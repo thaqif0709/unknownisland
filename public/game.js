@@ -2267,7 +2267,7 @@
     const opening = el.classList.contains('gone');
     closePanels();
     if (!opening) return;
-    releaseKeys();
+    if (which !== 'map') releaseKeys();   // the map doesn't block movement, so don't drop held keys
     if (which === 'book') renderBook(); else if (which === 'journal') renderJournal(); else if (which === 'board') renderBoard();
     else if (which === 'carvingPanel') renderCarving(); else if (which === 'map') renderMap(); else renderSettings();
     el.classList.remove('gone');
