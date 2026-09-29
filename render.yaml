@@ -1,0 +1,21 @@
+# Render Blueprint: lets Render create the game server from this repo in a few clicks.
+# In the Render dashboard: New > Blueprint > pick this repo. Render will ask for
+# the values marked `sync: false`.
+services:
+  - type: web
+    name: unknown-island
+    runtime: node
+    region: singapore
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: INVITE_CODE
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

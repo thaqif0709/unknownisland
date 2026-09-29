@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Unknown Island</title>
+<meta name="description" content="A watercolor survival island for friends.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F7F1E3; --ink:#34335A; --soft:#6A6888;
+  --rose:#C8505A; --ochre:#D39A3A; --blue:#4E8FBF; --leaf:#6F9E5B;
+  --card:#F7F1E3; --card-ink:#34335A; --field:#FFFBF2;
+  --hand:"Kalam", "Segoe Print", "Comic Sans MS", cursive;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --card:#2E2D48; --card-ink:#F2EAD8; --soft:#B7B3D6; --field:#3A3958; } }
+:root[data-theme="dark"]{ --card:#2E2D48; --card-ink:#F2EAD8; --soft:#B7B3D6; --field:#3A3958; }
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-user-select:none;user-select:none;touch-action:none}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;width:100%;height:100%}
+
+.hud{position:fixed;left:14px;top:calc(env(safe-area-inset-top,0px) + 12px);pointer-events:none;display:grid;gap:6px;
+  background:rgba(247,241,227,.82);padding:10px 14px 12px;border-radius:14px 22px 16px 20px;min-width:190px;transition:opacity .4s}
+.hidden{opacity:0;pointer-events:none}
+.day{font-size:22px;font-weight:700;line-height:1.1}
+.day small{font-weight:400;font-size:16px;color:var(--soft)}
+.stat{display:grid;grid-template-columns:52px 1fr;align-items:center;gap:8px;font-size:15px}
+.bar{height:10px;border-radius:6px 9px 5px 8px;background:rgba(52,51,90,.12);overflow:hidden}
+.bar i{display:block;height:100%;width:var(--v,100%);border-radius:6px 10px 7px 9px;opacity:.85;transition:width .3s}
+.b-health i{background:var(--rose)} .b-food i{background:var(--ochre)} .b-water i{background:var(--blue)}
+.temp{font-size:15px;min-height:1.2em}
+.temp.cold{color:var(--blue);font-weight:700} .temp.warm{color:var(--ochre);font-weight:700}
+
+.online{position:fixed;right:14px;top:calc(env(safe-area-inset-top,0px) + 12px);pointer-events:none;
+  background:rgba(247,241,227,.82);padding:8px 14px 10px;border-radius:20px 14px 18px 12px;font-size:15px;max-width:44vw;transition:opacity .4s}
+.online b{font-size:17px;display:block}
+.online span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.online i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+
+.inv{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);pointer-events:none;
+  background:rgba(247,241,227,.82);padding:8px 14px;border-radius:16px 12px 20px 14px;font-size:17px;transition:opacity .4s}
+.inv b{font-size:20px}
+.inv .craft{display:block;font-size:14px;color:var(--soft)}
+
+.prompt{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 22%);transform:translateX(-50%);
+  background:rgba(247,241,227,.9);padding:6px 16px;border-radius:18px 12px 16px 14px;font-size:19px;pointer-events:none;transition:opacity .2s;white-space:nowrap}
+.prompt kbd{font-family:var(--hand);font-weight:700;border:2px solid var(--ink);border-radius:7px 5px 8px 6px;padding:0 7px;margin-right:6px}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 16%);transform:translateX(-50%);font-size:22px;
+  color:var(--ink);text-shadow:0 0 8px var(--paper),0 0 14px var(--paper);pointer-events:none;opacity:0;transition:opacity .5s;text-align:center;max-width:90vw}
+.toast.on{opacity:1}
+.banner{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);background:var(--rose);color:var(--paper);
+  padding:4px 14px;border-radius:14px 10px 16px 12px;font-size:16px;pointer-events:none;transition:opacity .3s}
+
+#tags{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+#tags div{position:absolute;left:0;top:0;transform:translate(-50%,-100%);font-size:15px;font-weight:700;white-space:nowrap;
+  color:var(--ink);text-shadow:0 0 4px var(--paper),0 0 8px var(--paper),0 0 2px var(--paper);will-change:transform}
+
+.touch{display:none}
+@media (pointer:coarse){
+  .touch{display:flex;position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);flex-direction:column;gap:12px;align-items:flex-end}
+  .touch button{font-family:var(--hand);font-weight:700;font-size:18px;border:2px solid var(--ink);color:var(--ink);
+    background:rgba(247,241,227,.9);border-radius:40px 34px 38px 36px;min-width:84px;min-height:84px;padding:8px}
+  .touch button.small{min-height:52px;font-size:16px}
+  .prompt kbd{display:none}
+  .online{font-size:13px}
+}
+.joy{position:fixed;width:110px;height:110px;margin:-55px 0 0 -55px;border-radius:50%;border:2px solid rgba(52,51,90,.35);
+  background:rgba(247,241,227,.35);pointer-events:none;display:none}
+.joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px;border-radius:50%;background:rgba(52,51,90,.35)}
+
+.overlay{position:fixed;inset:0;display:grid;place-items:center;padding:16px;overflow-y:auto;touch-action:auto}
+.overlay.gone{display:none}
+.card{width:min(420px,100%);background:var(--card);color:var(--card-ink);padding:26px 28px 24px;
+  border:2px solid var(--card-ink);border-radius:255px 18px 225px 16px/16px 225px 18px 255px;
+  box-shadow:6px 8px 0 rgba(52,51,90,.18);-webkit-user-select:text;user-select:text}
+.card h1{margin:0;font-size:clamp(42px,11vw,60px);line-height:1;font-weight:700}
+.card p{margin:12px 0 0;font-size:18px;line-height:1.45}
+.card .keys{font-size:16px;color:var(--soft)}
+.card button{font-family:var(--hand);font-weight:700;font-size:22px;width:100%;padding:10px;margin-top:18px;
+  color:var(--paper);background:var(--rose);border:0;border-radius:18px 10px 16px 12px;cursor:pointer}
+.card button:hover{filter:brightness(1.07)}
+.card button:disabled{opacity:.6;cursor:wait}
+.card button:focus-visible,.card input:focus-visible,.tabs button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.card button.link{background:none;color:var(--soft);font-size:16px;font-weight:400;padding:4px;margin-top:8px;text-decoration:underline}
+.tabs{display:flex;gap:6px;margin-top:16px}
+.tabs button{flex:1;margin:0;font-size:18px;padding:6px;background:none;color:var(--card-ink);border:2px solid transparent;border-radius:14px 10px 12px 16px}
+.tabs button[aria-selected="true"]{border-color:var(--card-ink)}
+form{display:grid;gap:10px;margin-top:14px}
+label{display:grid;gap:2px;font-size:16px}
+input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-ink);background:var(--field);
+  border:2px solid var(--soft);border-radius:12px 8px 14px 10px;width:100%}
+.err{color:var(--rose);font-size:16px;min-height:1.3em;margin:0}
+.view{display:none}
+.view.on{display:block}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="tags"></div>
+
+<div class="hud hidden" id="hud">
+  <div class="day" id="dayLabel">Day 1 <small>morning</small></div>
+  <div class="stat"><span>Health</span><div class="bar b-health"><i id="bHealth"></i></div></div>
+  <div class="stat"><span>Food</span><div class="bar b-food"><i id="bFood"></i></div></div>
+  <div class="stat"><span>Water</span><div class="bar b-water"><i id="bWater"></i></div></div>
+  <div class="temp" id="temp"></div>
+</div>
+<div class="online hidden" id="online"></div>
+<div class="inv hidden" id="inv">Wood <b id="iWood">0</b> &nbsp; Stone <b id="iStone">0</b>
+  <span class="craft" id="craftHint">A fire needs 4 wood and 3 stone</span></div>
+<div class="prompt hidden" id="prompt"></div>
+<div class="toast" id="toast"></div>
+<div class="banner hidden" id="banner">Reconnecting&hellip;</div>
+<div class="joy" id="joy"><i id="joyKnob"></i></div>
+<div class="touch hidden" id="touchUi">
+  <button class="small" id="btnFire">Build fire</button>
+  <button id="btnAct">Act</button>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="card" role="dialog" aria-labelledby="oTitle">
+    <h1 id="oTitle">Unknown Island</h1>
+
+    <div class="view" id="vAuth">
+      <p>A shared island for you and your friends. Find water, find food, and keep a fire going through the night.</p>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tabLogin" aria-selected="true">Log in</button>
+        <button type="button" role="tab" id="tabSignup" aria-selected="false">I have an invite</button>
+      </div>
+      <form id="fAuth" autocomplete="on">
+        <label>Name <input id="inName" name="username" autocomplete="username" maxlength="16" required></label>
+        <label>Password <input id="inPass" name="password" type="password" autocomplete="current-password" minlength="6" required></label>
+        <label id="lInvite" hidden>Invite code <input id="inInvite" name="invite" autocomplete="off"></label>
+        <p class="err" id="authErr" role="alert"></p>
+        <button type="submit" id="authGo" style="margin-top:0">Log in</button>
+      </form>
+    </div>
+
+    <div class="view" id="vReady">
+      <p id="readyText"></p>
+      <p class="keys">WASD to walk, drag to look around, scroll to zoom, E to use things, F to build a fire. On a phone, use the left thumb stick and the buttons.</p>
+      <button type="button" id="goIsland">Go to the island</button>
+      <button type="button" class="link" id="logout">Log out</button>
+    </div>
+
+    <div class="view" id="vMsg">
+      <p id="msgText"></p>
+      <button type="button" id="msgBtn">OK</button>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/three.min.js"></script>
+<script src="/shared/world-gen.js"></script>
+<script src="/net.js"></script>
+<script src="/game.js"></script>
+</body>
+</html>
