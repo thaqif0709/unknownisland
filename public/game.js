@@ -951,6 +951,29 @@
     return (robeGeo = g);
   }
 
+  // Cowl round the neck (a flared ring of cloth) and the hood's drooping point
+  // (a bent teardrop). Both built once and shared.
+  let cowl = null, hoodTip = null;
+  function cowlGeo() {
+    if (cowl) return cowl;
+    const prof = [[.2, -.16], [.27, -.1], [.31, 0], [.335, .1], [.33, .17], [.29, .2]].map(([r, y]) => new THREE.Vector2(r, y));
+    cowl = new THREE.LatheGeometry(prof, 24);
+    const pos = cowl.attributes.position;
+    for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), z = pos.getZ(i), a = Math.atan2(x, z), k = 1 + Math.sin(a * 6) * .03; pos.setX(i, x * k); pos.setZ(i, z * k); }
+    cowl.computeVertexNormals();
+    return cowl;
+  }
+  function hoodTipGeo() {
+    if (hoodTip) return hoodTip;
+    const prof = []; for (let i = 0; i <= 12; i++) { const t2 = i / 12; prof.push(new THREE.Vector2(.19 * Math.pow(1 - t2, 1.3) + .004, t2 * .5)); }
+    hoodTip = new THREE.LatheGeometry(prof, 14);
+    const pos = hoodTip.attributes.position;
+    for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); pos.setZ(i, pos.getZ(i) - y * y * .7); }   // droops as it goes
+    hoodTip.computeVertexNormals();
+    return hoodTip;
+  }
+  function setHood(av, up) { if (!av) return; av.hoodUp.visible = !!up; av.hoodDown.visible = !up; }
+
   // A frog castaway in a simple hooded cloak: part wizard, part wanderer.
   function makeCastaway(cloak) {
     const root = new THREE.Group();
@@ -975,7 +998,8 @@
     const belt = add(new THREE.Mesh(new THREE.TorusGeometry(.265, .026, 8, 24), ropeM), 0, .88, 0); belt.rotation.x = Math.PI / 2;
     add(new THREE.Mesh(new THREE.CylinderGeometry(.02, .02, .2, 6), ropeM), .12, .77, .24).rotation.z = .2;   // rope end
     const patch = add(new THREE.Mesh(new THREE.BoxGeometry(.13, .12, .02), patchM), -.2, .62, .26); patch.rotation.set(-.2, -.6, .15);
-    const drape = add(new THREE.Mesh(new THREE.TorusGeometry(.17, .09, 10, 22), cloakM), 0, 1.16, 0); drape.rotation.x = Math.PI / 2;
+    // the cowl: cloth gathered round the neck that the hood grows out of
+    add(new THREE.Mesh(cowlGeo(), cloakM), 0, 1.16, 0);
     // head: wide and flat, pale throat, dark spots, bulging eyes, long smile
     const head = new THREE.Group(); head.position.y = 1.42; body.add(head);
     add(ball(.3, frogM, 24, 16), 0, .06, 0, head).scale.set(1.3, .78, 1.05);
@@ -991,12 +1015,20 @@
     mouth.rotation.z = -Math.PI / 2 - Math.PI * .31;
     // the hood: a cowl around the back and top of the head, open at the face, with a drooping tip
     const open = 1.45;
-    const hood = add(new THREE.Mesh(new THREE.SphereGeometry(.36, 22, 14, Math.PI / 2 + open, Math.PI * 2 - open * 2, 0, Math.PI * .72), cloakM), 0, .06, -.02, head);
+    const hoodUp = new THREE.Group(); head.add(hoodUp);
+    // reaches further down than before so it meets the cowl with no gap
+    const hood = add(new THREE.Mesh(new THREE.SphereGeometry(.36, 22, 16, Math.PI / 2 + open, Math.PI * 2 - open * 2, 0, Math.PI * .86), cloakM), 0, .06, -.02, hoodUp);
     hood.scale.set(1.2, 1.05, 1.12); hood.material.side = THREE.DoubleSide;
-    const lining = add(new THREE.Mesh(new THREE.SphereGeometry(.345, 22, 14, Math.PI / 2 + open, Math.PI * 2 - open * 2, 0, Math.PI * .72), innerM), 0, .06, -.02, head);
+    const lining = add(new THREE.Mesh(new THREE.SphereGeometry(.345, 22, 16, Math.PI / 2 + open, Math.PI * 2 - open * 2, 0, Math.PI * .86), innerM), 0, .06, -.02, hoodUp);
     lining.scale.set(1.2, 1.05, 1.12); lining.material.side = THREE.BackSide;
-    const tip = add(new THREE.Mesh(new THREE.ConeGeometry(.13, .46, 12), cloakM), 0, .08, -.5, head);
-    tip.rotation.x = -2.35;   // droops down the back
+    // the point grows out of the back of the hood (its wide base sits inside it) and droops
+    const tip = add(new THREE.Mesh(hoodTipGeo(), cloakM), 0, .2, -.26, hoodUp);
+    tip.rotation.x = -2.2;
+    // hood down: fallen back and bunched behind the neck, the point hanging down the back
+    const hoodDown = new THREE.Group(); body.add(hoodDown); hoodDown.visible = false;
+    const bunch = add(new THREE.Mesh(new THREE.SphereGeometry(.3, 16, 10), cloakM), 0, 1.26, -.2, hoodDown); bunch.scale.set(1.15, .55, .75);
+    const fold = add(new THREE.Mesh(new THREE.SphereGeometry(.24, 14, 8), innerM), 0, 1.33, -.15, hoodDown); fold.scale.set(1.05, .3, .6);
+    const hang = add(new THREE.Mesh(hoodTipGeo(), cloakM), 0, 1.24, -.3, hoodDown); hang.rotation.x = Math.PI + .35;
     // arms: wide ragged sleeves, green webbed hands
     function arm(x) {
       const p = new THREE.Group(); p.position.set(x, 1.08, 0); body.add(p);
@@ -1007,7 +1039,7 @@
     }
     const armL = arm(-.27), armR = arm(.27);
 
-    const av = { root, body, legL, legR, armL, armR, walk: 0, swingT: 0 };
+    const av = { root, body, legL, legR, armL, armR, walk: 0, swingT: 0, hoodUp, hoodDown };
     av.armL.rotation.z = -.18; av.armR.rotation.z = .18;
     shadows(root);
     scene.add(root);
@@ -1431,7 +1463,12 @@
   const ui = { hud: $('hud'), inv: $('inv'), prompt: $('prompt'), toast: $('toast'), overlay: $('overlay'), online: $('online'),
     touch: $('touchUi'), banner: $('banner'), tags: $('tags'), gear: $('btnSettings'), book: $('book'), settings: $('settings'), journal: $('journal'),
     board: $('boardPanel'), carvingPanel: $('carvingPanel'), chat: $('chat'), map: $('map'), minimap: $('minimap') };
-  let myPatches = [];
+  let myPatches = [], hoodDown = false;
+  function toggleHood() {
+    if (state !== 'play' || !hero) return;
+    hoodDown = !hoodDown; setHood(hero, !hoodDown);   // show it straight away; the server tells everyone
+    if (net) net.send({ t: 'hood', down: hoodDown });
+  }
   const WEATHER_SAY = { clear: 'The sky clears.', rain: 'It starts to rain. Fires burn smaller in the wet.',
     storm: 'A storm rolls in. The sea will bring things up tomorrow.', fogstorm: 'The fog is coming in, in broad daylight.' };
   let toastTimer = 0;
@@ -1560,7 +1597,7 @@
     tag.textContent = p.name;
     ui.tags.appendChild(tag);
     const av = makeCastaway(colorFor(p.id));
-    setPatches(av, p.patches);
+    setPatches(av, p.patches); setHood(av, !p.hoodDown);
     remotes.set(p.id, { name: p.name, remote: new Net.Remote(p.x, p.z, p.face), av, tag, dead: p.dead, patches: p.patches || [] });
   }
   function renderOnline() {
@@ -1596,6 +1633,7 @@
         hero = makeCastaway(colorFor(me.id));
         applySelf(m.you);
         myPatches = m.you.patches || []; setPatches(hero, myPatches);
+        hoodDown = !!m.you.hoodDown; setHood(hero, !hoodDown);
         renderOnline();
         ui.banner.classList.add('hidden');
         hideOverlay();
@@ -1669,6 +1707,10 @@
         break;
       }
       case 'carvings': setCarvings(m.list, m.changed, m.why); break;
+      case 'hood':
+        if (me && m.id === me.id) { hoodDown = m.down; setHood(hero, !hoodDown); }
+        else { const r = remotes.get(m.id); if (r) setHood(r.av, !m.down); }
+        break;
       case 'chat': addChat(m); break;
       case 'note':
         notes.push(m.note); if (notes.length > 40) notes.shift(); renderScraps();
@@ -1691,7 +1733,7 @@
       case 'respawned':
         applySelf(m.you);
         hero.root.rotation.x = 0;
-        myPatches = m.you.patches || myPatches; setPatches(hero, myPatches);
+        myPatches = m.you.patches || myPatches; setPatches(hero, myPatches); setHood(hero, !hoodDown);
         state = 'play'; hideOverlay(); showHud(true);
         toast('You wake up on the beach again.');
         break;
@@ -1804,6 +1846,7 @@
   $('btnJournal').addEventListener('click', () => togglePanel('journal'));
   $('btnMap').addEventListener('click', () => togglePanel('map'));
   $('btnSettings').addEventListener('click', () => togglePanel('settings'));
+  $('btnHood').addEventListener('click', () => toggleHood());
   $('btnRun').addEventListener('click', () => { runToggle = !runToggle; $('btnRun').setAttribute('aria-pressed', String(runToggle)); });
 
   // ================= Input =================
@@ -1811,7 +1854,7 @@
   const ACTIONS = [
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
-    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'],
+    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'],
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -1865,6 +1908,7 @@
     if (e.code === prefs.binds.build) build('campfire');
     if (e.code === prefs.binds.book) togglePanel('book');
     if (e.code === prefs.binds.journal) togglePanel('journal');
+    if (e.code === prefs.binds.hood) toggleHood();
     if (e.code === prefs.binds.map) togglePanel('map');
     if (e.code.startsWith('Arrow') || e.code === 'Space' || e.code === 'Tab') e.preventDefault();
   });

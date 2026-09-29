@@ -467,7 +467,7 @@ class Island {
       tools: (Array.isArray(saved.tools) ? saved.tools : []).filter(t => WG.recipeById(t)),
       dead: m.health <= 0, cause: '', moving: false, warm: false,
       energy: 100, exhausted: false, rest: 0, wantSprint: false, running: false,
-      dread: m.dread || 0, fog: 0, knockedUntil: 0, camYaw: null, lastKnockAt: 0, patches,
+      dread: m.dread || 0, fog: 0, knockedUntil: 0, camYaw: null, lastKnockAt: 0, patches, hoodDown: !!saved.hoodDown,
       lastPosAt: Date.now(), nextActAt: 0,
     };
     this.players.set(p.id, p);
@@ -506,9 +506,9 @@ class Island {
 
   selfView(p) {
     return { id: p.id, name: p.name, x: p.x, z: p.z, face: p.face, health: p.health, hunger: p.hunger,
-      thirst: p.thirst, inv: p.inv, tools: p.tools, energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches };
+      thirst: p.thirst, inv: p.inv, tools: p.tools, energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches, hoodDown: p.hoodDown };
   }
-  publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), face: r2(p.face), dead: p.dead, patches: p.patches }; }
+  publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown }; }
   fireView(f) { return { id: f.id, x: f.x, z: f.z, fuel: r2(f.fuel), kind: f.kind }; }
 
   // ================= Loop =================
@@ -616,6 +616,9 @@ class Island {
       case 'respawn': return this.onRespawn(p);
       case 'pin': return this.onPin(p, msg);
       case 'chat': return this.onChat(p, msg);
+      case 'hood':   // hood up or down; everyone sees it, and it's remembered
+        p.hoodDown = !!msg.down;
+        return this.broadcast({ t: 'hood', id: p.id, down: p.hoodDown });
       case 'patch': return this.onPatch(p, msg);
       case 'intro': p.introAt = Date.now(); return;
       case 'intro-seen':
@@ -1043,7 +1046,7 @@ class Island {
       const { wood, stone, ...rest } = p.inv;
       return {
         playerId: p.id, x: r2(p.x), z: r2(p.z), face: r2(p.face), health: r2(p.health), hunger: r2(p.hunger),
-        thirst: r2(p.thirst), wood, stone, inventory: { ...rest, tools: [...p.tools] }, dread: r2(p.dread),
+        thirst: r2(p.thirst), wood, stone, inventory: { ...rest, tools: [...p.tools], hoodDown: !!p.hoodDown }, dread: r2(p.dread),
       };
     });
     const objects = [...this.dirty].map(id => {
