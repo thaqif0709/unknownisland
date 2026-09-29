@@ -589,9 +589,14 @@
     spike: new THREE.CylinderGeometry(.035, .05, .28, 8),
     cap: new THREE.SphereGeometry(.16, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2),
     tuft: new THREE.ConeGeometry(.07, .32, 5),
+    // a toadstool: a stout stem that bulges a little, a round cap with a curled-under rim, pale gills beneath
+    mStem: (() => { const pr = [[.05, 0], [.058, .04], [.052, .1], [.045, .15], [.05, .17]].map(([r, y]) => new THREE.Vector2(r, y)); return new THREE.LatheGeometry(pr, 12); })(),
+    mCap: (() => { const pr = [[.001, .16], [.06, .15], [.11, .12], [.15, .07], [.17, .035], [.165, .015], [.14, .02]].map(([r, y]) => new THREE.Vector2(r, y)); return new THREE.LatheGeometry(pr, 16); })(),
+    mGills: (() => { const g = new THREE.CylinderGeometry(.14, .06, .02, 16); return g; })(),
+    mSpot: (() => { const g = new THREE.SphereGeometry(.026, 6, 4); g.scale(1, .45, 1); return g; })(),
   };
   const DM = { stem: decorLambert(0x6F8F5A), tint: decorLambert(0xFFFFFF), yellow: decorLambert(0xE0A33A), lav: decorLambert(0x8C7BA8),
-    mushStem: decorLambert(0xEFE3C8), white: decorLambert(0xFFFFFF), tuftA: decorLambert(0x7F9A64), tuftB: decorLambert(0x93A873) };
+    mushStem: decorLambert(0xEFE3C8), gills: decorLambert(0xE6D2B0), white: decorLambert(0xFFFFFF), tuftA: decorLambert(0x7F9A64), tuftB: decorLambert(0x93A873) };
   const decorCols = a => a.map(c => new THREE.Color(c));
   // species: which biomes, how many per chunk, and its parts [geometry, material, y, colours, scale]
   const DECOR = [
@@ -600,7 +605,10 @@
     { biomes: ['meadow'], n: 22, parts: [[DG.stem, DM.stem, 0, null, [1, .32, 1]], [DG.cup, DM.tint, .32, decorCols(['#C4574F', '#E0A33A', '#D98C8C', '#8C7BA8', '#F1E6CC'])]] },
     { biomes: ['spring', 'forest'], n: 14, parts: [[DG.stem, DM.stem, 0, null, [1, .2, 1]], [DG.bell, DM.tint, .2, decorCols(['#5F7FA8', '#7E97B8', '#4F6687'])]] },
     { biomes: ['highland'], n: 30, parts: [[DG.stem, DM.stem, 0, null, [1, .18, 1]], [DG.spike, DM.lav, .3]] },
-    { biomes: ['forest'], n: 16, parts: [[DG.stem, DM.mushStem, 0, null, [3.2, .14, 3.2]], [DG.cap, DM.tint, .12, decorCols(['#B8504A', '#C0704F', '#E0A33A'])], [DG.dot, DM.white, .2, null, [.6, .6, .6]]] },
+    // toadstools: stem, gills, cap and a few white spots (the spots sit on the cap's curve, off-centre)
+    { biomes: ['forest'], n: 16, parts: [[DG.mStem, DM.mushStem, 0], [DG.mGills, DM.gills, .158], [DG.mCap, DM.tint, .15, decorCols(['#B8504A', '#C0704F', '#C9623E'])],
+      [DG.mSpot, DM.white, .308, null, null, [.03, -.02]], [DG.mSpot, DM.white, .292, null, null, [-.07, .03]], [DG.mSpot, DM.white, .276, null, null, [.05, .09]],
+      [DG.mSpot, DM.white, .269, null, null, [-.02, -.11]], [DG.mSpot, DM.white, .254, null, null, [.12, -.03]]] },
     { biomes: ['meadow', 'forest', 'highland', 'spring'], n: 40, parts: [[DG.tuft, DM.tuftA, .14], [DG.tuft, DM.tuftB, .12, null, [.8, .8, .8]]] },
   ];
   const dummy = new THREE.Object3D();
@@ -615,10 +623,12 @@
         if (sp.biomes.includes(WG.biomeAt(x, z, h))) spots.push([x, groundAt(x, z), z, .75 + r() * .5, r() * 6.28, r()]);
       }
       if (!spots.length) return;
-      for (const [geo, mat, y, colors, sc] of sp.parts) {
+      for (const [geo, mat, y, colors, sc, off] of sp.parts) {
         const im = new THREE.InstancedMesh(geo, mat, spots.length);
         spots.forEach(([x, h, z, k, rot, rr], i) => {
-          dummy.position.set(x, h + y * k, z); dummy.rotation.set(0, rot, 0);
+          // off: an optional sideways offset, turned with the plant
+          const ox = off ? (off[0] * Math.cos(rot) + off[1] * Math.sin(rot)) * k : 0, oz = off ? (-off[0] * Math.sin(rot) + off[1] * Math.cos(rot)) * k : 0;
+          dummy.position.set(x + ox, h + y * k, z + oz); dummy.rotation.set(0, rot, 0);
           const v = sc || [1, 1, 1]; dummy.scale.set(v[0] * k, v[1] * k, v[2] * k); dummy.updateMatrix();
           im.setMatrixAt(i, dummy.matrix);
           if (colors) im.setColorAt(i, colors[(rr * colors.length) | 0]);
@@ -3134,11 +3144,17 @@
   // jump that's higher than the top passes over it. Trees, palms, lanterns, the
   // board and the carving stones are always too tall.
   const _box = new THREE.Box3();
+  const canopyRadius = o => (topOf(o), o._canopy || .5);
   function topOf(o) {
     // measured from the model when it's built (cached until it grows or changes)
-    if (o.mesh && (o.type === 'rock' || o.type === 'ore' || o.type === 'bush')) {
+    if (o.mesh && (o.type === 'rock' || o.type === 'ore' || o.type === 'bush' || o.type === 'tree' || o.type === 'palm')) {
       const key = o.mesh.uuid + ':' + o.mesh.scale.y.toFixed(3);
-      if (o._topKey !== key) { o.mesh.updateMatrixWorld(true); _box.setFromObject(o.mesh); o._top = Math.max(.2, _box.max.y - o.mesh.position.y); o._topKey = key; }
+      if (o._topKey !== key) {
+        o.mesh.updateMatrixWorld(true); _box.setFromObject(o.mesh);
+        o._top = Math.max(.2, _box.max.y - o.mesh.position.y);
+        o._canopy = Math.max(.4, Math.min(_box.max.x - _box.min.x, _box.max.z - _box.min.z) * .32);   // the flat-ish middle of the leafy top
+        o._topKey = key;
+      }
       return o._top;
     }
     switch (o.type) {
@@ -3171,13 +3187,14 @@
   window.addEventListener('blur', () => { hop.charge = -1; });
   // What you can stand on: rocks, ore and bushes whose top you've reached. Returns
   // the height of the highest one under your feet that isn't above y.
-  const STANDABLE = { rock: 1, ore: 1, bush: 1 };
+  const STANDABLE = { rock: 1, ore: 1, bush: 1, tree: 1, palm: 1 };
   function floorAt(x, z, y) {
     let f = 0;
     nearbyObjects(x, z, o => {
       if (!STANDABLE[o.type] || o.state.gone) return;
       const top = topOf(o);
-      if (top <= y + .08 && top > f && Math.hypot(o.x - x, o.z - z) < radius(o) * .85 + .15) f = top;
+      const zone = (o.type === 'tree' || o.type === 'palm') ? canopyRadius(o) : radius(o) * .85 + .15;
+      if (top <= y + .08 && top > f && Math.hypot(o.x - x, o.z - z) < zone) f = top;
     });
     return f;
   }
@@ -3200,8 +3217,8 @@
       const k = Math.min(1, crouch) * .22;
       av.body.scale.set(1 + k * .5, 1 - k, 1 + k * .5); av.legL.rotation.x = av.legR.rotation.x = -k * 2;
     }
-    if (y > 0) {
-      av.root.position.y += y;
+    if (y > 0) av.root.position.y += y;   // (y includes whatever you're standing on)
+    if (airborne) {   // tucked legs and raised arms only while actually in the air
       av.legL.rotation.x = -.7; av.legR.rotation.x = -.4;
       if (!av.swingT || av.swingT <= 0) { av.armL.rotation.x = -1.1; if (!av.held) av.armR.rotation.x = -1.1; }
     }
