@@ -6,7 +6,9 @@
 
   // ================= Tuning =================
   const RULES = {
-    DAY_LEN: 240,            // real seconds per in-game day
+    // Real seconds per in-game day, loosely Minecraft's: 20 minutes, of which about
+    // 10 min is day, 8 min 20 s is night, and dusk and dawn are short in between.
+    DAY_LEN: 1200,
     HUNGER_DRAIN: 0.28,      // per second while moving (standing still costs no hunger or thirst)
     THIRST_DRAIN: 0.42,
     STARVE_DMG: 1.6,         // per second each, when hunger or thirst is 0
@@ -62,7 +64,7 @@
     KNOCK: { HEALTH: 20, DREAD: 25, DROP: .5, DOWN_MS: 3000 },
     // Old stone lanterns. Oil keeps them lit; lit, they clear the fog around them.
     LANTERN: {
-      FUEL_PER_OIL: 480, MAX_FUEL: 1920,   // seconds (a day is 240)
+      FUEL_PER_OIL: 2400, MAX_FUEL: 9600,  // seconds (a day is 1200): one oil lasts about two days
       RADIUS: 14, BIG_RADIUS: 24,          // fog cleared around a lit lantern
       BIG_OFFERINGS: 3,                    // different frogs needed to light a great lantern
       // The fog fights back: a cold lantern's clearing shrinks in steps over
@@ -134,16 +136,17 @@
 
   // Fire types: warmth radius, how fast they burn (1 = one fuel per second), fuel.
   const FIRES = {
-    campfire: { warm: 5.5, burn: 1, start: 110, add: 55, max: 200 },
-    hearth: { warm: 8, burn: 0.5, start: 160, add: 70, max: 300 },
+    // burn is fuel per real second (scaled to the 20-minute day: a fresh campfire lasts most of a night)
+    campfire: { warm: 5.5, burn: 0.2, start: 110, add: 55, max: 200 },
+    hearth: { warm: 8, burn: 0.1, start: 160, add: 70, max: 300 },
   };
 
   const isNight = t => t < 0.22 || t >= 0.8;
   // 0 by day, 1 at night, easing in through dusk and out through dawn.
   function nightFactor(t) {
-    if (t >= .72 && t < .84) return smoothstep(.72, .84, t);
-    if (t >= .84 || t < .2) return 1;
-    if (t < .3) return 1 - smoothstep(.2, .3, t);
+    if (t >= .74 && t < .82) return smoothstep(.74, .82, t);
+    if (t >= .82 || t < .2) return 1;
+    if (t < .28) return 1 - smoothstep(.2, .28, t);
     return 0;
   }
   function smoothstep(a, b, x) { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); }

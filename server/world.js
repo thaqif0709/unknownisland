@@ -620,7 +620,7 @@ class Island {
         const now = Date.now();
         if (p.dead || p.knockedUntil > now || now - (p.lastJumpAt || 0) < 400) return;
         p.lastJumpAt = now;
-        return this.broadcast({ t: 'jump', id: p.id }, p);
+        return this.broadcast({ t: 'jump', id: p.id, mul: Math.min(2, Math.max(1, +msg.mul || 1)) }, p);
       }
       case 'hold':   // which item is in your hand (just for show; everyone sees it)
         p.hold = typeof msg.key === 'string' && ITEMS[msg.key] ? msg.key : null;

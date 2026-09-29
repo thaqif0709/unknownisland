@@ -268,13 +268,13 @@ planned separately by Thaqif):
 ## Survival rules
 
 All in `RULES` in `server/shared/world-gen.js` (the server sends them to clients):
-day 240 s (t: 0 midnight, .25 sunrise, .5 noon, .75 sunset; night is t < .22 or
+day 1200 s, loosely Minecraft's 20-minute day (about 11.6 min light incl. short dawn/dusk, 8.4 min night; t: 0 midnight, .25 sunrise, .5 noon, .75 sunset; night is t < .22 or
 t ≥ .8; the day counter increments at sunrise); hunger −0.28/s, thirst −0.42/s;
 start 100/80/70; −1.6/s health each when hunger or thirst is 0; −0.6/s at night
 away from a lit fire (radius 5.5); +0.8/s regen when both > 35 and unhurt; spring
 +35 water; seawater −4; coconut +18 food +14 water (3 per palm); berries +12 food;
-rocks 2 stone each; trees/palms 3 chops (1 wood each); fire 4 wood + 3 stone, 110 s
-fuel, +55 per wood (max 200); coconuts and berries refill each sunrise; felled trees
+rocks 2 stone each; trees/palms 3 chops (1 wood each); fire 4 wood + 3 stone, 110 fuel burning 0.2/s (about 9 real minutes),
++55 per wood (max 200); coconuts and berries refill each sunrise; felled trees
 regrow after 2 days, mined rocks after 3.
 
 ## Infrastructure
