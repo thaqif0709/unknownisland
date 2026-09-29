@@ -58,7 +58,7 @@ Environment*). Existing players aren't affected.
 
 - **Computer:** WASD or arrow keys to walk, hold **Shift** to sprint, drag the mouse
   to look around, scroll to zoom, **E** to use whatever you're next to, **B** for the
-  recipe book, **F** to quickly build a campfire, **Esc** for settings.
+  recipe book, **J** for the journal, **F** to quickly build a campfire, **Esc** for settings.
 - **Phone:** drag on the left side to walk, drag on the right side to look around,
   and use the **Act**, **Run** and **Recipes** buttons. The gear button opens settings.
 - **Settings (Esc):** change any key, camera sensitivity and invert. Settings are
@@ -87,6 +87,29 @@ When you log off, your castaway leaves the island and everything is frozen until
 come back. If you die, you wake up on the beach: you keep your tools but lose what
 you were carrying.
 
+## The island's stranger side
+
+- **Fog and dread.** Fog rolls in from the sea at night. Being in fog, in the dark
+  or alone raises your dread; fires, lanterns, daylight and friends bring it down.
+  High dread makes you see and hear things.
+- **The Stilled** stand in the fog at night and only move when nobody is looking.
+  If one reaches you, you're knocked down and drop half of what you carry.
+- **Stone lanterns** push the fog back while they burn lamp oil (pressed from
+  seeds). When they run dry, the fog slowly takes the ground back.
+- **Tides, bugs and the journal (J).** Every morning the sea washes things up.
+  Catch bugs, collect shells and sea glass. Stitch up to three patches onto your
+  cloak from the journal; each one helps and costs something.
+- **Moon and weather.** The moon turns every 8 days; the Drowning Moon brings the
+  thickest fog. Rain, storms and fog storms come and go.
+- **The driftwood board** by the first lantern holds notes anyone pins.
+- **The carving stones.** Three old stones where the island itself asks for
+  things. Answer and it gives something back; ignore it and the fog gets worse.
+- **The intro** plays the first time you arrive (Settings → Rewatch the intro).
+
+Journal entries, tide items and the carving stones' requests live in database
+tables (`journal_entries`, `tide_table`, `sleeper_requests`), so you can add or
+change them in Neon without touching the code.
+
 ## Changing the rules
 
 All the survival numbers (day length, hunger, sprinting, regrowth, plant sizes), the
@@ -112,6 +135,8 @@ temporary in-memory island (nothing is saved) and the invite code is `dev`.
 server/index.js           Web server: game files, login API, game connection
 server/auth.js            Sign-up with invite code, login, sessions
 server/world.js           The island simulation, catch-up, saving
+server/sleeper.js         The carving stones (the island's requests)
+server/content.js         Default journal, tide, bug and request content
 server/store.js           Database access (Neon), or in-memory for testing
 server/shared/world-gen.js Island shape, object placement, survival rules
                           (used by both the server and the browser)

@@ -122,9 +122,25 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 .carve-sheet .note{color:#3E3833}
 #carveEar{font-style:italic;color:#2B211F;min-height:0;margin:6px 0 0}
 #carveTally{font-size:16px;margin:4px 0 0}
-.intro-sheet{background:#E4E0D6}
-.intro-sheet p{font-size:18px;line-height:1.5;margin:10px 0}
-.intro-sheet .collar{display:inline-block;border:2px dashed var(--ink);padding:0 10px;letter-spacing:.2em;font-weight:700}
+/* intro cutscene */
+.cut{position:fixed;inset:0;z-index:8;pointer-events:none}
+.cut.gone{display:none}
+.cut canvas{position:absolute;inset:0;width:100%;height:100%}
+.cut .veil,.cut .flash,.cut .under{position:absolute;inset:0;opacity:0}
+.cut .veil{background:#0E0B0A} .cut .flash{background:#FFFDF6} .cut .under{background:radial-gradient(ellipse at 50% 15%,rgba(60,100,100,0),rgba(8,18,20,.55))}
+.cut .cap{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 12%);transform:translateX(-50%);width:min(760px,90vw);text-align:center;
+  font-size:clamp(18px,2.6vw,26px);line-height:1.4;color:#F5ECD7;text-shadow:0 0 6px #0E0B0A,0 0 14px #0E0B0A,2px 2px 0 #0E0B0A;opacity:0;transition:opacity 1.2s}
+.cut .cap.on{opacity:1}
+.cut .name{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-3deg);padding:10px 34px;background:#D8C9A6;color:#3A2A22;
+  border:3px dashed #5A4436;outline:10px solid #D8C9A6;font-size:clamp(34px,6vw,64px);font-weight:700;letter-spacing:.35em;opacity:0;transition:opacity 1.6s}
+.cut .name.on{opacity:1}
+.cut .title{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);white-space:nowrap;font-size:clamp(44px,9vw,110px);font-weight:700;color:#2B211F;
+  -webkit-text-stroke:2px #2B211F;text-shadow:3px 3px 0 #F5ECD7,-2px -2px 0 #F5ECD7;clip-path:inset(0 100% 0 0);opacity:0;transition:clip-path 2.6s ease-out,opacity 1.2s}
+.cut .title.on{clip-path:inset(0 0 0 0);opacity:1}
+.cut .title.out{opacity:0}
+.cut .skip{position:absolute;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);pointer-events:auto;font-family:var(--hand);font-weight:600;font-size:16px;
+  color:#F5ECD7;background:rgba(14,11,10,.55);border:2px solid #F5ECD7;border-radius:18px;padding:6px 16px;cursor:pointer}
+.cut .skip:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .stamp{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) rotate(-4deg) scale(.9);border:4px solid var(--rose);color:var(--rose);
   background:rgba(245,236,215,.9);border-radius:12px;padding:6px 16px;font-size:22px;font-weight:600;pointer-events:none;opacity:0;transition:opacity .4s,transform .4s}
 .stamp.on{opacity:1;transform:translate(-50%,-50%) rotate(-4deg) scale(1)}
@@ -256,17 +272,6 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
   </div>
 </div>
 
-<div class="panel gone" id="intro" role="dialog" aria-modal="true" aria-labelledby="introTitle">
-  <div class="sheet intro-sheet">
-    <h2 id="introTitle">A grey beach</h2>
-    <p>You wake on wet sand with the sea pulling at your feet. You don't remember arriving.</p>
-    <p>You're wrapped in a patched sailcloth cloak. It isn't yours. Stitched inside the collar is a name: <span class="collar">PELL</span></p>
-    <p>On the old sea charts this place is marked <i>Unknown</i>. Sailors say the fog around it hums at night, and that anyone who washes up here doesn't wash back out.</p>
-    <p class="note">Find fresh water. Keep a fire going through the night. Stay out of the fog.</p>
-    <div class="actions"><button type="button" class="main" id="introGo">Get up</button></div>
-  </div>
-</div>
-
 <div class="panel gone" id="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
   <div class="sheet">
     <header><h2 id="setTitle">Settings</h2><button type="button" class="x" data-close aria-label="Close">&times;</button></header>
@@ -283,8 +288,21 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
     <h3>Graphics</h3>
     <label class="row">Quality <select id="quality"><option value="auto">Auto (Low on phones)</option><option value="high">High</option><option value="low">Low (faster)</option></select></label>
     <p class="note">Low turns off shadows and some outlines so older phones run smoothly.</p>
+    <h3>Story</h3>
+    <button type="button" class="link" id="rewatch">Rewatch the intro</button>
     <div class="actions"><button type="button" class="main" id="resume">Back to the island</button><button type="button" class="link" id="logout2">Log out</button></div>
   </div>
+</div>
+
+<div class="cut gone" id="cut" aria-live="polite">
+  <canvas id="cutChart"></canvas>
+  <div class="under" id="cutUnder"></div>
+  <div class="flash" id="cutFlash"></div>
+  <div class="veil" id="cutVeil"></div>
+  <div class="name" id="cutName">PELL</div>
+  <div class="title" id="cutTitle">Unknown Island</div>
+  <p class="cap" id="cutCap"></p>
+  <button type="button" class="skip" id="cutSkip">Skip &rsaquo;</button>
 </div>
 
 <div class="overlay" id="overlay">

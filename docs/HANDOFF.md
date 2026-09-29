@@ -82,7 +82,7 @@ automatically from `main`. Env vars are set in Render.
   HMAC of the token keyed by `SESSION_SECRET`. Logging in elsewhere kicks the old
   connection.
 - **Multiple islands later:** the schema and `Island` class are keyed by island id;
-  for now everyone joins island 1 (`DEFAULT_ISLAND` in `server/index.js`).
+  everyone joins island 2 (`DEFAULT_ISLAND` in `server/index.js`).
 - **Death:** you drop, see how long the island has lasted, and wake up on the beach
   with starting stats and empty pockets.
 
@@ -181,6 +181,56 @@ planned separately by Thaqif):
   a little less dread). `discoveries` records per player with `first_on_island`
   and a count; first finds are announced to everyone. The journal (J) is a flash
   sheet with a canvas-drawn inked icon per entry.
+- **Phase 5, cloak and events (done).**
+  - *Moon:* 8-day cycle, `moonPhase(day) = (day + 3) % 8`, so day 1 is full and
+    phase 0 (days 5, 13, ...) is the Drowning Moon: fog front up to 40, lanterns
+    burn 2x, more Stilled. The moon disc is drawn per phase; the HUD shows the
+    phase and weather; a dusk warning comes before a Drowning night.
+  - *Weather:* rolled at dawn and noon (`RULES.WEATHER`): clear 6, rain 3,
+    storm 1, fog storm 1 (from day 3). Rain refills thirst, shrinks all light and
+    warmth radii to 70% and brings rain bugs; a storm night makes the next tide
+    1.6x bigger and digging can turn up buried finds; a fog storm adds +9 to the
+    fog front by day. Saved in `islands.weather` / `moon_day`.
+  - *Overnight changes:* when the island wakes after more than 0.8 of a day,
+    `overnight()` does one or two of: leaves a Stilled frozen near a lit camp,
+    puts out a lantern, puts out the fires, drags a sack, pins a note nobody
+    wrote (`CONTENT.ISLAND_NOTES`).
+  - *Driftwood board:* by the first lantern. Read and pin notes (200 characters,
+    one per 30 s, within 4 units), in `board_notes` (last 40 kept).
+  - *Cloak patches:* up to 3 (`RULES.PATCH_SLOTS`), stitched in the journal from
+    things you've found (`WG.PATCHES`, each a perk and a cost), in
+    `cloak_items`, shown on everyone's cloak.
+  - *Full-moon and rain bugs:* glowing mushroom, lantern fish (full moon);
+    glass snail, rain beetle (rain).
+  - *The extra one at the fire:* client-only. At night, warm by a fire with a
+    friend nearby and dread >= 50, you may see one more frog sitting at the fire
+    (a cloak colour nobody has, no name tag). It goes if you stare at it.
+- **The Sleeper (done).** Three carving stones (`generateCarvings(seed)`: by the
+  beach camp, near the main spring, on the highest ground). One request at a
+  time from `sleeper_requests` (editable in Neon: text, conditions, reward,
+  penalty, min_day, weight, days, stone, done_text, fail_text, enabled). Code in
+  `server/sleeper.js`, mixed into `Island`. At dawn (also during catch-up) an
+  expired request fails and applies its penalty; a resolved request is replaced
+  at the next dawn. Condition types: `offer {item,count}` (bring items to the
+  stone), `lanterns_lit {count,minHeight}`, `lantern_fed {which,fuel}`,
+  `gather {count}` (at night, within 6 of the stone), `fires_dawn {count}`,
+  `fog_walk {seconds}` (in thick fog, then back into light), `bugs {count}`,
+  `find {key}`. Rewards: `calm` (fog front drops to 1.5 for the night),
+  `gift` (lamp oil and seeds left at the stone), `relic` (carved mask, eye
+  stone or old tooth, journal category `relics`), `note`, `light` (the nearest
+  cold lantern lights itself). Penalties: `press` (fog front +4, lanterns burn
+  1.5x), `dread`, `douse`. Every request and mood is logged in `island_events`.
+  Gifts left at a stone survive the tide. The carved text re-inks itself on the
+  stone when it changes; reading a stone at night plays breathing; Drowning
+  nights bring small tremors.
+- **Intro cutscene (done).** In-engine, about 73 s, skippable (button, Esc,
+  Enter, Space): the chart inks itself, a storm with the reed boat and
+  lightning, something vast passes under the boat, the grey beach, PELL in the
+  collar, the fog with a Stilled at its edge for a moment, the title, then the
+  frog stands and the camera settles into play. Plays on a player's first
+  arrival if `players.seen_intro` is false; Settings has "Rewatch the intro".
+  While it plays the server holds the player (no hunger, cold, dread or
+  Stilled; at most 150 s). Code: the "Intro cutscene" section of game.js.
 
 ## Content model (added after v1)
 
@@ -226,15 +276,19 @@ regrow after 2 days, mined rocks after 3.
 
 ## Protocol (WebSocket `/ws`, JSON)
 
-Client → server: `hello {token}` (first message), `pos {x,z,face,moving}` (≈15 Hz
-while moving, 1 Hz idle), `act {target}` where target is `o<id>`, `f<id>`, `spring`
-or `sea`, `build {x,z}`, `respawn`.
+Client → server: `hello {token}` (first message), `pos {x,z,face,moving,sprint,cam}`
+(≈15 Hz while moving, 1 Hz idle), `act {target}` where target is `o<id>`, `f<id>`
+(fire), `d<id>` (sack), `l<id>` (lantern), `w<id>` (wash-up), `b<id>` (bug),
+`c<id>` (carving stone offering), `spring` or `sea`, `build {recipe,x,z}`,
+`respawn`, `pin {text}`, `patch {key,on}`, `intro` / `intro-seen`.
 
 Server → client: `welcome` (you, island, objects, fires, players, rules), `snap`
 (time, day, `[id,x,z,face,moving,dead]` per player), `me` (own stats ≈4 Hz),
 `join`, `leave`, `objs` (object state changes), `fire` (new fire), `fires`
 (fuel sync ≈1 Hz), `fx` (swing animation), `toast`, `dawn`, `died`,
-`respawned`, `correct`, `kicked`, `auth-failed`.
+`respawned`, `correct`, `kicked`, `auth-failed`, plus `knocked`, `drop`/`undrop`/
+`movedrop`, `unfire`, `lanterns`, `wash`/`unwash`, `bugs`, `journal`,
+`discovery`, `env` (moon, weather, Sleeper moods), `note`, `patches`, `carvings`.
 
 ## Testing locally
 

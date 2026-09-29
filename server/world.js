@@ -343,6 +343,9 @@ class Island {
     if (done.length) console.log(`[island ${this.id}] overnight: ${done.join(', ')}`);
   }
 
+  // Watching the intro cutscene (held safe for at most two and a half minutes).
+  watching(p) { return p.introAt && Date.now() - p.introAt < 150000; }
+
   // ================= Driftwood board =================
   async pinNote(p, text, key) {
     const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
@@ -489,7 +492,7 @@ class Island {
     if ((this.sleeperTimer = (this.sleeperTimer || 0) - dt) <= 0) { this.sleeperCheck(1 - this.sleeperTimer); this.sleeperTimer = 1; }
     this.updateBugs(dt);
     for (const p of this.players.values()) {
-      if (p.dead) continue;
+      if (p.dead || this.watching(p)) continue;   // nothing happens to you while the intro plays
       const warmMul = this.env.lightMul * (this.has(p, 'silverfin_scale') ? 1.3 : 1);
       p.warm = this.fires.some(f => f.fuel > 0 && Math.hypot(f.x - p.x, f.z - p.z) < FIRES[f.kind].warm * warmMul)
         || this.lanterns.some(l => l.lit && Math.hypot(l.x - p.x, l.z - p.z) < this.lanternRadius(l) * .6 * warmMul);
@@ -560,7 +563,10 @@ class Island {
       case 'respawn': return this.onRespawn(p);
       case 'pin': return this.onPin(p, msg);
       case 'patch': return this.onPatch(p, msg);
-      case 'intro-seen': return this.store.setSeenIntro(p.id, true).catch(e => console.error('[island] intro flag not saved', e.message));
+      case 'intro': p.introAt = Date.now(); return;
+      case 'intro-seen':
+        p.introAt = 0;
+        return this.store.setSeenIntro(p.id, true).catch(e => console.error('[island] intro flag not saved', e.message));
       case 'ping': return this.send(p, { t: 'pong', c: msg.c });
     }
   }
@@ -776,7 +782,7 @@ class Island {
     return true;
   }
   updateStilled(dt, lights) {
-    const S = RULES.STILLED, now = Date.now(), players = [...this.players.values()].filter(p => !p.dead);
+    const S = RULES.STILLED, now = Date.now(), players = [...this.players.values()].filter(p => !p.dead && !this.watching(p));
     // fade: gone when their spot clears (dawn, a fire) or nobody is near
     this.stilled = this.stilled.filter(s => {
       if (s.lingering) {   // left standing in daylight by the night: gone when someone walks up to it
