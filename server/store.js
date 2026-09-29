@@ -32,6 +32,29 @@ function createPgStore(url) {
         lit_at TIMESTAMPTZ,
         PRIMARY KEY (island_id, lantern_id))`);
       await q(`ALTER TABLE lanterns ADD COLUMN IF NOT EXISTS cleared_since TIMESTAMPTZ`);
+      // Phase 4: collections and tides. The two content tables can be edited in
+      // Neon without redeploying; defaults are inserted only if missing.
+      await q(`CREATE TABLE IF NOT EXISTS journal_entries (
+        entry_key TEXT PRIMARY KEY, category TEXT NOT NULL, name TEXT NOT NULL,
+        description TEXT NOT NULL, rarity TEXT NOT NULL DEFAULT 'common')`);
+      await q(`CREATE TABLE IF NOT EXISTS tide_table (
+        item_key TEXT PRIMARY KEY, weight REAL NOT NULL, min_day INT NOT NULL DEFAULT 1,
+        conditions JSONB NOT NULL DEFAULT '{}', kind TEXT NOT NULL DEFAULT 'resource',
+        label TEXT NOT NULL, gives JSONB NOT NULL DEFAULT '{}', entry_key TEXT)`);
+      await q(`CREATE TABLE IF NOT EXISTS discoveries (
+        island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
+        player_id INT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+        entry_key TEXT NOT NULL, found_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        first_on_island BOOLEAN NOT NULL DEFAULT false, count INT NOT NULL DEFAULT 1,
+        PRIMARY KEY (island_id, player_id, entry_key))`);
+      await q(`CREATE TABLE IF NOT EXISTS washups (
+        id SERIAL PRIMARY KEY, island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
+        item_key TEXT NOT NULL, x REAL NOT NULL, z REAL NOT NULL, data JSONB NOT NULL DEFAULT '{}', day INT NOT NULL)`);
+      const C = require('./content');
+      for (const e of C.JOURNAL) await q(`INSERT INTO journal_entries (entry_key, category, name, description, rarity) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+        [e.key, e.category, e.name, e.description, e.rarity]);
+      for (const t of C.TIDE) await q(`INSERT INTO tide_table (item_key, weight, min_day, conditions, kind, label, gives, entry_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING`,
+        [t.key, t.weight, t.minDay || 1, t.conditions || {}, t.kind, t.label, t.gives || {}, t.entry || null]);
       await q(`ALTER TABLE lanterns ADD COLUMN IF NOT EXISTS reclaim_progress REAL NOT NULL DEFAULT 1`);
       await q(`CREATE TABLE IF NOT EXISTS drops (
         id SERIAL PRIMARY KEY,
@@ -128,6 +151,34 @@ function createPgStore(url) {
     },
     async deleteDrop(id) { await q('DELETE FROM drops WHERE id = $1', [id]); },
     async moveDrop(id, x, z) { await q('UPDATE drops SET x = $2, z = $3 WHERE id = $1', [id, x, z]); },
+    // content (editable tables) and collections
+    async loadContent() {
+      const j = await q('SELECT entry_key, category, name, description, rarity FROM journal_entries ORDER BY category, entry_key');
+      const t = await q('SELECT item_key, weight, min_day, conditions, kind, label, gives, entry_key FROM tide_table');
+      return {
+        journal: j.rows.map(r => ({ key: r.entry_key, category: r.category, name: r.name, description: r.description, rarity: r.rarity })),
+        tide: t.rows.map(r => ({ key: r.item_key, weight: r.weight, minDay: r.min_day, conditions: r.conditions, kind: r.kind, label: r.label, gives: r.gives, entry: r.entry_key })),
+      };
+    },
+    async loadDiscoveries(islandId) {
+      const r = await q(`SELECT d.player_id, p.username, d.entry_key, d.first_on_island, d.count, d.found_at FROM discoveries d
+                         JOIN players p ON p.id = d.player_id WHERE d.island_id = $1`, [islandId]);
+      return r.rows.map(x => ({ playerId: x.player_id, name: x.username, key: x.entry_key, first: x.first_on_island, count: x.count, foundAt: new Date(x.found_at).getTime() }));
+    },
+    async recordDiscovery(islandId, playerId, key, first) {
+      await q(`INSERT INTO discoveries (island_id, player_id, entry_key, first_on_island) VALUES ($1, $2, $3, $4)
+               ON CONFLICT (island_id, player_id, entry_key) DO UPDATE SET count = discoveries.count + 1`, [islandId, playerId, key, first]);
+    },
+    async loadWashups(islandId) {
+      const r = await q('SELECT id, item_key, x, z, data, day FROM washups WHERE island_id = $1', [islandId]);
+      return r.rows.map(w => ({ id: w.id, key: w.item_key, x: w.x, z: w.z, data: w.data, day: w.day }));
+    },
+    async insertWashup(islandId, w) {
+      const r = await q('INSERT INTO washups (island_id, item_key, x, z, data, day) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id', [islandId, w.key, w.x, w.z, w.data || {}, w.day]);
+      return r.rows[0].id;
+    },
+    async deleteWashup(id) { await q('DELETE FROM washups WHERE id = $1', [id]); },
+    async clearWashups(islandId) { await q('DELETE FROM washups WHERE island_id = $1', [islandId]); },
     async deleteFire(id) { await q('DELETE FROM fires WHERE id = $1', [id]); },
     async insertFire(islandId, x, z, fuel, builtBy, kind) {
       const r = await q('INSERT INTO fires (island_id, x, z, fuel, built_by, kind) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
@@ -139,7 +190,8 @@ function createPgStore(url) {
 }
 
 function createMemoryStore() {
-  let nextPlayer = 1, nextFire = 1, nextDrop = 1;
+  let nextPlayer = 1, nextFire = 1, nextDrop = 1, nextWashup = 1;
+  const discoveries = []; let washups = [];
   const players = new Map(), sessions = new Map(), members = new Map();
   const islands = new Map([
     [1, { id: 1, name: 'Unknown Island', seed: 7, day: 1, time: 0.26, lastTickAt: Date.now(), objects: new Map(), fires: [], drops: [], lanterns: new Map() }],
@@ -205,6 +257,20 @@ function createMemoryStore() {
     },
     async deleteDrop(id) { for (const i of islands.values()) i.drops = i.drops.filter(d => d.id !== id); },
     async moveDrop(id, x, z) { for (const i of islands.values()) for (const d of i.drops) if (d.id === id) Object.assign(d, { x, z }); },
+    async loadContent() {
+      const C = require('./content');
+      return { journal: clone(C.JOURNAL), tide: C.TIDE.map(t => ({ minDay: 1, gives: {}, conditions: {}, ...clone(t) })) };
+    },
+    async loadDiscoveries(islandId) { return clone(discoveries.filter(d => d.islandId === islandId)); },
+    async recordDiscovery(islandId, playerId, key, first) {
+      const d = discoveries.find(d => d.islandId === islandId && d.playerId === playerId && d.key === key);
+      if (d) d.count++;
+      else discoveries.push({ islandId, playerId, name: (players.get(playerId) || {}).username, key, first, count: 1, foundAt: Date.now() });
+    },
+    async loadWashups(islandId) { return clone(washups.filter(w => w.islandId === islandId)); },
+    async insertWashup(islandId, w) { const id = nextWashup++; washups.push({ ...clone(w), id, islandId }); return id; },
+    async deleteWashup(id) { washups = washups.filter(w => w.id !== id); },
+    async clearWashups(islandId) { washups = washups.filter(w => w.islandId !== islandId); },
     async deleteFire(id) { for (const i of islands.values()) i.fires = i.fires.filter(f => f.id !== id); },
     async insertFire(islandId, x, z, fuel, builtBy, kind) {
       const id = nextFire++;

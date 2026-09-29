@@ -168,6 +168,19 @@ planned separately by Thaqif):
   max 2.5x) and doubles on Drowning nights (`env.drowning`, set in Phase 5).
   All of it runs during offline catch-up; inventories and journals are never
   touched.
+- **Phase 4, tides, bugs and the journal (done; no bottles/relics/name stones,
+  which are story).** Content lives in the database so it can be edited in Neon
+  without redeploying: `journal_entries` (key, category bugs/shells/glass/tide/
+  strange, name, description, rarity) and `tide_table` (weight, min_day, kind
+  resource/food/collectible/strange, gives JSON, entry_key). Defaults are in
+  `server/content.js` and only inserted if missing; the server reloads content
+  every 5 minutes (on join). Each sunrise `tide()` clears the old `washups` and
+  washes 8-12 new ones onto beaches (at most one strange thing per tide; the
+  footprints lead to the nearest fire/lit lantern). Bugs (`CONTENT.BUGS`) spawn
+  around players by biome and time, last 1-2 minutes, and can be caught (food,
+  a little less dread). `discoveries` records per player with `first_on_island`
+  and a count; first finds are announced to everyone. The journal (J) is a flash
+  sheet with a canvas-drawn inked icon per entry.
 
 ## Content model (added after v1)
 

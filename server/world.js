@@ -1,5 +1,6 @@
 // The island: authoritative simulation, catch-up after quiet periods, and persistence.
 const WG = require('./shared/world-gen');
+const CONTENT = require('./content');
 const { RULES, FIRES, ITEMS, heightAt, SPRING, SPAWN, isNight } = WG;
 
 const TICK_MS = 80;           // simulation + position broadcast (~12.5 Hz)
@@ -41,6 +42,7 @@ class Island {
     this.lanternsDirty = new Set();
     this.env = {};   // weather and moon flags for the fog (later phases)
     this.stilled = []; this.nextStilled = 1; this.stilledTimer = 0;
+    this.bugs = []; this.nextBug = 1; this.washups = [];
     this.players = new Map();   // playerId -> live player
     this.dirty = new Set();     // object ids changed since the last save
     this.timer = null;
@@ -60,7 +62,165 @@ class Island {
   static async load(store, id) {
     const data = await store.loadIsland(id);
     if (!data) throw new Error(`Island ${id} not found in the database`);
-    return new Island(store, data);
+    const isl = new Island(store, data);
+    isl.setContent(await store.loadContent());
+    isl.discoveries = new Map();   // entry key -> { first: {playerId, name}, counts: Map(playerId -> n) }
+    for (const d of await store.loadDiscoveries(id)) isl.noteDiscovery(d.key, d.playerId, d.name, d.first, d.count);
+    isl.washups = await store.loadWashups(id);
+    return isl;
+  }
+
+  // Journal entries and the tide table live in the database so they can be
+  // edited without a code change; reloaded every few minutes.
+  setContent(c) { this.content = c; this.contentAt = Date.now(); this.journalKeys = new Set(c.journal.map(e => e.key)); }
+  async refreshContent() {
+    if (Date.now() - (this.contentAt || 0) < 5 * 60 * 1000) return;
+    try { this.setContent(await this.store.loadContent()); } catch (e) { console.error('[island] content reload failed', e.message); }
+  }
+  noteDiscovery(key, playerId, name, first, count = 1) {
+    if (!this.discoveries.has(key)) this.discoveries.set(key, { first: null, counts: new Map() });
+    const d = this.discoveries.get(key);
+    if (first || !d.first) d.first = d.first && !first ? d.first : { playerId, name };
+    d.counts.set(playerId, count);
+  }
+  // A player finds something for the journal: first finds are credited and announced.
+  discover(p, key) {
+    if (!key || !this.journalKeys.has(key)) return;
+    const d = this.discoveries.get(key);
+    const first = !d || !d.first;
+    const count = ((d && d.counts.get(p.id)) || 0) + 1;
+    this.noteDiscovery(key, p.id, p.name, first, count);
+    this.store.recordDiscovery(this.id, p.id, key, first).catch(e => console.error('[island] discovery not saved', e.message));
+    const entry = this.content.journal.find(e => e.key === key);
+    if (first) this.broadcast({ t: 'discovery', key, by: p.name, first: true, name: entry.name });
+    this.send(p, { t: 'journal', key, count, first: this.discoveries.get(key).first.name });
+  }
+  journalView(p) {
+    const firsts = {}, mine = {};
+    for (const [key, d] of this.discoveries) {
+      if (d.first) firsts[key] = d.first.name;
+      if (d.counts.has(p.id)) mine[key] = d.counts.get(p.id);
+    }
+    return { entries: this.content.journal, firsts, mine };
+  }
+
+  // ================= Tides =================
+  // Each sunrise the sea takes back what it left last time and washes up new
+  // things from the tide table, onto the beaches.
+  async tide() {
+    if (this.tiding) return;   // one tide at a time
+    this.tiding = true;
+    try { await this.runTide(); } finally { this.tiding = false; }
+  }
+  async runTide() {
+    const T = this.content.tide.filter(t => (t.minDay || 1) <= this.day);
+    if (!T.length) return;
+    const total = T.reduce((a, t) => a + t.weight, 0);
+    const pick = () => { let r = Math.random() * total; for (const t of T) if ((r -= t.weight) <= 0) return t; return T[0]; };
+    const old = this.washups;
+    this.washups = [];
+    if (old.length && this.players.size) this.broadcast({ t: 'unwash', ids: old.map(w => w.id) });
+    try { await this.store.clearWashups(this.id); } catch (e) { console.error('[island] tide clear failed', e.message); }
+    const n = 8 + Math.floor(Math.random() * 5);
+    let strange = 0;
+    for (let i = 0; i < n; i++) {
+      let t = pick();
+      if (t.kind === 'strange' && ++strange > 1) t = T.find(x => x.key === 'driftwood') || t;   // at most one wrong thing per tide
+      const spot = this.beachSpot();
+      if (!spot) continue;
+      const w = { key: t.key, x: spot.x, z: spot.z, day: this.day, data: {} };
+      if (t.key === 'footprints') w.data = this.footprintTarget(spot);
+      try { w.id = await this.store.insertWashup(this.id, w); } catch (e) { console.error('[island] washup not saved', e.message); continue; }
+      this.washups.push(w);
+      if (this.players.size) this.broadcast({ t: 'wash', w: this.washView(w) });
+    }
+  }
+  beachSpot() {
+    for (let tries = 0; tries < 400; tries++) {
+      const x = (Math.random() - .5) * WG.ISL * 2.3, z = (Math.random() - .5) * WG.ISL * 2.3, h = heightAt(x, z);
+      if (h > .4 && h < .85 && WG.biomeAt(x, z, h) === 'beach') return { x: r2(x), z: r2(z) };
+    }
+    return null;
+  }
+  // Footprints walk out of the sea to the nearest fire or lantern, and stop.
+  footprintTarget(spot) {
+    let best = null, bd = 90;
+    for (const f of this.fires) { const d = Math.hypot(f.x - spot.x, f.z - spot.z); if (d < bd) { bd = d; best = f; } }
+    for (const l of this.lanterns) { const d = Math.hypot(l.x - spot.x, l.z - spot.z); if (l.lit && d < bd) { bd = d; best = l; } }
+    if (best) return { tx: best.x, tz: best.z };
+    const a = Math.atan2(-spot.z, -spot.x);   // otherwise simply inland
+    return { tx: r2(spot.x + Math.cos(a) * 25), tz: r2(spot.z + Math.sin(a) * 25) };
+  }
+  washView(w) { const t = this.content.tide.find(t => t.key === w.key) || {}; return { id: w.id, key: w.key, x: w.x, z: w.z, data: w.data, kind: t.kind, label: t.label || w.key }; }
+  async takeWashup(p, id) {
+    const w = this.washups.find(w => w.id === id);
+    if (!w || Math.hypot(w.x - p.x, w.z - p.z) > 2 + RULES.REACH + REACH_SLACK) return;
+    const t = this.content.tide.find(t => t.key === w.key) || { kind: 'resource', gives: {} };
+    const say = msg => this.send(p, { t: 'toast', msg });
+    this.discover(p, t.entry);
+    if (t.kind === 'strange') {
+      if (w.key === 'door_in_sand') return say('It will not open. There is nothing behind it.');
+      if (w.key === 'ringing_bell') { this.broadcast({ t: 'fx', id: p.id, k: 'bell', x: w.x, z: w.z }); p.dread = Math.min(100, p.dread + 4); return say('It rings. The sea is perfectly flat.'); }
+      if (w.key === 'footprints') { p.dread = Math.min(100, p.dread + 6); return say('Webbed feet. They walk out of the sea and do not walk back.'); }
+      if (w.key === 'your_cloak') { p.dread = Math.min(100, p.dread + 10); say('Same patch, same frayed hem. It\u2019s still warm.'); }
+    } else if (t.kind === 'food') {
+      p.hunger = Math.min(100, p.hunger + (t.gives.hunger || 15)); p.dread = Math.max(0, p.dread + RULES.DREAD.EAT);
+      say(`${t.label}. You eat it on the spot.`);
+    } else {
+      const got = [];
+      for (const [k, n] of Object.entries(t.gives || {})) if (k in p.inv) { p.inv[k] += n; got.push(`+${n} ${WG.ITEMS[k].toLowerCase()}`); }
+      say(got.length ? `${t.label}: ${got.join(', ')}` : `${t.label}. Into the journal.`);
+    }
+    this.washups = this.washups.filter(x => x !== w);
+    this.broadcast({ t: 'unwash', ids: [w.id] });
+    this.store.deleteWashup(w.id).catch(e => console.error('[island] washup delete failed', e.message));
+    this.fx(p, 'swing');
+    this.sendMe(p);
+  }
+
+  // ================= Bugs =================
+  // Bugs appear around players by biome and time of day; catch them to eat and
+  // for the journal. The server decides where they are; clients animate them.
+  updateBugs(dt) {
+    if ((this.bugTimer = (this.bugTimer || 0) - dt) > 0) return;
+    this.bugTimer = 1;
+    const now = Date.now(), night = WG.nightFactor(this.time) > .5;
+    let changed = false;
+    const before = this.bugs.length;
+    this.bugs = this.bugs.filter(b => b.until > now && [...this.players.values()].some(p => Math.hypot(p.x - b.x, p.z - b.z) < 45));
+    if (this.bugs.length !== before) changed = true;
+    for (const p of this.players.values()) {
+      if (p.dead) continue;
+      const near = this.bugs.filter(b => Math.hypot(p.x - b.x, p.z - b.z) < 30).length;
+      if (near >= 5 || Math.random() > .5) continue;
+      for (let tries = 0; tries < 6; tries++) {
+        const a = Math.random() * Math.PI * 2, r = 8 + Math.random() * 16, x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
+        const h = heightAt(x, z), biome = WG.biomeAt(x, z, h);
+        const sp = WG.nearestSpring(x, z), nearWater = Math.hypot(x - sp.x, z - sp.z) < 20 || biome === 'beach';
+        const kinds = CONTENT.BUGS.filter(k => (k.when === 'any' || (k.when === 'night') === night) && k.biomes.includes(biome) && (!k.nearWater || nearWater));
+        if (!kinds.length) continue;
+        const total = kinds.reduce((a, k) => a + k.weight * (k.key === 'moon_moth' && this.env.fullMoon ? 6 : 1), 0);
+        let roll = Math.random() * total, kind = kinds[0];
+        for (const k of kinds) if ((roll -= k.weight * (k.key === 'moon_moth' && this.env.fullMoon ? 6 : 1)) <= 0) { kind = k; break; }
+        this.bugs.push({ id: this.nextBug++, key: kind.key, x: r2(x), z: r2(z), until: now + 60000 + Math.random() * 60000 });
+        changed = true;
+        break;
+      }
+    }
+    if (changed) this.broadcast({ t: 'bugs', list: this.bugs.map(b => [b.id, b.key, b.x, b.z]) });
+  }
+  catchBug(p, id) {
+    const b = this.bugs.find(b => b.id === id);
+    if (!b || Math.hypot(b.x - p.x, b.z - p.z) > 1.8 + REACH_SLACK + .8) return;
+    this.bugs = this.bugs.filter(x => x !== b);
+    p.hunger = Math.min(100, p.hunger + 6);
+    p.dread = Math.max(0, p.dread - 2);
+    const entry = this.content.journal.find(e => e.key === b.key);
+    this.send(p, { t: 'toast', msg: `${entry ? entry.name : 'A bug'}. Crunchy.` });
+    this.discover(p, b.key);
+    this.broadcast({ t: 'bugs', list: this.bugs.map(b => [b.id, b.key, b.x, b.z]) });
+    this.fx(p, 'swing');
+    this.sendMe(p);
   }
 
   // ================= Time =================
@@ -76,6 +236,7 @@ class Island {
     for (const l of this.lanterns || []) this.burnLantern(l, sec);
     if (sunrises > 0) {
       this.day += sunrises;
+      if (this.content) this.tide();   // async; the sea brings new things
       return this.dawn();
     }
     return [];
@@ -116,6 +277,7 @@ class Island {
 
   // ================= Players =================
   async join(account, ws) {
+    await this.refreshContent();
     const old = this.players.get(account.id);
     if (old) {
       this.send(old, { t: 'kicked', reason: 'You logged in somewhere else.' });
@@ -151,6 +313,9 @@ class Island {
       fires: this.fires.map(f => this.fireView(f)),
       drops: this.drops.map(d => ({ id: d.id, x: d.x, z: d.z })),
       lanterns: this.lanterns.map(l => this.lanternView(l)),
+      washups: this.washups.map(w => this.washView(w)),
+      bugs: this.bugs.map(b => [b.id, b.key, b.x, b.z]),
+      journal: this.journalView(p),
       players: [...this.players.values()].filter(q => q !== p).map(q => this.publicView(q)),
       rules: RULES,
     });
@@ -180,6 +345,7 @@ class Island {
   start() {
     if (this.timer) return;
     this.catchUp();
+    if (!this.washups.length && this.content && !this.tiding) this.tide();   // first visit: something on the beaches already
     this.lastSave = Date.now();
     this.timer = setInterval(() => this.tick(), TICK_MS);
   }
@@ -206,6 +372,7 @@ class Island {
     const lights = this.lights();
     const D = RULES.DREAD, nf = WG.nightFactor(this.time);
     this.updateStilled(dt, lights);
+    this.updateBugs(dt);
     for (const p of this.players.values()) {
       if (p.dead) continue;
       p.warm = this.fires.some(f => f.fuel > 0 && Math.hypot(f.x - p.x, f.z - p.z) < FIRES[f.kind].warm)
@@ -319,8 +486,10 @@ class Island {
       return say('Salty. That only made it worse.');
     }
 
-    const m = /^([ofdl])(\d+)$/.exec(target);
+    const m = /^([ofdlwb])(\d+)$/.exec(target);
     if (!m) return;
+    if (m[1] === 'w') return this.takeWashup(p, +m[2]);
+    if (m[1] === 'b') return this.catchBug(p, +m[2]);
     if (m[1] === 'd') return this.pickUp(p, +m[2]);
     if (m[1] === 'l') return this.tendLantern(p, +m[2]);
     if (m[1] === 'f') {

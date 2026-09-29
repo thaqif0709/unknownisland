@@ -1038,6 +1038,99 @@
   function clearLanterns() { lanterns.forEach(l => scene.remove(l.mesh)); lanterns = new Map(); }
   const lanternRadius = l => l.big ? RULES.LANTERN.BIG_RADIUS : RULES.LANTERN.RADIUS;
 
+  // ================= Tides: things the sea washes up =================
+  let washups = new Map();
+  const driftM = soft(0x9A8068), crateM = soft(0xA07A4A), fishM = soft(0xB9C3C6), shellM = soft(0xEBD9C3), shellPinkM = soft(0xE3A89A),
+    doorM = soft(0x6E5646), bellM = soft(0xC9A04A), plankM = soft(0x8A6A52), printM = new THREE.MeshBasicMaterial({ color: 0x5E4A3A, transparent: true, opacity: .55, depthWrite: false });
+  const glassMats = { glass_green: 0x7FBF8A, glass_blue: 0x6FA3D0, glass_amber: 0xE0A33A, glass_violet: 0xA88BD8 };
+  function makeWashup(w) {
+    const g = new THREE.Group(), r = mulberry32(w.id * 31 + 7);
+    const add = (geo, m, x, y, z) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); g.add(mesh); return mesh; };
+    switch (w.key) {
+      case 'driftwood': { const l = add(new THREE.CylinderGeometry(.12, .17, 1.8, 8), driftM, 0, .14, 0); l.rotation.z = Math.PI / 2; l.rotation.y = r() * 3;
+        const b = add(new THREE.CylinderGeometry(.05, .07, .6, 6), driftM, .3, .2, .15); b.rotation.set(.6, 0, 1.1); break; }
+      case 'crate_seeds': case 'crate_oil': { const c = add(new THREE.BoxGeometry(.7, .55, .6), crateM, 0, .25, 0); c.rotation.set(.12, r() * 3, .1);
+        add(new THREE.BoxGeometry(.72, .08, .62), driftM, 0, .5, 0).rotation.copy(c.rotation); break; }
+      case 'silverfin': { const f = add(new THREE.SphereGeometry(.3, 10, 6), fishM, 0, .08, 0); f.scale.set(1.4, .35, .55);
+        const tail = add(new THREE.ConeGeometry(.16, .25, 4), fishM, -.45, .08, 0); tail.rotation.z = Math.PI / 2; break; }
+      case 'spiral_shell': case 'conch': { const big = w.key === 'conch' ? 1.8 : 1; const c = add(new THREE.ConeGeometry(.12 * big, .32 * big, 10), w.key === 'conch' ? shellPinkM : shellM, 0, .1, 0); c.rotation.z = 1.3;
+        add(new THREE.SphereGeometry(.11 * big, 10, 8), w.key === 'conch' ? shellPinkM : shellM, .12 * big, .09, 0); break; }
+      case 'cowrie': add(new THREE.SphereGeometry(.12, 10, 8), shellM, 0, .07, 0).scale.set(1.3, .6, .9); break;
+      case 'scallop': { const s2 = add(new THREE.CylinderGeometry(.2, .02, .05, 10, 1, false, 0, Math.PI), shellPinkM, 0, .04, 0); s2.rotation.x = -1.4; break; }
+      case 'sand_dollar': add(new THREE.CylinderGeometry(.16, .16, .03, 14), shellM, 0, .03, 0); break;
+      case 'door_in_sand': { add(new THREE.BoxGeometry(1.1, 2.1, .12), doorM, 0, 1, 0); add(new THREE.BoxGeometry(1.3, .12, .16), plankM, 0, 2.1, 0);
+        add(new THREE.SphereGeometry(.05, 8, 6), bellM, .38, 1, .08); g.rotation.y = r() * 3; break; }
+      case 'ringing_bell': { add(new THREE.BoxGeometry(1.6, .1, .4), plankM, 0, .1, 0); add(new THREE.CylinderGeometry(.03, .03, .7, 6), plankM, 0, .5, 0);
+        const bell = add(new THREE.CylinderGeometry(.08, .22, .3, 12), bellM, 0, .72, 0); g.userData.bell = bell; break; }
+      case 'your_cloak': { const c = add(new THREE.SphereGeometry(.5, 12, 8), softShared(me ? colorFor(me.id) : 0x8A6A52), 0, .06, 0); c.scale.set(1.3, .18, .9); break; }
+      case 'footprints': {   // a line of webbed prints from the sea to the target, and none back
+        const tx = w.data.tx, tz = w.data.tz, len = Math.hypot(tx - w.x, tz - w.z), n = Math.min(80, Math.floor(len / .7));
+        const a = Math.atan2(tx - w.x, tz - w.z), printGeo = new THREE.CircleGeometry(.11, 5);
+        for (let i = 0; i < n; i++) {
+          const k = i / n, side = i % 2 ? .16 : -.16, x = w.x + (tx - w.x) * k + Math.cos(a) * side, z = w.z + (tz - w.z) * k - Math.sin(a) * side;
+          const m = new THREE.Mesh(printGeo, printM); m.rotation.x = -Math.PI / 2; m.rotation.z = -a; m.scale.set(1, 1.5, 1);
+          m.position.set(x - w.x, groundAt(x, z) - groundAt(w.x, w.z) + .04, z - w.z); g.add(m);
+        }
+        break; }
+      default: {
+        if (glassMats[w.key]) { const m = new THREE.MeshBasicMaterial({ color: glassMats[w.key], transparent: true, opacity: .85 });
+          const gl = add(new THREE.IcosahedronGeometry(.15, 0), m, 0, .08, 0); gl.scale.set(1.3, .6, 1); }
+        else add(new THREE.BoxGeometry(.3, .3, .3), crateM, 0, .15, 0);
+      }
+    }
+    g.position.set(w.x, groundAt(w.x, w.z), w.z);
+    if (w.key !== 'footprints') shadows(g);
+    return g;
+  }
+  function addWash(w) {
+    if (washups.has(w.id)) return;
+    const mesh = makeWashup(w);
+    scene.add(mesh);
+    if (w.key === 'footprints') noInk.add(mesh);
+    washups.set(w.id, { ...w, type: 'wash', r: w.key === 'door_in_sand' ? .7 : .4, mesh, state: {} });
+  }
+  function removeWash(id) { const w = washups.get(id); if (w) { scene.remove(w.mesh); noInk.delete(w.mesh); washups.delete(id); } }
+  function clearWash() { [...washups.keys()].forEach(removeWash); }
+
+  // ================= Bugs =================
+  // Server decides where; here they flit, hover, hop or crawl around that spot.
+  let bugs = new Map();
+  const bugMats = { firefly: new THREE.MeshBasicMaterial({ color: 0xE8F27A }), moon_moth: new THREE.MeshBasicMaterial({ color: 0xF3EAD6 }),
+    cricket: soft(0x6F8F4A), bark_beetle: soft(0x3E3430), dragonfly: soft(0x5F7FA8), wing: new THREE.MeshBasicMaterial({ color: 0xE9F1F3, transparent: true, opacity: .55 }) };
+  function makeBug(key) {
+    const g = new THREE.Group(), add = (geo, m, x, y, z) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); g.add(mesh); return mesh; };
+    if (key === 'firefly') { add(new THREE.SphereGeometry(.07, 8, 6), bugMats.firefly, 0, 0, 0); add(new THREE.SphereGeometry(.05, 6, 4), bugMats.bark_beetle, 0, .02, .06); }
+    else if (key === 'moon_moth') { add(new THREE.SphereGeometry(.04, 6, 4), bugMats.moon_moth, 0, 0, 0);
+      for (const sx of [-1, 1]) { const w = add(new THREE.CircleGeometry(.16, 8), bugMats.moon_moth, sx * .13, 0, 0); w.rotation.x = -Math.PI / 2; g.userData['wing' + sx] = w; } }
+    else if (key === 'dragonfly') { const b = add(new THREE.CylinderGeometry(.02, .015, .4, 6), bugMats.dragonfly, 0, 0, 0); b.rotation.x = Math.PI / 2;
+      for (const sx of [-1, 1]) for (const dz of [-.04, .06]) { const w = add(new THREE.PlaneGeometry(.26, .06), bugMats.wing, sx * .14, .01, dz); w.rotation.x = -Math.PI / 2; } }
+    else if (key === 'cricket') { add(new THREE.SphereGeometry(.07, 8, 6), bugMats.cricket, 0, 0, 0).scale.set(.7, .7, 1.5); }
+    else { add(new THREE.SphereGeometry(.08, 8, 6), bugMats.bark_beetle, 0, 0, 0).scale.set(1, .55, 1.3); }
+    return g;
+  }
+  function syncBugs(list) {
+    const seen = new Set();
+    for (const [id, key, x, z] of list) {
+      seen.add(id);
+      if (!bugs.has(id)) { const mesh = makeBug(key); scene.add(mesh); if (key === 'firefly' || key === 'moon_moth') noInk.add(mesh);
+        bugs.set(id, { id, key, x, z, type: 'bug', r: .3, mesh, state: {}, ph: Math.random() * 6.28 }); }
+    }
+    for (const [id, b] of bugs) if (!seen.has(id)) { scene.remove(b.mesh); noInk.delete(b.mesh); bugs.delete(id); }
+  }
+  function animateBugs(elapsed) {
+    bugs.forEach(b => {
+      const e = elapsed + b.ph, gy = groundAt(b.x, b.z);
+      let x = b.x, z = b.z, y = gy;
+      if (b.key === 'firefly' || b.key === 'moon_moth') { x += Math.sin(e * .7) * .8; z += Math.cos(e * .5) * .8; y += 1 + Math.sin(e * 1.3) * .3; }
+      else if (b.key === 'dragonfly') { x += Math.sin(e * .9) * 1.2; z += Math.sin(e * .6) * 1.2; y += .9 + Math.sin(e * 5) * .05; }
+      else if (b.key === 'cricket') { y += .07 + Math.max(0, Math.sin(e * 2.2)) * .35; x += Math.sin(e * .3) * .6; }
+      else { x += Math.sin(e * .25) * .5; z += Math.cos(e * .2) * .5; y += .05; }
+      b.mesh.position.set(x, y, z); b.mesh.rotation.y = e * .5;
+      b.cx = x; b.cz = z;   // where it actually is, for catching
+      if (b.mesh.userData['wing-1']) { const f = Math.sin(e * 14) * .6; b.mesh.userData['wing-1'].rotation.y = f; b.mesh.userData.wing1.rotation.y = -f; }
+    });
+  }
+
   // Sacks of things dropped when someone was knocked down.
   let drops = new Map();
   const sackM = soft(0xB59A72), tieM = soft(0x7A5A45);
@@ -1071,7 +1164,7 @@
 
   const $ = id => document.getElementById(id);
   const ui = { hud: $('hud'), inv: $('inv'), prompt: $('prompt'), toast: $('toast'), overlay: $('overlay'), online: $('online'),
-    touch: $('touchUi'), banner: $('banner'), tags: $('tags'), gear: $('btnSettings'), book: $('book'), settings: $('settings') };
+    touch: $('touchUi'), banner: $('banner'), tags: $('tags'), gear: $('btnSettings'), book: $('book'), settings: $('settings'), journal: $('journal') };
   let toastTimer = 0;
   function toast(msg) { ui.toast.textContent = msg; ui.toast.classList.add('on'); toastTimer = 2.6; }
 
@@ -1221,6 +1314,9 @@
         clearDrops(); (m.drops || []).forEach(addDrop);
         clearStilled();
         clearLanterns(); (m.lanterns || []).forEach(setLantern);
+        clearWash(); (m.washups || []).forEach(addWash);
+        syncBugs(m.bugs || []);
+        if (m.journal) journal = m.journal;
         resetRemotes(); m.players.forEach(addRemote);
         if (hero) removeCastaway(hero);
         hero = makeCastaway(colorFor(me.id));
@@ -1266,6 +1362,7 @@
       case 'fx': {
         if (m.o != null && objects[m.o] && objects[m.o].mesh) objects[m.o].mesh.rotation.z = .06;
         if (me && m.id !== me.id) { const r = remotes.get(m.id); if (r) r.av.swingT = .35; }
+        if (m.k === 'bell') Sound.bell(m.x, m.z);
         break;
       }
       case 'toast': toast(m.msg); break;
@@ -1275,6 +1372,18 @@
         break;
       case 'drop': addDrop(m.drop); break;
       case 'lanterns': for (const l of m.list) setLantern(l); break;
+      case 'wash': addWash(m.w); break;
+      case 'unwash': m.ids.forEach(removeWash); break;
+      case 'bugs': syncBugs(m.list); break;
+      case 'journal':
+        journal.mine[m.key] = m.count; if (m.first) journal.firsts[m.key] = m.first;
+        if (m.count === 1) { const e = journal.entries.find(e => e.key === m.key); if (e) stamp(`New in your journal: ${e.name}`); }
+        if (!ui.journal.classList.contains('gone')) renderJournal();
+        break;
+      case 'discovery':
+        journal.firsts[m.key] = m.by;
+        if (!me || m.by !== me.name) toast(`${m.by} found the first ${m.name.toLowerCase()} on the island.`);
+        break;
       case 'unfire': { const f = fires.get(m.id); if (f) { scene.remove(f.mesh); fires.delete(m.id); } break; }
       case 'movedrop': { const d = drops.get(m.id); if (d) { d.x = m.x; d.z = m.z; d.mesh.position.set(m.x, groundAt(m.x, m.z), m.z); } break; }
       case 'undrop': removeDrop(m.id); break;
@@ -1332,7 +1441,8 @@
       const d = Math.hypot(o.x - px, o.z - pz) - radius(o);
       if (d < RULES.REACH && d < bd) { bd = d; bestO = o; }
     };
-    nearbyObjects(px, pz, check); fires.forEach(check); drops.forEach(check); lanterns.forEach(check);
+    nearbyObjects(px, pz, check); fires.forEach(check); drops.forEach(check); lanterns.forEach(check); washups.forEach(check);
+    bugs.forEach(b => { const d = Math.hypot((b.cx ?? b.x) - px, (b.cz ?? b.z) - pz); if (d < 1.9 && d < bd) { bd = d; bestO = b; } });
     if (bestO) return bestO;
     const sn = WG.nearestSpring(px, pz);
     if (Math.hypot(px - sn.x, pz - sn.z) < RULES.SPRING_REACH) return { type: 'spring' };
@@ -1351,6 +1461,8 @@
       case 'ore': return has('pickaxe') ? `Mine ${o.ore === 'iron' ? 'iron' : 'copper'} ore` : `${o.ore === 'iron' ? 'Iron' : 'Copper'} ore (needs a pickaxe)`;
       case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
       case 'drop': return 'Pick up the scattered things';
+      case 'wash': return o.kind === 'strange' ? (o.key === 'door_in_sand' ? 'Try the door' : o.key === 'ringing_bell' ? 'Touch the bell' : o.key === 'footprints' ? 'Look at the footprints' : 'Pick it up') : `Pick up: ${o.label.replace(/^A /, 'a ')}`;
+      case 'bug': { const e = journal.entries.find(e => e.key === o.key); return `Catch the ${(e ? e.name : 'bug').toLowerCase()}`; }
       case 'lantern': {
         const oil = (stats.inv.oil || 0) > 0;
         if (o.lit) return oil ? `Add lamp oil (burns ${Math.ceil(o.fuel / RULES.DAY_LEN * 24)} more hours)` : 'A lit stone lantern';
@@ -1365,7 +1477,7 @@
   const has = tool => stats.tools.includes(tool);
   function targetKey(o) {
     if (o.type === 'spring' || o.type === 'sea') return o.type;
-    return (o.type === 'fire' ? 'f' : o.type === 'drop' ? 'd' : o.type === 'lantern' ? 'l' : 'o') + o.id;
+    return ({ fire: 'f', drop: 'd', lantern: 'l', wash: 'w', bug: 'b' }[o.type] || 'o') + o.id;
   }
   function act() {
     if (state !== 'play' || cooldown > 0 || !target || !net || knockT > 0) return;
@@ -1386,6 +1498,7 @@
   const canAfford = r => Object.entries(r.cost).every(([k, n]) => (stats.inv[k] || 0) >= n);
   $('btnAct').addEventListener('click', act);
   $('btnBook').addEventListener('click', () => togglePanel('book'));
+  $('btnJournal').addEventListener('click', () => togglePanel('journal'));
   $('btnSettings').addEventListener('click', () => togglePanel('settings'));
   $('btnRun').addEventListener('click', () => { runToggle = !runToggle; $('btnRun').setAttribute('aria-pressed', String(runToggle)); });
 
@@ -1394,7 +1507,7 @@
   const ACTIONS = [
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
-    ['book', 'Recipe book', 'KeyB'],
+    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'],
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -1414,7 +1527,7 @@
   const keys = {};
   const held = a => !!keys[prefs.binds[a]];
   let waitingBind = null;
-  const panelOpen = () => !ui.book.classList.contains('gone') || !ui.settings.classList.contains('gone');
+  const panelOpen = () => !ui.book.classList.contains('gone') || !ui.settings.classList.contains('gone') || !ui.journal.classList.contains('gone');
   window.addEventListener('keydown', e => {
     if (waitingBind) {
       e.preventDefault();
@@ -1431,13 +1544,17 @@
     }
     if (state !== 'play' && state !== 'dead') return;
     if (e.code === 'Escape') { e.preventDefault(); if (panelOpen()) closePanels(); else if (state === 'play') togglePanel('settings'); return; }
-    if (panelOpen()) { if (e.code === prefs.binds.book && !ui.book.classList.contains('gone')) closePanels(); return; }
+    if (panelOpen()) {
+      if ((e.code === prefs.binds.book && !ui.book.classList.contains('gone')) || (e.code === prefs.binds.journal && !ui.journal.classList.contains('gone'))) closePanels();
+      return;
+    }
     if (state !== 'play') return;
     if (e.repeat) { if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); return; }
     keys[e.code] = true;
     if (e.code === prefs.binds.act) act();
     if (e.code === prefs.binds.build) build('campfire');
     if (e.code === prefs.binds.book) togglePanel('book');
+    if (e.code === prefs.binds.journal) togglePanel('journal');
     if (e.code.startsWith('Arrow') || e.code === 'Space' || e.code === 'Tab') e.preventDefault();
   });
   window.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -1458,21 +1575,108 @@
       : `Press ${keyLabel(prefs.binds.book)} for the recipe book.`;
   }
 
+  // ================= Journal (a tattoo flash sheet) =================
+  let journal = { entries: [], firsts: {}, mine: {} };
+  const JCATS = [['bugs', 'Bugs'], ['shells', 'Shells'], ['glass', 'Sea glass'], ['tide', 'From the tide'], ['strange', 'Strange tides']];
+  const iconCache = new Map();
+  // Each entry gets a small inked design, drawn once.
+  function flashIcon(key, known) {
+    const id = key + (known ? '' : '?');
+    if (iconCache.has(id)) return iconCache.get(id);
+    const c = document.createElement('canvas'); c.width = c.height = 120;
+    const g = c.getContext('2d'), INK = '#2B211F';
+    g.lineWidth = 5; g.lineCap = g.lineJoin = 'round'; g.strokeStyle = INK;
+    const fill = (col, draw) => { g.beginPath(); draw(); g.fillStyle = col; g.fill(); g.stroke(); };
+    if (!known) {
+      g.setLineDash([6, 8]); g.beginPath(); g.arc(60, 60, 34, 0, Math.PI * 2); g.stroke(); g.setLineDash([]);
+      g.font = 'bold 40px sans-serif'; g.fillStyle = INK; g.textAlign = 'center'; g.fillText('?', 60, 74);
+    } else if (key === 'firefly' || key === 'moon_moth') {
+      const moth = key === 'moon_moth';
+      for (const sx of [-1, 1]) fill(moth ? '#F3EAD6' : '#E9F1F3', () => g.ellipse(60 + sx * 24, 52, 22, moth ? 26 : 12, sx * .5, 0, Math.PI * 2));
+      fill(moth ? '#D9CDB4' : '#E8D24A', () => g.ellipse(60, 64, 10, 24, 0, 0, Math.PI * 2));
+      if (!moth) { g.fillStyle = 'rgba(232,242,122,.55)'; g.beginPath(); g.arc(60, 80, 16, 0, Math.PI * 2); g.fill(); }
+    } else if (key === 'dragonfly') {
+      for (const [y, l] of [[46, 34], [58, 30]]) for (const sx of [-1, 1]) fill('#DCE9EC', () => g.ellipse(60 + sx * l * .8, y, l * .8, 8, 0, 0, Math.PI * 2));
+      fill('#5F7FA8', () => g.ellipse(60, 64, 7, 34, 0, 0, Math.PI * 2));
+    } else if (key === 'cricket' || key === 'bark_beetle') {
+      const beetle = key === 'bark_beetle';
+      for (const sx of [-1, 1]) for (const y of [48, 62, 76]) { g.beginPath(); g.moveTo(60, y); g.lineTo(60 + sx * 34, y + (beetle ? 8 : 14)); g.stroke(); }
+      fill(beetle ? '#4A3A34' : '#7C9A6B', () => g.ellipse(60, 62, beetle ? 20 : 14, beetle ? 28 : 32, 0, 0, Math.PI * 2));
+      fill(beetle ? '#4A3A34' : '#7C9A6B', () => g.arc(60, 30, 10, 0, Math.PI * 2));
+      if (beetle) { g.beginPath(); g.moveTo(60, 38); g.lineTo(60, 88); g.stroke(); }
+    } else if (key === 'spiral_shell' || key === 'conch') {
+      fill(key === 'conch' ? '#E3A89A' : '#EBD9C3', () => { g.moveTo(22, 80); g.quadraticCurveTo(60, 10, 98, 50); g.quadraticCurveTo(80, 95, 22, 80); });
+      g.beginPath(); for (let a = 0; a < Math.PI * 4; a += .15) { const r = 22 * (1 - a / (Math.PI * 4.4)); g.lineTo(66 + Math.cos(a) * r, 56 + Math.sin(a) * r); } g.stroke();
+    } else if (key === 'cowrie') {
+      fill('#EBD9C3', () => g.ellipse(60, 60, 26, 36, 0, 0, Math.PI * 2));
+      g.beginPath(); g.moveTo(60, 32); g.quadraticCurveTo(52, 60, 60, 88); g.stroke();
+      g.fillStyle = '#B08A6A'; [[48, 44], [72, 52], [50, 74], [70, 78]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); });
+    } else if (key === 'scallop') {
+      fill('#E3A89A', () => { g.moveTo(60, 94); g.lineTo(20, 46); g.quadraticCurveTo(60, 8, 100, 46); g.closePath(); });
+      for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(60, 92); g.lineTo(60 + i * 16, 30 + Math.abs(i) * 6); g.stroke(); }
+    } else if (key === 'sand_dollar') {
+      fill('#EBD9C3', () => g.arc(60, 60, 36, 0, Math.PI * 2));
+      for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2 - Math.PI / 2; g.beginPath(); g.ellipse(60 + Math.cos(a) * 16, 60 + Math.sin(a) * 16, 4, 10, a + Math.PI / 2, 0, 7); g.stroke(); }
+    } else if (key.startsWith('glass_')) {
+      fill({ glass_green: '#7FBF8A', glass_blue: '#6FA3D0', glass_amber: '#E0A33A', glass_violet: '#A88BD8' }[key],
+        () => { g.moveTo(30, 58); g.lineTo(52, 26); g.lineTo(90, 40); g.lineTo(96, 76); g.lineTo(58, 94); g.closePath(); });
+      g.beginPath(); g.moveTo(52, 26); g.lineTo(62, 60); g.lineTo(96, 76); g.moveTo(62, 60); g.lineTo(58, 94); g.stroke();
+    } else if (key === 'silverfin') {
+      fill('#B9C3C6', () => g.ellipse(54, 60, 34, 16, 0, 0, Math.PI * 2));
+      fill('#B9C3C6', () => { g.moveTo(86, 60); g.lineTo(106, 44); g.lineTo(106, 76); g.closePath(); });
+      g.fillStyle = INK; g.beginPath(); g.arc(34, 56, 3, 0, 7); g.fill();
+    } else if (key === 'door_in_sand') {
+      fill('#8A6A52', () => g.rect(38, 18, 44, 76)); g.beginPath(); g.moveTo(20, 94); g.lineTo(100, 94); g.stroke();
+      g.fillStyle = '#C9A04A'; g.beginPath(); g.arc(74, 58, 4, 0, 7); g.fill();
+    } else if (key === 'ringing_bell') {
+      fill('#8A6A52', () => g.rect(16, 88, 88, 10));
+      fill('#C9A04A', () => { g.moveTo(44, 78); g.quadraticCurveTo(44, 30, 60, 28); g.quadraticCurveTo(76, 30, 76, 78); g.closePath(); });
+      for (const sx of [-1, 1]) { g.beginPath(); g.arc(60, 54, 34, sx > 0 ? -.4 : Math.PI - .4 + .8, sx > 0 ? .4 : Math.PI + .4); g.stroke(); }
+    } else if (key === 'your_cloak') {
+      fill(me ? hex(colorFor(me.id)) : '#8A6A52', () => { g.moveTo(40, 24); g.lineTo(80, 24); g.lineTo(96, 96); g.lineTo(24, 96); g.closePath(); });
+      fill('#D9C9A6', () => g.rect(52, 60, 16, 14));
+    } else if (key === 'footprints') {
+      for (let i = 0; i < 4; i++) { const x = 44 + (i % 2) * 30, y = 96 - i * 24; fill('#6E5646', () => g.ellipse(x, y, 7, 10, 0, 0, 7));
+        for (const dx of [-7, 0, 7]) { g.beginPath(); g.arc(x + dx, y - 12, 3, 0, 7); g.fillStyle = '#6E5646'; g.fill(); } }
+    } else fill('#D9C9A6', () => g.arc(60, 60, 30, 0, Math.PI * 2));
+    const url = c.toDataURL();
+    iconCache.set(id, url);
+    return url;
+  }
+  function renderJournal() {
+    const found = Object.keys(journal.mine).length;
+    $('journalCount').textContent = `${found} of ${journal.entries.length} found`;
+    $('journalBody').innerHTML = JCATS.map(([cat, title]) => {
+      const list = journal.entries.filter(e => e.category === cat);
+      if (!list.length) return '';
+      return `<h3>${esc(title)}</h3><div class="flash">` + list.map(e => {
+        const n = journal.mine[e.key] || 0, known = n > 0, first = journal.firsts[e.key];
+        return `<figure class="flashcard ${known ? '' : 'unknown'} r-${esc(e.rarity)}">
+          <img src="${flashIcon(e.key, known)}" alt="">
+          <figcaption><b>${known ? esc(e.name) : '???'}</b>
+          ${known ? `<span class="desc">${esc(e.description)}</span><span class="meta">Found ${n}\u00d7${first ? ` \u00b7 first found by ${esc(first)}` : ''}</span>`
+                  : first ? `<span class="meta">Someone has found this</span>` : ''}</figcaption></figure>`;
+      }).join('') + '</div>';
+    }).join('');
+  }
+  let stampT = null;
+  function stamp(msg) { const el = $('stamp'); el.textContent = msg; el.classList.add('on'); clearTimeout(stampT); stampT = setTimeout(() => el.classList.remove('on'), 3200); }
+
   // ================= Recipe book & settings =================
   function togglePanel(which) {
-    const el = which === 'book' ? ui.book : ui.settings;
+    const el = which === 'book' ? ui.book : which === 'journal' ? ui.journal : ui.settings;
     const opening = el.classList.contains('gone');
     closePanels();
     if (!opening) return;
     releaseKeys();
-    if (which === 'book') renderBook(); else renderSettings();
+    if (which === 'book') renderBook(); else if (which === 'journal') renderJournal(); else renderSettings();
     el.classList.remove('gone');
     const first = el.querySelector('.x');
     if (first) first.focus({ preventScroll: true });
   }
   function closePanels() {
     waitingBind = null;
-    ui.book.classList.add('gone'); ui.settings.classList.add('gone');
+    ui.book.classList.add('gone'); ui.settings.classList.add('gone'); ui.journal.classList.add('gone');
   }
   document.querySelectorAll('.panel').forEach(p => p.addEventListener('click', e => {
     if (e.target === p || e.target.closest('[data-close]')) closePanels();
@@ -1588,6 +1792,7 @@
   applyQuality();
   if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, camera, chunks, objects: () => objects, stats, stilled,
     pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); },
+    washups: () => washups, bugs: () => bugs, previewJournal: keys => { keys.forEach(k => { journal.mine[k] = 1 + (k.length % 3); journal.firsts[k] = journal.firsts[k] || 'aiman'; }); },
     lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); } }; }
 
   // ================= Sky =================
@@ -1662,6 +1867,15 @@
       src.connect(f); f.connect(g); node.connect(c.destination);
       src.start(at, Math.random() * .5, dur + .05);
       return f;
+    },
+    bell(x, z) {
+      if (!this.ctx || prefs.sounds === false) return;
+      const c = this.ctx, t0 = c.currentTime, d = Math.hypot(x - px, z - pz), vol = Math.max(0, .25 - d / 200);
+      for (const [f, g] of [[523, 1], [1318, .4], [2093, .2]]) {
+        const o = c.createOscillator(), gn = c.createGain(); o.type = 'sine'; o.frequency.value = f;
+        gn.gain.setValueAtTime(vol * g, t0); gn.gain.exponentialRampToValueAtTime(.0001, t0 + 3);
+        o.connect(gn); gn.connect(c.destination); o.start(t0); o.stop(t0 + 3.1);
+      }
     },
     footsteps() {
       const c = this.ctx, pan = Math.random() * 1.6 - .8, n = 3 + (Math.random() * 3 | 0);
@@ -1819,6 +2033,8 @@
     }
     if (hero) poseCastaway(hero, px, pz, face, moving ? (running ? 2 : 1) : 0, state === 'dead' || knockT > 0, dt, elapsed);
 
+    animateBugs(elapsed);
+    washups.forEach(w => { if (w.mesh.userData.bell) w.mesh.userData.bell.rotation.z = Math.sin(elapsed * 3 + w.id) * .25; });
     stilled.forEach(s => {
       const p = s.remote.sample();
       s.mesh.position.set(p.x, groundAt(p.x, p.z), p.z); s.mesh.rotation.y = p.face;
