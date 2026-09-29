@@ -52,6 +52,15 @@ code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--chip);bo
 .r-common{color:var(--leaf)} .r-uncommon{color:var(--blue)} .r-rare{color:var(--ochre)}
 .grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px 18px}
 .log li{margin:4px 0}
+details.spoiler{border:2px dashed var(--line);border-radius:12px;margin:8px 0;padding:0 12px}
+details.spoiler[open]{border-style:solid;padding-bottom:8px}
+details.spoiler summary{cursor:pointer;padding:8px 0;list-style:none;font-weight:500}
+details.spoiler summary::-webkit-details-marker{display:none}
+details.spoiler summary::before{content:"\25B8";display:inline-block;margin-right:6px;transition:transform .15s}
+details.spoiler[open] summary::before{transform:rotate(90deg)}
+details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:6px}
+.warn{font-size:12px;font-weight:600;color:#FBF4E3;background:var(--rose);border-radius:7px;padding:1px 8px;margin-right:4px}
+.spoilall{font:inherit;font-size:14px;color:var(--soft);background:none;border:0;text-decoration:underline;cursor:pointer;padding:0}
 .muted{color:var(--soft);font-size:14px}
 .scroll{overflow-x:auto}
 @media (max-width:820px){
@@ -66,7 +75,8 @@ code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--chip);bo
 <body>
 <div class="wrap">
   <header class="top">
-    <div><h1>Unknown Island Wiki</h1><p>How everything on the island works, kept up to date with the game. <span class="muted" id="liveNote"></span></p></div>
+    <div><h1>Unknown Island Wiki</h1><p>How everything on the island works, kept up to date with the game. <span class="muted" id="liveNote"></span></p>
+      <p class="muted">Spoilers are hidden. <button type="button" class="spoilall" id="spoilAll">Show all spoilers</button></p></div>
     <a class="play" href="/">Play &rsaquo;</a>
   </header>
 
@@ -238,17 +248,22 @@ code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--chip);bo
         <tr><td>Being in fog<br>Darkness away from light<br>Being alone (no friend within <span data-r="DREAD.FRIEND_RADIUS"></span> steps), especially at night<br>A Stilled nearby<br>Strange things on the beach</td>
             <td>Being near a fire or lit lantern (twice as fast sitting)<br>Daylight in clear air<br>Friends nearby<br>Eating</td></tr>
       </table>
-      <p>As dread rises, colours drain, ink creeps in from the screen edges, and you may hear footsteps and whispers. At high dread you'll see ink dots across the picture, a frog standing where nobody is&hellip; and around the fire, sometimes <b>one frog too many</b>. Only you see it.</p>
+      <p>As dread rises, the picture starts to change, and so do the sounds around you.</p>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> What high dread does <span class="muted">(click to show)</span></summary>
+      <p>Colours drain, ink creeps in from the screen edges, and you may hear footsteps and whispers. At high dread you'll see ink dots across the picture, a frog standing where nobody is&hellip; and around the fire, sometimes <b>one frog too many</b>. Only you see it.</p></details>
     </section>
 
     <section id="stilled"><h2>The Stilled</h2>
       <ul>
         <li>Pale, faceless figures that stand in the fog at night.</li>
+      </ul>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> How they behave <span class="muted">(click to show)</span></summary>
+      <ul>
         <li><b>They only move when nobody is looking at them.</b> Keep your camera on them and they freeze.</li>
         <li>They can't enter light or clear air: fires and lit lanterns make safe circles.</li>
         <li>They're drawn to frogs who are alone or frightened.</li>
         <li>If one reaches you, you're knocked down: &minus;<span data-r="KNOCK.HEALTH"></span> health, +<span data-r="KNOCK.DREAD"></span> dread, and half of what you carry spills into a sack on the ground where you fell. Go back for it&hellip; carefully.</li>
-      </ul>
+      </ul></details>
     </section>
 
     <section id="lanterns"><h2>Stone lanterns</h2>
@@ -268,31 +283,36 @@ code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--chip);bo
     </section>
 
     <section id="sleeper"><h2>The carving stones</h2>
-      <p>Three old standing stones (by the beach camp, near the main spring, and on the highest ground) carry carvings that change by themselves. Sometimes the island itself seems to be asking for something: an offering, lights in a certain place, frogs gathered at night&hellip;</p>
+      <p>Three old standing stones (by the beach camp, near the main spring, and on the highest ground) carry carvings that change by themselves. Read one with <kbd>E</kbd>.</p>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> What the stones do <span class="muted">(click to show)</span></summary>
+      <p>Sometimes the island itself seems to be asking for something: an offering, lights in a certain place, frogs gathered at night&hellip;</p>
       <ul>
         <li>Read a stone with <kbd>E</kbd>. If it wants something you carry, you can leave it at the stone's foot. Tally marks show how far along the group is.</li>
         <li>Each request has a few days. <b>Answer it</b> and something good happens: the fog holds back for a night, something is left at the stone, a lantern lights itself, a note appears on the board&hellip;</li>
         <li><b>Ignore it</b> and the fog presses harder for a while, and lanterns burn faster.</li>
         <li>A new carving appears at dawn. Put your ear to a stone at night and listen.</li>
       </ul>
-      <p class="muted">There are <span id="reqCount">several</span> different requests so far; more may be added.</p>
+      <p class="muted">There are <span id="reqCount">several</span> different requests so far; more may be added.</p></details>
     </section>
 
     <section id="tides"><h2>Tides</h2>
       <p>Every sunrise the sea takes back what it left and washes new things onto the beaches: driftwood, crates of seeds and oil, fish, shells and sea glass. Pick them up with <kbd>E</kbd>. After storms there's more.</p>
       <p>Some things the tide brings shouldn't be there. At most one a day.</p>
-      <div class="grid2" id="tideList"></div>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> Everything the tide can bring <span class="muted">(click to show)</span></summary>
+      <div class="grid2" id="tideList"></div></details>
     </section>
 
     <section id="journal"><h2>The journal and rarity</h2>
       <p>Press <kbd>J</kbd>. Everything you find (bugs, shells, sea glass, strange tide finds, relics) goes into the journal as an inked flash sheet. The first frog to find each thing is credited for everyone to see. Every entry shows how rare it is and where to look, even before you've found it.</p>
       <p><span class="pill r-common">&#9670; Common</span> easy, most days &nbsp; <span class="pill r-uncommon">&#9670;&#9670; Uncommon</span> now and then &nbsp; <span class="pill r-rare">&#9670;&#9670;&#9670; Rare</span> only at the right place, time or weather, or very seldom</p>
-      <div class="scroll"><table id="jtable"><tr><th>Find</th><th>Rarity</th><th>Where and when</th></tr></table></div>
+<details class="spoiler"><summary><span class="warn">Spoiler</span> Every find, how rare it is and where to look <span class="muted">(click to show)</span></summary>
+      <div class="scroll"><table id="jtable"><tr><th>Find</th><th>Rarity</th><th>Where and when</th></tr></table></div></details>
     </section>
 
     <section id="cloak"><h2>Cloak patches</h2>
       <p>Stitch patches onto your cloak (from the Journal) using things you've found. You have <span data-r="PATCH_SLOTS"></span> slots; unpick one to swap. Everyone can see your patches. Each one helps, and costs something.</p>
-      <div class="scroll"><table id="patches"><tr><th>Patch</th><th>Needs</th><th>Helps</th><th>Costs</th></tr></table></div>
+<details class="spoiler"><summary><span class="warn">Spoiler</span> Every patch and what it needs <span class="muted">(click to show)</span></summary>
+      <div class="scroll"><table id="patches"><tr><th>Patch</th><th>Needs</th><th>Helps</th><th>Costs</th></tr></table></div></details>
     </section>
 
     <section id="friends"><h2>Friends, chat and the board</h2>
@@ -329,6 +349,7 @@ code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--chip);bo
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li>Wiki: spoilers (rare finds, strange tides, what the stones and the Stilled do) are hidden until you click to show them.</li>
         <li><b>Wiki:</b> this page, built into the game at <code>/wiki</code> and kept up to date.</li>
         <li><b>Sitting</b> (<kbd>V</kbd>): slouched on the ground with knees up; frogs now have knees. Resting by a fire calms dread faster.</li>
         <li><b>Jumping</b> shows to friends while you charge. Charged jumps leap three times as high and forward.</li>
@@ -362,6 +383,12 @@ code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--chip);bo
   const mins = sec => { sec = Math.round(sec); const m = Math.floor(sec / 60), s = sec % 60; return m ? (s ? `${m} min ${s} s` : `${m} min`) : `${s} s`; };
   document.querySelectorAll('[data-r]').forEach(el => { const v = get(el.dataset.r); if (v != null) el.textContent = v; });
   const $ = id => document.getElementById(id);
+  // spoilers start hidden; one switch opens or closes them all
+  $('spoilAll').addEventListener('click', () => {
+    const all = [...document.querySelectorAll('details.spoiler')], open = !all.every(d => d.open);
+    all.forEach(d => { d.open = open; });
+    $('spoilAll').textContent = open ? 'Hide all spoilers' : 'Show all spoilers';
+  });
   $("startStats").textContent = `${R.START.health} health, ${R.START.hunger} food and ${R.START.thirst} water`;
   $('dayLen').textContent = mins(R.DAY_LEN); $('dayLight').textContent = mins(R.DAYLIGHT_LEN); $('nightLen').textContent = mins(R.NIGHT_LEN);
   const Wt = R.WEATHER.WEIGHTS, total = Object.values(Wt).reduce((a, b) => a + b, 0);
