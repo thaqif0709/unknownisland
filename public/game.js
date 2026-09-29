@@ -2313,16 +2313,30 @@
       g.beginPath(); g.arc(mapCoord(x, size), mapCoord(z, size), r * dotScale, 0, Math.PI * 2);
       g.fillStyle = fill; g.fill(); g.lineWidth = Math.max(1, 1.5 * dotScale); g.strokeStyle = '#2B211F'; g.stroke();
     };
+    // Player markers get a bright halo behind them, in each player's own cloak colour,
+    // so they stand out clearly against any terrain colour underneath.
+    const haloDot = (cx, cy, r) => {
+      g.beginPath(); g.arc(cx, cy, r + 3 * dotScale, 0, Math.PI * 2);
+      g.fillStyle = 'rgba(255,251,240,.95)'; g.fill();
+      g.lineWidth = Math.max(1, 1.5 * dotScale); g.strokeStyle = '#2B211F'; g.stroke();
+    };
     WG.SPRINGS.forEach(s => dot(s.x, s.z, 4, '#2E6B7A'));
     if (board) dot(board.x, board.z, 4, '#8A6A4A');
     carvings.forEach(c => dot(c.x, c.z, 4.5, '#5B4A63'));
     lanterns.forEach(l => dot(l.x, l.z, l.big ? 5.5 : 4, l.lit ? '#E0A33A' : '#8A8171'));
     fires.forEach(f => dot(f.x, f.z, 3.5, f.fuel > 0 ? '#C9622F' : '#8A8171'));
-    remotes.forEach((r, id) => { if (!r.dead) { const s = r.remote.sample(); dot(s.x, s.z, 4, hex(colorFor(id))); } });
+    remotes.forEach((r, id) => {
+      if (r.dead) return;
+      const s = r.remote.sample(), cx = mapCoord(s.x, size), cy = mapCoord(s.z, size), rr = 5.5 * dotScale;
+      haloDot(cx, cy, rr);
+      dot(s.x, s.z, 5.5, hex(colorFor(id)));
+    });
     if (inGame()) {
-      g.save(); g.translate(mapCoord(px, size), mapCoord(pz, size)); g.rotate(Math.PI - face); g.scale(dotScale, dotScale);
-      g.beginPath(); g.moveTo(0, -7); g.lineTo(4.5, 5); g.lineTo(-4.5, 5); g.closePath();
-      g.fillStyle = hex(colorFor(me.id)); g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#2B211F'; g.stroke();
+      const cx = mapCoord(px, size), cy = mapCoord(pz, size);
+      haloDot(cx, cy, 6 * dotScale);
+      g.save(); g.translate(cx, cy); g.rotate(Math.PI - face); g.scale(dotScale, dotScale);
+      g.beginPath(); g.moveTo(0, -8); g.lineTo(5.5, 6); g.lineTo(-5.5, 6); g.closePath();
+      g.fillStyle = hex(colorFor(me.id)); g.fill(); g.lineWidth = 1.8; g.strokeStyle = '#2B211F'; g.stroke();
       g.restore();
     }
   }
