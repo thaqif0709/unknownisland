@@ -63,6 +63,13 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 .inv .tools:empty{display:none}
 .slot{--slot:48px;position:relative;width:var(--slot);height:var(--slot);border:2.5px solid var(--ink);border-radius:10px;background:#E9DCC0;
   box-shadow:inset 2px 2px 0 rgba(255,250,235,.7),inset -2px -2px 0 rgba(43,33,31,.12)}
+.slot{pointer-events:auto;cursor:pointer}
+.slot i{position:absolute;left:3px;top:1px;font-style:normal;font-size:11px;font-weight:600;color:var(--soft);line-height:1;z-index:1}
+.slot.sel{border-color:var(--rose);box-shadow:0 0 0 3px var(--rose),inset 2px 2px 0 rgba(255,250,235,.7);transform:translateY(-3px)}
+.slot.tool{pointer-events:none}
+.day .timer{display:block;font-weight:600;font-size:14px;color:var(--ochre);margin-top:1px}
+.day .timer.soon{color:var(--rose)}
+.day .timer.night{color:var(--blue)}
 .slot.empty{background:rgba(233,220,192,.45);border-style:dashed;border-color:rgba(43,33,31,.35);box-shadow:none}
 .slot img{position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px)}
 .slot b{position:absolute;right:-5px;bottom:-6px;min-width:20px;padding:0 4px;font-size:13px;line-height:17px;text-align:center;
@@ -302,6 +309,7 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
 <div class="banner hidden" id="banner">Reconnecting&hellip;</div>
 <div class="joy" id="joy"><i id="joyKnob"></i></div>
 <div class="touch hidden" id="touchUi">
+  <button class="small" id="btnDrop" type="button">Drop</button>
   <button class="small" id="btnHood" type="button">Hood</button>
   <button class="small" id="btnChat" type="button">Chat</button>
   <button class="small" id="btnJournal" type="button">Journal</button>
@@ -373,6 +381,8 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
     <div id="binds"></div>
     <p class="note">Click a key, then press the new one. The arrow keys always walk too.</p>
     <button type="button" class="link" id="resetKeys">Reset controls to defaults</button>
+    <h3>Items</h3>
+    <p class="note">Press <kbd class="k">1</kbd> to <kbd class="k">8</kbd> (or tap a slot) to hold that item; press the same number again to put it away. <kbd class="k" id="dropKeyLbl">G</kbd> drops one at your feet in a sack, Shift + <kbd class="k">G</kbd> drops them all. Anyone can pick a sack up with <kbd class="k">E</kbd>, so that's how you give things to a friend.</p>
     <h3>Chat</h3>
     <p class="note">Press <kbd class="k" id="chatKeyLbl">Enter</kbd> (or <kbd class="k">/</kbd>) to open the chat, type, and press Enter to send. Esc closes it. On a phone, use the Chat button.</p>
     <div class="howto">

@@ -296,7 +296,7 @@ Client → server: `hello {token}` (first message), `pos {x,z,face,moving,sprint
 (≈15 Hz while moving, 1 Hz idle), `act {target}` where target is `o<id>`, `f<id>`
 (fire), `d<id>` (sack), `l<id>` (lantern), `w<id>` (wash-up), `b<id>` (bug),
 `c<id>` (carving stone offering), `spring` or `sea`, `build {recipe,x,z}`,
-`respawn`, `pin {text}`, `patch {key,on}`, `intro` / `intro-seen`, `chat {text}`
+`respawn`, `pin {text}`, `patch {key,on}`, `intro` / `intro-seen`, `hold {key}` (item in hand, shown to others), `dropitem {key,count}` (into a sack at your feet; merges into a sack within 1.5), `chat {text}`
 (the server parses `/w`, `/whisper`, `/tell`, `/msg`, `/r`, `/who`, `/help`; plain
 text is global; max 240 characters, 6 messages per 8 s; the last 30 global
 messages are kept in memory and sent in `welcome.chat`; nothing is saved).

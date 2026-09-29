@@ -479,7 +479,7 @@ class Island {
       // the layout comes from /api/world; here only what differs from default
       states: this.objects.filter(o => !WG.isDefaultState(o.type, o.state)).map(o => [o.id, o.state]),
       fires: this.fires.map(f => this.fireView(f)),
-      drops: this.drops.map(d => ({ id: d.id, x: d.x, z: d.z })),
+      drops: this.drops.map(d => ({ id: d.id, x: d.x, z: d.z, items: d.items })),
       lanterns: this.lanterns.map(l => this.lanternView(l)),
       washups: this.washups.map(w => this.washView(w)),
       bugs: this.bugs.map(b => [b.id, b.key, b.x, b.z]),
@@ -508,7 +508,7 @@ class Island {
     return { id: p.id, name: p.name, x: p.x, z: p.z, face: p.face, health: p.health, hunger: p.hunger,
       thirst: p.thirst, inv: p.inv, tools: p.tools, energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches, hoodDown: p.hoodDown };
   }
-  publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown }; }
+  publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown, hold: p.hold || null }; }
   fireView(f) { return { id: f.id, x: f.x, z: f.z, fuel: r2(f.fuel), kind: f.kind }; }
 
   // ================= Loop =================
@@ -616,6 +616,10 @@ class Island {
       case 'respawn': return this.onRespawn(p);
       case 'pin': return this.onPin(p, msg);
       case 'chat': return this.onChat(p, msg);
+      case 'hold':   // which item is in your hand (just for show; everyone sees it)
+        p.hold = typeof msg.key === 'string' && ITEMS[msg.key] ? msg.key : null;
+        return this.broadcast({ t: 'hold', id: p.id, key: p.hold }, p);
+      case 'dropitem': return this.onDropItem(p, msg);
       case 'hood':   // hood up or down; everyone sees it, and it's remembered
         p.hoodDown = !!msg.down;
         return this.broadcast({ t: 'hood', id: p.id, down: p.hoodDown });
@@ -1015,17 +1019,48 @@ class Island {
       const id = await this.store.insertDrop(this.id, x, z, items);
       const d = { id, x, z, items };
       this.drops.push(d);
-      this.broadcast({ t: 'drop', drop: { id, x, z } });
+      this.broadcast({ t: 'drop', drop: { id, x, z, items } });
     } catch (e) { console.error('[island] could not save drop', e.message); }
+  }
+
+  // Drop some of what you carry at your feet, in a sack anyone can pick up
+  // (that's how you give things to a friend). Drops next to a sack go into it.
+  async onDropItem(p, { key, count }) {
+    const now = Date.now();
+    if (p.dead || p.knockedUntil > now || typeof key !== 'string' || !(key in ITEMS)) return;
+    if (now - (p.lastDropAt || 0) < 150) return;
+    p.lastDropAt = now;
+    const n = Math.min(Math.max(1, count | 0), p.inv[key] || 0);
+    if (n <= 0) return;
+    p.inv[key] -= n;
+    this.sendMe(p);
+    const x = r2(p.x + Math.sin(p.face) * .9), z = r2(p.z + Math.cos(p.face) * .9);
+    const near = this.drops.find(d => Math.hypot(d.x - x, d.z - z) < 1.5);
+    if (near) {
+      near.items[key] = (near.items[key] || 0) + n;
+      this.broadcast({ t: 'dropitems', id: near.id, items: near.items });
+      this.store.updateDrop(near.id, near.items).catch(e => console.error('[island] could not update drop', e.message));
+      return;
+    }
+    const items = { [key]: n };
+    try {
+      const id = await this.store.insertDrop(this.id, x, z, items);
+      this.drops.push({ id, x, z, items });
+      this.broadcast({ t: 'drop', drop: { id, x, z, items } });
+    } catch (e) {
+      p.inv[key] += n; this.sendMe(p);   // give it back if it couldn't be saved
+      console.error('[island] could not save drop', e.message);
+    }
   }
 
   async pickUp(p, id) {
     const d = this.drops.find(d => d.id === id);
     if (!d || Math.hypot(d.x - p.x, d.z - p.z) > RULES.REACH + 1 + REACH_SLACK) return;
     this.drops = this.drops.filter(x => x !== d);
-    for (const [k, n] of Object.entries(d.items)) if (k in p.inv) p.inv[k] += n;
+    const got = [];
+    for (const [k, n] of Object.entries(d.items)) if (k in p.inv && n > 0) { p.inv[k] += n; got.push(`${n} ${ITEMS[k].toLowerCase()}`); }
     this.broadcast({ t: 'undrop', id });
-    this.send(p, { t: 'toast', msg: 'You gather up the scattered things.' });
+    this.send(p, { t: 'toast', msg: got.length ? `You pick up the sack: ${got.join(', ')}.` : 'An empty sack.' });
     this.sendMe(p);
     try { await this.store.deleteDrop(id); } catch (e) { console.error('[island] could not delete drop', e.message); }
   }

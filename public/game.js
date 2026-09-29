@@ -972,6 +972,28 @@
     hoodTip.computeVertexNormals();
     return hoodTip;
   }
+  // The item in your right hand: a small model of whatever is selected.
+  function heldModel(key) {
+    const g = new THREE.Group(), add = (geo, m, x, y, z) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); g.add(mesh); return mesh; };
+    switch (key) {
+      case 'wood': add(new THREE.CylinderGeometry(.06, .06, .34, 8), logM, 0, 0, 0).rotation.z = Math.PI / 2; break;
+      case 'stone': add(new THREE.DodecahedronGeometry(.1, 0), rockM[0], 0, 0, 0).scale.set(1.1, .8, 1); break;
+      case 'clay': add(new THREE.SphereGeometry(.09, 8, 6), clayM, 0, 0, 0).scale.set(1.2, .8, 1); break;
+      case 'copper': case 'iron': add(new THREE.DodecahedronGeometry(.1, 0), rockM[1], 0, 0, 0);
+        add(new THREE.SphereGeometry(.035, 6, 4), softShared(key === 'copper' ? 0xD9803A : 0xC9D2DA), .06, .04, .05); break;
+      case 'seeds': for (const [x, z] of [[-.03, 0], [.03, .02], [0, -.03]]) add(new THREE.SphereGeometry(.03, 6, 4), softShared(0xC8A860), x, 0, z).scale.set(.8, .6, 1.3); break;
+      case 'oil': add(new THREE.SphereGeometry(.07, 10, 8), softShared(0xE0A33A), 0, 0, 0); add(new THREE.CylinderGeometry(.025, .03, .07, 8), logM, 0, .09, 0); break;
+      default: add(new THREE.BoxGeometry(.12, .12, .12), sackM, 0, 0, 0);
+    }
+    shadows(g);
+    return g;
+  }
+  function setHeld(av, key) {
+    if (!av || av.heldKey === (key || null)) return;
+    if (av.held) { av.armR.remove(av.held); av.held = null; }
+    av.heldKey = key || null;
+    if (key) { av.held = heldModel(key); av.held.position.set(0, -.5, .07); av.armR.add(av.held); }
+  }
   function setHood(av, up) { if (!av) return; av.hoodUp.visible = !!up; av.hoodDown.visible = !up; }
 
   // A frog castaway in a simple hooded cloak: part wizard, part wanderer.
@@ -1073,7 +1095,7 @@
     av.legL.rotation.x = s; av.legR.rotation.x = -s;
     av.armL.rotation.x = -s * .9;
     if (av.swingT > 0) { av.swingT -= dt; const k = av.swingT / .35; av.armR.rotation.x = -2.4 * Math.sin(k * Math.PI); }
-    else av.armR.rotation.x = s * .9;
+    else av.armR.rotation.x = av.held ? -.6 + s * .25 : s * .9;   // holding something: arm forward
     // bouncy walk, gentle breathing when idle
     av.body.position.y = moving ? Math.abs(Math.cos(av.walk)) * .08 : Math.sin(elapsed * 2.2) * .015;
     const sq = moving ? 1 + Math.abs(Math.sin(av.walk)) * .04 : 1 + Math.sin(elapsed * 2.2) * .01;
@@ -1439,7 +1461,7 @@
     const tie = new THREE.Mesh(new THREE.TorusGeometry(.09, .025, 6, 12), tieM); tie.rotation.x = Math.PI / 2; tie.position.y = .45; g.add(tie);
     g.position.set(d.x, groundAt(d.x, d.z), d.z); g.rotation.y = d.id;
     shadows(g); scene.add(g);
-    drops.set(d.id, { id: d.id, type: 'drop', x: d.x, z: d.z, r: .4, mesh: g, state: {} });
+    drops.set(d.id, { id: d.id, type: 'drop', x: d.x, z: d.z, r: .4, mesh: g, state: {}, items: d.items || null });
   }
   function removeDrop(id) { const d = drops.get(id); if (d) { scene.remove(d.mesh); drops.delete(id); } }
   function clearDrops() { drops.forEach(d => scene.remove(d.mesh)); drops = new Map(); }
@@ -1597,7 +1619,7 @@
     tag.textContent = p.name;
     ui.tags.appendChild(tag);
     const av = makeCastaway(colorFor(p.id));
-    setPatches(av, p.patches); setHood(av, !p.hoodDown);
+    setPatches(av, p.patches); setHood(av, !p.hoodDown); setHeld(av, p.hold);
     remotes.set(p.id, { name: p.name, remote: new Net.Remote(p.x, p.z, p.face), av, tag, dead: p.dead, patches: p.patches || [] });
   }
   function renderOnline() {
@@ -1634,6 +1656,7 @@
         applySelf(m.you);
         myPatches = m.you.patches || []; setPatches(hero, myPatches);
         hoodDown = !!m.you.hoodDown; setHood(hero, !hoodDown);
+        sentHold = null; lastInv = '';
         renderOnline();
         ui.banner.classList.add('hidden');
         hideOverlay();
@@ -1725,6 +1748,8 @@
       case 'unfire': { const f = fires.get(m.id); if (f) { scene.remove(f.mesh); fires.delete(m.id); } break; }
       case 'movedrop': { const d = drops.get(m.id); if (d) { d.x = m.x; d.z = m.z; d.mesh.position.set(m.x, groundAt(m.x, m.z), m.z); } break; }
       case 'undrop': removeDrop(m.id); break;
+      case 'dropitems': { const d = drops.get(m.id); if (d) d.items = m.items; break; }
+      case 'hold': { const r = remotes.get(m.id); if (r) setHeld(r.av, m.key); break; }
       case 'dawn':
         if (state === 'play') toast(`Morning of day ${m.day}. You made it through the night.`);
         break;
@@ -1801,7 +1826,10 @@
       case 'rock': return o.species === 'pebble' ? 'Pick up stones' : 'Gather stone';
       case 'ore': return has('pickaxe') ? `Mine ${o.ore === 'iron' ? 'iron' : 'copper'} ore` : `${o.ore === 'iron' ? 'Iron' : 'Copper'} ore (needs a pickaxe)`;
       case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
-      case 'drop': return 'Pick up the scattered things';
+      case 'drop': {
+        const list = o.items ? Object.entries(o.items).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${(WG.ITEMS[k] || k).toLowerCase()}`) : [];
+        return list.length ? `Pick up the sack (${list.slice(0, 3).join(', ')}${list.length > 3 ? ', ...' : ''})` : 'Pick up the sack';
+      }
       case 'carving': return o.offer && o.tally ? `Read the ${o.key} stone (it wants ${WG.ITEMS[o.offer].toLowerCase()})` : `Read the ${o.key} stone`;
       case 'board': return notes.length ? `Read the driftwood board (${notes.length} note${notes.length > 1 ? 's' : ''})` : 'The driftwood board (pin a note)';
       case 'wash': return o.kind === 'strange' ? (o.key === 'door_in_sand' ? 'Try the door' : o.key === 'ringing_bell' ? 'Touch the bell' : o.key === 'footprints' ? 'Look at the footprints' : 'Pick it up') : `Pick up: ${o.label.replace(/^A /, 'a ')}`;
@@ -1847,6 +1875,7 @@
   $('btnMap').addEventListener('click', () => togglePanel('map'));
   $('btnSettings').addEventListener('click', () => togglePanel('settings'));
   $('btnHood').addEventListener('click', () => toggleHood());
+  $('btnDrop').addEventListener('click', () => dropHeld(false));
   $('btnRun').addEventListener('click', () => { runToggle = !runToggle; $('btnRun').setAttribute('aria-pressed', String(runToggle)); });
 
   // ================= Input =================
@@ -1854,7 +1883,7 @@
   const ACTIONS = [
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
-    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'],
+    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'],
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -1909,6 +1938,8 @@
     if (e.code === prefs.binds.book) togglePanel('book');
     if (e.code === prefs.binds.journal) togglePanel('journal');
     if (e.code === prefs.binds.hood) toggleHood();
+    if (/^Digit[1-8]$/.test(e.code) || /^Numpad[1-8]$/.test(e.code)) selectSlot(+e.code.slice(-1) - 1);
+    if (e.code === prefs.binds.drop) dropHeld(e.shiftKey);
     if (e.code === prefs.binds.map) togglePanel('map');
     if (e.code.startsWith('Arrow') || e.code === 'Space' || e.code === 'Tab') e.preventDefault();
   });
@@ -1917,6 +1948,34 @@
   window.addEventListener('blur', releaseKeys);
 
   let lastInv = '', lastCounts = {};
+  // Hotbar: slotKeys[i] is the item in slot i+1. selSlot is the one in your hand (-1: empty hands).
+  const slotKeys = Array(8).fill(null);
+  let selSlot = -1, sentHold = null;
+  function syncSlots() {
+    for (let i = 0; i < 8; i++) if (slotKeys[i] && !((stats.inv[slotKeys[i]] || 0) > 0)) slotKeys[i] = null;
+    for (const k of Object.keys(WG.ITEMS)) if ((stats.inv[k] || 0) > 0 && !slotKeys.includes(k)) { const e = slotKeys.indexOf(null); if (e >= 0) slotKeys[e] = k; }
+  }
+  const heldKey = () => (selSlot >= 0 && slotKeys[selSlot]) || null;
+  function updateHeld() {
+    const k = heldKey();
+    setHeld(hero, k);
+    if (k !== sentHold && net && state === 'play') { sentHold = k; net.send({ t: 'hold', key: k }); }
+  }
+  function selectSlot(i) {
+    if (state !== 'play') return;
+    selSlot = selSlot === i ? -1 : i;   // same number again: put it away
+    lastInv = ''; renderInventory();
+    const k = heldKey();
+    if (k) toast(`${WG.ITEMS[k]} in hand. ${keyLabel(prefs.binds.drop)} drops one, Shift+${keyLabel(prefs.binds.drop)} drops them all.`);
+  }
+  function dropHeld(all) {
+    const k = heldKey();
+    if (state !== 'play' || !net) return;
+    if (!k) { toast('Pick something to hold first (keys 1-8).'); return; }
+    net.send({ t: 'dropitem', key: k, count: all ? stats.inv[k] : 1 });
+    if (hero) hero.swingT = .25;
+  }
+  $('invList').addEventListener('click', e => { const sl = e.target.closest('[data-slot]'); if (sl) selectSlot(+sl.dataset.slot); });
   // Small inked icons for carried things and tools, drawn once on a canvas.
   const itemIcons = new Map();
   function itemIcon(key) {
@@ -1953,17 +2012,18 @@
     const url = c.toDataURL(); itemIcons.set(key, url); return url;
   }
   function renderInventory() {
-    const key = JSON.stringify([stats.inv, stats.tools, prefs.binds.book]);
+    syncSlots();
+    const key = JSON.stringify([stats.inv, stats.tools, prefs.binds.book, slotKeys, selSlot]);
     if (key === lastInv) return;
     lastInv = key;
-    // eight slots: whatever you carry fills them in order, the rest stay empty
-    const held = Object.keys(WG.ITEMS).filter(k => (stats.inv[k] || 0) > 0), SLOTS = 8;
-    $('invList').innerHTML = Array.from({ length: SLOTS }, (_, i) => {
-      const k = held[i];
-      if (!k) return '<div class="slot empty"></div>';
+    // eight slots, numbered 1-8. Each thing keeps its slot until you run out of it.
+    $('invList').innerHTML = slotKeys.map((k, i) => {
+      const sel = i === selSlot ? ' sel' : '', num = `<i>${i + 1}</i>`;
+      if (!k) return `<div class="slot empty${sel}" data-slot="${i}">${num}</div>`;
       const n = stats.inv[k], fresh = (lastCounts[k] || 0) < n ? ' new' : '';
-      return `<div class="slot${fresh}" title="${esc(WG.ITEMS[k])}: ${n}"><img src="${itemIcon(k)}" alt="${esc(WG.ITEMS[k])}"><b>${n}</b></div>`;
+      return `<div class="slot${fresh}${sel}" data-slot="${i}" title="${esc(WG.ITEMS[k])}: ${n}">${num}<img src="${itemIcon(k)}" alt="${esc(WG.ITEMS[k])}"><b>${n}</b></div>`;
     }).join('');
+    updateHeld();
     lastCounts = { ...stats.inv };
     $('toolList').innerHTML = stats.tools.length ? '<span class="toolsLabel">Tools</span>' + stats.tools.map(t =>
       `<div class="slot tool" title="${esc(WG.recipeById(t).name)}"><img src="${itemIcon(t)}" alt="${esc(WG.recipeById(t).name)}"></div>`).join('') : '';
@@ -2313,6 +2373,7 @@
   function renderSettings() {
     renderBinds();
     $('chatKeyLbl').textContent = keyLabel(prefs.binds.chat);
+    $('dropKeyLbl').textContent = keyLabel(prefs.binds.drop);
     $('sens').value = prefs.sens;
     $('invertY').checked = prefs.invertY;
     $('quality').value = prefs.quality;
@@ -2997,7 +3058,11 @@
       $('bDread').style.setProperty('--v', stats.dread + '%');
       $('energyBar').classList.toggle('tired', nrg.exhausted);
       const wx = { rain: ' \u00b7 rain', storm: ' \u00b7 storm', fogstorm: ' \u00b7 fog storm' }[env.weather] || '';
-      const dl = `Day ${day} <small>${phaseName(t)}</small><span class="sky${env.drowning ? ' drown' : ''}">${esc(WG.MOON_NAMES[env.phase || 0])}${wx}</span>`;
+      // countdown to the next nightfall or dawn (real minutes:seconds)
+      const toT = target => ((target - t) % 1 + 1) % 1 * RULES.DAY_LEN;
+      const left = night ? toT(.22) : toT(.8), mm = Math.floor(left / 60), ss = Math.floor(left % 60);
+      const clock = `<span class="timer${night ? ' night' : left < 30 ? ' soon' : ''}">${night ? '\u263e Dawn in' : '\u2600 Night in'} ${mm}:${String(ss).padStart(2, '0')}</span>`;
+      const dl = `Day ${day} <small>${phaseName(t)}</small>${clock}<span class="sky${env.drowning ? ' drown' : ''}">${esc(WG.MOON_NAMES[env.phase || 0])}${wx}</span>`;
       if (dl !== lastDayLabel) { $('dayLabel').innerHTML = dl; lastDayLabel = dl; }
       const temp = $('temp');
       if (knockT > 0 || stats.down) { temp.textContent = 'Knocked down\u2026'; temp.className = 'temp cold'; }

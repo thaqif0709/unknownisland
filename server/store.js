@@ -175,6 +175,7 @@ function createPgStore(url) {
     },
     async deleteDrop(id) { await q('DELETE FROM drops WHERE id = $1', [id]); },
     async moveDrop(id, x, z) { await q('UPDATE drops SET x = $2, z = $3 WHERE id = $1', [id, x, z]); },
+    async updateDrop(id, items) { await q('UPDATE drops SET items = $2 WHERE id = $1', [id, items]); },
     // content (editable tables) and collections
     async loadContent() {
       const j = await q('SELECT entry_key, category, name, description, rarity FROM journal_entries ORDER BY category, entry_key');
@@ -318,6 +319,7 @@ function createMemoryStore() {
     },
     async deleteDrop(id) { for (const i of islands.values()) i.drops = i.drops.filter(d => d.id !== id); },
     async moveDrop(id, x, z) { for (const i of islands.values()) for (const d of i.drops) if (d.id === id) Object.assign(d, { x, z }); },
+    async updateDrop(id, items) { for (const i of islands.values()) for (const d of i.drops) if (d.id === id) d.items = clone(items); },
     async loadContent() {
       const C = require('./content');
       return { journal: clone(C.JOURNAL), tide: C.TIDE.map(t => ({ minDay: 1, gives: {}, conditions: {}, ...clone(t) })),
