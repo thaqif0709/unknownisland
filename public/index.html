@@ -32,6 +32,8 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 .hidden{opacity:0;pointer-events:none}
 .day{font-size:22px;font-weight:600;line-height:1.1}
 .day small{font-weight:400;font-size:16px;color:var(--soft)}
+.day .sky{display:block;font-weight:400;font-size:14px;color:var(--soft)}
+.day .sky.drown{color:#3E7A72;font-weight:600}
 .stat{display:grid;grid-template-columns:56px 1fr;align-items:center;gap:8px;font-size:15px}
 .bar{height:10px;border-radius:18px;background:rgba(43,33,31,.14);overflow:hidden;border:2px solid var(--ink)}
 .bar i{display:block;height:100%;width:var(--v,100%);border-radius:18px;opacity:.85;transition:width .3s}
@@ -93,6 +95,27 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 .flashcard .meta{display:block;font-size:12px;color:var(--soft);margin-top:4px}
 .flashcard.unknown{background:transparent;border-style:dashed;box-shadow:none;opacity:.7}
 .flashcard.unknown figcaption b{background:transparent;color:var(--soft);border-color:var(--soft)}
+.sheet h3 small{font-weight:400;font-size:14px}
+.patches{display:grid;gap:8px}
+.patch{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:center;border:2px dashed rgba(43,33,31,.3);border-radius:14px;padding:6px 10px}
+.patch.on{border-style:solid;border-color:var(--ink)}
+.patch i{width:20px;height:20px;border:2px solid var(--ink);border-radius:4px}
+.patch b{font-size:15px}
+.patch .desc{display:block;font-size:13px;line-height:1.3}
+.patch .desc em{color:var(--rose);font-style:normal}
+.patch .meta{font-size:12px;color:var(--soft);text-align:right}
+.patch button.main{font-size:14px;padding:4px 10px}
+.board-sheet{background:#CDBB9A;color:var(--ink)}
+.scraps{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:10px}
+.scrap{background:#F6EEDC;border:2px solid var(--ink);padding:8px 10px 6px;box-shadow:2px 2px 0 var(--ink)}
+.scrap:nth-child(odd){transform:rotate(-1.2deg)} .scrap:nth-child(even){transform:rotate(1deg)}
+.scrap p{margin:0;font-size:15px;line-height:1.35;white-space:pre-wrap;word-break:break-word;-webkit-user-select:text;user-select:text}
+.scrap span{display:block;font-size:12px;color:#6B5E55;margin-top:4px;text-align:right}
+#boardForm{display:flex;gap:8px;align-items:flex-end;margin-top:12px}
+#boardForm textarea{flex:1;font-family:var(--hand);font-size:16px;border:2px solid var(--ink);border-radius:10px;padding:6px 8px;resize:vertical;min-height:52px;background:#FBF4E3;color:var(--ink);-webkit-user-select:text;user-select:text}
+.intro-sheet{background:#E4E0D6}
+.intro-sheet p{font-size:18px;line-height:1.5;margin:10px 0}
+.intro-sheet .collar{display:inline-block;border:2px dashed var(--ink);padding:0 10px;letter-spacing:.2em;font-weight:700}
 .stamp{position:fixed;left:50%;top:30%;transform:translate(-50%,-50%) rotate(-4deg) scale(.9);border:4px solid var(--rose);color:var(--rose);
   background:rgba(245,236,215,.9);border-radius:12px;padding:6px 16px;font-size:22px;font-weight:600;pointer-events:none;opacity:0;transition:opacity .4s,transform .4s}
 .stamp.on{opacity:1;transform:translate(-50%,-50%) rotate(-4deg) scale(1)}
@@ -203,6 +226,26 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
   </div>
 </div>
 <div class="stamp" id="stamp" aria-live="polite"></div>
+
+<div class="panel gone" id="boardPanel" role="dialog" aria-modal="true" aria-labelledby="boardTitle">
+  <div class="sheet journal-sheet board-sheet">
+    <header><h2 id="boardTitle">The driftwood board</h2><button type="button" class="x" data-close aria-label="Close">&times;</button></header>
+    <p class="note">Notes pinned by whoever passed by. Everyone on the island can read them.</p>
+    <form id="boardForm"><textarea id="boardText" maxlength="200" rows="2" placeholder="Write a note (200 letters)"></textarea><button type="submit" class="main">Pin it</button></form>
+    <div class="scraps" id="boardNotes"></div>
+  </div>
+</div>
+
+<div class="panel gone" id="intro" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+  <div class="sheet intro-sheet">
+    <h2 id="introTitle">A grey beach</h2>
+    <p>You wake on wet sand with the sea pulling at your feet. You don't remember arriving.</p>
+    <p>You're wrapped in a patched sailcloth cloak. It isn't yours. Stitched inside the collar is a name: <span class="collar">PELL</span></p>
+    <p>On the old sea charts this place is marked <i>Unknown</i>. Sailors say the fog around it hums at night, and that anyone who washes up here doesn't wash back out.</p>
+    <p class="note">Find fresh water. Keep a fire going through the night. Stay out of the fog.</p>
+    <div class="actions"><button type="button" class="main" id="introGo">Get up</button></div>
+  </div>
+</div>
 
 <div class="panel gone" id="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
   <div class="sheet">

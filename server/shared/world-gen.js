@@ -73,6 +73,15 @@
       SWALLOW_CHANCE: .35,                 // chance each thing in a reclaimed clearing is taken
     },
     SEED_CHANCE_DIG: .35,
+    MOON_CYCLE: 8,                          // days; phase 0 is the Drowning Moon, 4 is full
+    WEATHER: {
+      WEIGHTS: { clear: 6, rain: 3, storm: 1, fogstorm: 1 },
+      FOGSTORM_MIN_DAY: 3,
+      RAIN_WATER: .4,                       // thirst refilled per second while it rains
+      RAIN_LIGHT: .7,                       // fire and lantern light shrink in rain
+      STORM_TIDE: 1.6,                      // more wash-ups the morning after a storm
+    },
+    PATCH_SLOTS: 3,
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {
       PER_PLAYER: 2, ALONE_EXTRA: 1, DREAD_EXTRA: 1, MAX: 12,
@@ -108,6 +117,18 @@
     { id: 'oil', kind: 'item', name: 'Lamp oil', cost: { seeds: 3 }, gives: { oil: 1 },
       desc: 'Pressed from seeds. An offering for the old stone lanterns: one lights a lantern for about two days.' },
   ];
+
+  // Cloak patches: stitched from things you have found. Each helps, and costs.
+  const PATCHES = [
+    { key: 'moon_wing', name: 'Moon moth wing', needs: 'moon_moth', perk: 'You see further in the fog.', cost: 'Dread rises faster.' },
+    { key: 'violet_charm', name: 'Violet glass charm', needs: 'glass_violet', perk: 'Lamp oil you offer burns half again as long.', cost: 'The dark frightens you more.' },
+    { key: 'firefly_jar', name: 'Firefly jar', needs: 'firefly', perk: 'A small light of your own that pushes the fog back.', cost: 'The Stilled notice you from further away.' },
+    { key: 'silverfin_scale', name: 'Silverfin scale', needs: 'silverfin', perk: 'Fires warm you from further away.', cost: 'The Stilled notice you more easily.' },
+    { key: 'conch_charm', name: 'Conch charm', needs: 'conch', perk: 'Friends calm you twice as much.', cost: 'You get hungry faster.' },
+  ];
+  const MOON_NAMES = ['Drowning Moon', 'thin crescent', 'half moon', 'swelling moon', 'full moon', 'waning moon', 'half moon', 'old crescent'];
+  // day 1 is a full moon (a gentle first night); the first Drowning Moon is day 5
+  const moonPhase = day => ((day + 3) % RULES.MOON_CYCLE + RULES.MOON_CYCLE) % RULES.MOON_CYCLE;
 
   // Fire types: warmth radius, how fast they burn (1 = one fuel per second), fuel.
   const FIRES = {
@@ -367,7 +388,7 @@
   const recipeById = id => RECIPES.find(r => r.id === id);
 
   const WorldGen = {
-    RULES, ITEMS, RECIPES, FIRES, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
+    RULES, ITEMS, RECIPES, FIRES, PATCHES, MOON_NAMES, moonPhase, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
     generateObjects, generateLanterns, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, speedMult,
   };

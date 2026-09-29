@@ -45,12 +45,12 @@
       ink: { value: new THREE.Color(0x2B211F) },
       fogTex: { value: fogTex }, fogOrigin: { value: fogOrigin }, fogSize: { value: FOG_SIZE },
       invProj: { value: camera.projectionMatrixInverse }, camWorld: { value: camera.matrixWorld }, camPos: { value: camera.position },
-      night: { value: 0 }, time: { value: 0 }, dread: { value: 0 },
+      night: { value: 0 }, time: { value: 0 }, dread: { value: 0 }, seeFar: { value: 1 },
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
     fragmentShader: `
       uniform sampler2D tColor, tDepth, tNormal, fogTex;
-      uniform vec2 res, fogOrigin; uniform float width, near, far, useNormals, fogSize, night, time, dread;
+      uniform vec2 res, fogOrigin; uniform float width, near, far, useNormals, fogSize, night, time, dread, seeFar;
       uniform vec3 ink, camPos; uniform mat4 invProj, camWorld;
       varying vec2 vUv;
       float lin(vec2 uv){ float z = texture2D(tDepth, uv).x * 2. - 1.; return 2. * near * far / (far + near - z * (far - near)); }
@@ -83,7 +83,7 @@
           float fPix = fogField(wp.xz);
           fog = max(max(fPix * smoothstep(1.5, 18., d0), fCam * smoothstep(2., 16., d0)), fPix * .35);
         }
-        fog = clamp(fog * (.85 + noise(gl_FragCoord.xy * .015 + time * .06) * .3), 0., 1.);
+        fog = clamp(fog * (.85 + noise(gl_FragCoord.xy * .015 + time * .06) * .3) * seeFar, 0., 1.);
         float bay = bayer(floor(gl_FragCoord.xy / 2.));
         // ---- ink lines (they blow out wider as dread rises) ----
         float e = 0.;
@@ -341,22 +341,59 @@
       g.fillStyle = '#F2C45A'; g.beginPath(); g.arc(128, 128, 69, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#E8A640'; g.beginPath(); g.arc(140, 140, 48, 0, Math.PI * 2); g.fill();
     } else {
+      // kind is 'moon' + phase (0-7). 0 is the Drowning Moon: dark, rimmed in sea-green.
+      const ph = +kind.slice(4) || 0, R = 73, lit = '#F3EAD6', dark = ph === 0 ? '#27403F' : '#4A4658';
       g.fillStyle = '#2B211F'; g.beginPath(); g.arc(128, 128, 80, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#F3EAD6'; g.beginPath(); g.arc(128, 128, 73, 0, Math.PI * 2); g.fill();
-      g.globalCompositeOperation = 'destination-out';   // crescent
-      g.beginPath(); g.arc(168, 104, 70, 0, Math.PI * 2); g.fill();
-      g.globalCompositeOperation = 'source-over';
-      g.strokeStyle = '#2B211F'; g.lineWidth = 7; g.beginPath(); g.arc(168, 104, 70, Math.PI * .62, Math.PI * 1.33); g.stroke();
-      g.fillStyle = '#D9CDB4'; [[96, 150, 10], [80, 110, 7]].forEach(([x, y, rr]) => { g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.fill(); });
+      g.fillStyle = dark; g.beginPath(); g.arc(128, 128, R, 0, Math.PI * 2); g.fill();
+      if (ph === 0) { g.strokeStyle = '#6FA39A'; g.lineWidth = 5; g.beginPath(); g.arc(128, 128, R - 4, 0, Math.PI * 2); g.stroke(); }
+      else {
+        // lit half (right while waxing, left while waning), then the terminator as an ellipse
+        const waxing = ph < 4, k = Math.cos(ph / 8 * Math.PI * 2);   // 1 new, -1 full
+        g.fillStyle = lit; g.beginPath(); g.arc(128, 128, R, -Math.PI / 2, Math.PI / 2, !waxing); g.closePath(); g.fill();
+        g.fillStyle = k > 0 ? dark : lit; g.beginPath(); g.ellipse(128, 128, Math.max(.5, R * Math.abs(k)), R, 0, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(160,150,130,.5)'; [[106, 150, 10], [150, 104, 8], [140, 160, 6]].forEach(([x, y, rr]) => { g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.fill(); });
+      }
     }
     return new THREE.CanvasTexture(c);
   }
+  const moonTex = [];
+  const moonTexture = ph => moonTex[ph] || (moonTex[ph] = discTexture('moon' + ph));
   const skyDisc = kind => {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: discTexture(kind), transparent: true, fog: false, depthWrite: false }));
     sp.scale.set(kind === 'sun' ? 46 : 34, kind === 'sun' ? 46 : 34, 1); sp.renderOrder = -2;
     scene.add(sp); noInk.add(sp); return sp;
   };
-  const sunDisc = skyDisc('sun'), moonDisc = skyDisc('moon');
+  const sunDisc = skyDisc('sun'), moonDisc = skyDisc('moon4');
+  let env = { phase: 4, lightMul: 1 };
+  function setEnv(e) {
+    env = Object.assign({ lightMul: 1 }, e || {});
+    fogEnv = { drowning: !!env.drowning, fogStorm: !!env.fogStorm };
+    moonDisc.material.map = moonTexture(env.phase || 0); moonDisc.material.needsUpdate = true;
+    fogTimer = 0;
+  }
+
+  // Rain: short inked streaks falling around the camera.
+  const rain = (() => {
+    const N = 900, geo = new THREE.BufferGeometry(), pos = new Float32Array(N * 6), seed = [];
+    const r = mulberry32(99);
+    for (let i = 0; i < N; i++) seed.push([r() * 40 - 20, r() * 24, r() * 40 - 20, .8 + r() * .4]);
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x5E6A74, transparent: true, opacity: .55, fog: false }));
+    lines.frustumCulled = false; lines.visible = false;
+    scene.add(lines); noInk.add(lines);
+    return { update(elapsed, on, heavy, cx, cy, cz) {
+      lines.visible = on; if (!on) return;
+      const n = heavy ? N : N / 2, fall = heavy ? 26 : 18, slant = heavy ? .35 : .12;
+      for (let i = 0; i < N; i++) {
+        const [ox, oy, oz, sp] = seed[i], y = cy - 8 + ((oy - elapsed * fall * sp) % 24 + 24) % 24;
+        const x = cx + ox, z = cz + oz, j = i * 6;
+        if (i >= n) { pos.fill(0, j, j + 6); pos[j + 1] = pos[j + 4] = -99; continue; }
+        pos[j] = x; pos[j + 1] = y; pos[j + 2] = z; pos[j + 3] = x + slant; pos[j + 4] = y + .7; pos[j + 5] = z;
+      }
+      geo.attributes.position.needsUpdate = true;
+    } };
+  })();
+  let flash = 0, nextFlash = 8;
 
   // Fireflies: soft blinking lights over the grass and among the trees at night.
   const fireflies = (() => {
@@ -924,6 +961,21 @@
     return av;
   }
   function removeCastaway(av) { scene.remove(av.root); }
+  // Cloak patches: small stitched squares in the colour of what they were made from.
+  const PATCH_COL = { moon_wing: 0xF3EAD6, violet_charm: 0xA88BD8, firefly_jar: 0xE8F27A, silverfin_scale: 0xB9C3C6, conch_charm: 0xE3A89A };
+  // [angle round the robe from the front, height]; placed on the robe's surface
+  const PATCH_SPOTS = [[.55, .6], [-.35, .92], [2.6, .75]].map(([a, y]) => { const r = .38 - (y - .35) / .78 * .18 + .025; return [Math.sin(a) * r, y, Math.cos(a) * r, a]; });
+  const stitchM = new THREE.MeshBasicMaterial({ color: 0x2B211F });
+  function setPatches(av, list) {
+    if (!av) return;
+    if (av.patches) av.body.remove(av.patches);
+    av.patches = new THREE.Group(); av.body.add(av.patches);
+    (list || []).slice(0, PATCH_SPOTS.length).forEach((key, i) => {
+      const [x, y, z, ry] = PATCH_SPOTS[i], m = new THREE.Mesh(new THREE.BoxGeometry(.12, .11, .02), softShared(PATCH_COL[key] || 0xD9C9A6));
+      m.position.set(x, y, z); m.rotation.set(0, ry, 0); m.rotateX(-.23); av.patches.add(m);
+      const st = new THREE.Mesh(new THREE.BoxGeometry(.13, .012, .024), stitchM); st.position.copy(m.position); st.rotation.copy(m.rotation); av.patches.add(st);
+    });
+  }
 
   function poseCastaway(av, x, z, face, moving, dead, dt, elapsed) {
     const gh = groundAt(x, z), y = Math.max(gh, -.75);
@@ -1096,7 +1148,11 @@
   // Server decides where; here they flit, hover, hop or crawl around that spot.
   let bugs = new Map();
   const bugMats = { firefly: new THREE.MeshBasicMaterial({ color: 0xE8F27A }), moon_moth: new THREE.MeshBasicMaterial({ color: 0xF3EAD6 }),
-    cricket: soft(0x6F8F4A), bark_beetle: soft(0x3E3430), dragonfly: soft(0x5F7FA8), wing: new THREE.MeshBasicMaterial({ color: 0xE9F1F3, transparent: true, opacity: .55 }) };
+    cricket: soft(0x6F8F4A), bark_beetle: soft(0x3E3430), dragonfly: soft(0x5F7FA8), wing: new THREE.MeshBasicMaterial({ color: 0xE9F1F3, transparent: true, opacity: .55 }),
+    snailShell: new THREE.MeshBasicMaterial({ color: 0xCFE6EA, transparent: true, opacity: .6 }), snail: soft(0xE7DCC8), heart: new THREE.MeshBasicMaterial({ color: 0xD9605A }),
+    rain_beetle: soft(0x3F5F6A), shroomCap: new THREE.MeshBasicMaterial({ color: 0x9FE3C8 }), shroomStem: new THREE.MeshBasicMaterial({ color: 0xE9F1DA }),
+    lanternFish: soft(0x3E4A5A), lure: new THREE.MeshBasicMaterial({ color: 0xF3D27A }) };
+  const GLOW_BUGS = new Set(['firefly', 'moon_moth', 'glow_mushroom', 'lantern_fish']);
   function makeBug(key) {
     const g = new THREE.Group(), add = (geo, m, x, y, z) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); g.add(mesh); return mesh; };
     if (key === 'firefly') { add(new THREE.SphereGeometry(.07, 8, 6), bugMats.firefly, 0, 0, 0); add(new THREE.SphereGeometry(.05, 6, 4), bugMats.bark_beetle, 0, .02, .06); }
@@ -1105,6 +1161,15 @@
     else if (key === 'dragonfly') { const b = add(new THREE.CylinderGeometry(.02, .015, .4, 6), bugMats.dragonfly, 0, 0, 0); b.rotation.x = Math.PI / 2;
       for (const sx of [-1, 1]) for (const dz of [-.04, .06]) { const w = add(new THREE.PlaneGeometry(.26, .06), bugMats.wing, sx * .14, .01, dz); w.rotation.x = -Math.PI / 2; } }
     else if (key === 'cricket') { add(new THREE.SphereGeometry(.07, 8, 6), bugMats.cricket, 0, 0, 0).scale.set(.7, .7, 1.5); }
+    else if (key === 'glass_snail') { add(new THREE.SphereGeometry(.05, 8, 6), bugMats.snail, 0, .03, .08).scale.set(1, .6, 2.2);
+      add(new THREE.SphereGeometry(.03, 6, 4), bugMats.heart, 0, .1, 0); add(new THREE.SphereGeometry(.09, 10, 8), bugMats.snailShell, 0, .1, 0); }
+    else if (key === 'rain_beetle') { add(new THREE.SphereGeometry(.08, 8, 6), bugMats.rain_beetle, 0, 0, 0).scale.set(1, .6, 1.2); }
+    else if (key === 'glow_mushroom') { for (const [x, z, k] of [[0, 0, 1], [.14, .08, .7], [-.1, .12, .55]]) {
+        add(new THREE.CylinderGeometry(.025 * k, .035 * k, .22 * k, 6), bugMats.shroomStem, x, .11 * k, z);
+        add(new THREE.SphereGeometry(.09 * k, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), bugMats.shroomCap, x, .2 * k, z); } }
+    else if (key === 'lantern_fish') { add(new THREE.SphereGeometry(.14, 10, 8), bugMats.lanternFish, 0, 0, 0).scale.set(1.6, .8, .8);
+      const st = add(new THREE.CylinderGeometry(.008, .008, .2, 4), bugMats.lanternFish, .16, .14, 0); st.rotation.z = -.6;
+      add(new THREE.SphereGeometry(.045, 8, 6), bugMats.lure, .24, .22, 0); }
     else { add(new THREE.SphereGeometry(.08, 8, 6), bugMats.bark_beetle, 0, 0, 0).scale.set(1, .55, 1.3); }
     return g;
   }
@@ -1112,7 +1177,7 @@
     const seen = new Set();
     for (const [id, key, x, z] of list) {
       seen.add(id);
-      if (!bugs.has(id)) { const mesh = makeBug(key); scene.add(mesh); if (key === 'firefly' || key === 'moon_moth') noInk.add(mesh);
+      if (!bugs.has(id)) { const mesh = makeBug(key); scene.add(mesh); if (GLOW_BUGS.has(key)) noInk.add(mesh);
         bugs.set(id, { id, key, x, z, type: 'bug', r: .3, mesh, state: {}, ph: Math.random() * 6.28 }); }
     }
     for (const [id, b] of bugs) if (!seen.has(id)) { scene.remove(b.mesh); noInk.delete(b.mesh); bugs.delete(id); }
@@ -1124,12 +1189,42 @@
       if (b.key === 'firefly' || b.key === 'moon_moth') { x += Math.sin(e * .7) * .8; z += Math.cos(e * .5) * .8; y += 1 + Math.sin(e * 1.3) * .3; }
       else if (b.key === 'dragonfly') { x += Math.sin(e * .9) * 1.2; z += Math.sin(e * .6) * 1.2; y += .9 + Math.sin(e * 5) * .05; }
       else if (b.key === 'cricket') { y += .07 + Math.max(0, Math.sin(e * 2.2)) * .35; x += Math.sin(e * .3) * .6; }
+      else if (b.key === 'glow_mushroom') { y = gy; }
+      else if (b.key === 'lantern_fish') { x += Math.sin(e * .4) * 1.4; z += Math.cos(e * .33) * 1.4; y = Math.max(gy, -.5) + .05 + Math.sin(e * 1.5) * .04; }
+      else if (b.key === 'glass_snail') { x += Math.sin(e * .08) * .3; y += .01; }
       else { x += Math.sin(e * .25) * .5; z += Math.cos(e * .2) * .5; y += .05; }
-      b.mesh.position.set(x, y, z); b.mesh.rotation.y = e * .5;
+      b.mesh.position.set(x, y, z); if (b.key !== 'glow_mushroom') b.mesh.rotation.y = e * .5;
       b.cx = x; b.cz = z;   // where it actually is, for catching
       if (b.mesh.userData['wing-1']) { const f = Math.sin(e * 14) * .6; b.mesh.userData['wing-1'].rotation.y = f; b.mesh.userData.wing1.rotation.y = -f; }
     });
   }
+
+  // ================= The driftwood board =================
+  // Grey driftwood planks on two posts, by the first lantern. Notes are paper scraps.
+  let board = null;
+  const paperM = soft(0xF3EAD6);
+  function setBoard(b) {
+    if (board) scene.remove(board.mesh);
+    board = null; if (!b) return;
+    const g = new THREE.Group(), add = (geo, m, x, y, z) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); g.add(mesh); return mesh; };
+    for (const sx of [-.8, .8]) add(new THREE.CylinderGeometry(.07, .09, 2, 7), driftM, sx, 1, 0).rotation.z = sx * .03;
+    for (const [y, w, rz] of [[1.55, 2.1, .02], [1.2, 1.9, -.03], [.85, 2, .015]]) add(new THREE.BoxGeometry(w, .32, .08), driftM, 0, y, 0).rotation.z = rz;
+    const scraps = new THREE.Group(); g.add(scraps);
+    g.position.set(b.x, groundAt(b.x, b.z), b.z); g.rotation.y = -.6;
+    shadows(g); scene.add(g);
+    board = { type: 'board', x: b.x, z: b.z, r: .9, mesh: g, scraps, state: {} };
+    renderScraps();
+  }
+  function renderScraps() {
+    if (!board) return;
+    board.scraps.clear();
+    notes.slice(-7).forEach((n, i) => {
+      const r = mulberry32(n.id * 17 + 3), m = new THREE.Mesh(new THREE.PlaneGeometry(.34, .26), paperM);
+      m.position.set(-.75 + (i % 4) * .5 + r() * .08, 1.45 - Math.floor(i / 4) * .45 + r() * .06, .05); m.rotation.z = (r() - .5) * .4;
+      board.scraps.add(m);
+    });
+  }
+  let notes = [];
 
   // Sacks of things dropped when someone was knocked down.
   let drops = new Map();
@@ -1164,7 +1259,11 @@
 
   const $ = id => document.getElementById(id);
   const ui = { hud: $('hud'), inv: $('inv'), prompt: $('prompt'), toast: $('toast'), overlay: $('overlay'), online: $('online'),
-    touch: $('touchUi'), banner: $('banner'), tags: $('tags'), gear: $('btnSettings'), book: $('book'), settings: $('settings'), journal: $('journal') };
+    touch: $('touchUi'), banner: $('banner'), tags: $('tags'), gear: $('btnSettings'), book: $('book'), settings: $('settings'), journal: $('journal'),
+    board: $('boardPanel'), intro: $('intro') };
+  let myPatches = [];
+  const WEATHER_SAY = { clear: 'The sky clears.', rain: 'It starts to rain. Fires burn smaller in the wet.',
+    storm: 'A storm rolls in. The sea will bring things up tomorrow.', fogstorm: 'The fog is coming in, in broad daylight.' };
   let toastTimer = 0;
   function toast(msg) { ui.toast.textContent = msg; ui.toast.classList.add('on'); toastTimer = 2.6; }
 
@@ -1291,7 +1390,8 @@
     tag.textContent = p.name;
     ui.tags.appendChild(tag);
     const av = makeCastaway(colorFor(p.id));
-    remotes.set(p.id, { name: p.name, remote: new Net.Remote(p.x, p.z, p.face), av, tag, dead: p.dead });
+    setPatches(av, p.patches);
+    remotes.set(p.id, { name: p.name, remote: new Net.Remote(p.x, p.z, p.face), av, tag, dead: p.dead, patches: p.patches || [] });
   }
   function renderOnline() {
     const rows = [`<span><i style="background:${hex(colorFor(me.id))}"></i>${esc(me.name)} (you)</span>`];
@@ -1317,10 +1417,13 @@
         clearWash(); (m.washups || []).forEach(addWash);
         syncBugs(m.bugs || []);
         if (m.journal) journal = m.journal;
+        setEnv(m.env);
+        notes = m.notes || []; setBoard(m.board);
         resetRemotes(); m.players.forEach(addRemote);
         if (hero) removeCastaway(hero);
         hero = makeCastaway(colorFor(me.id));
         applySelf(m.you);
+        myPatches = m.you.patches || []; setPatches(hero, myPatches);
         renderOnline();
         ui.banner.classList.add('hidden');
         hideOverlay();
@@ -1329,7 +1432,8 @@
         else {
           const wasPlaying = state === 'play';
           state = 'play';
-          if (!wasPlaying) toast(stats.thirst < 60 ? 'Thirsty. There might be fresh water inland.' : `Day ${day} on ${m.island.name}.`);
+          if (m.firstArrival && !wasPlaying) showIntro();
+          else if (!wasPlaying) toast(stats.thirst < 60 ? 'Thirsty. There might be fresh water inland.' : `Day ${day} on ${m.island.name}.`);
         }
         break;
       }
@@ -1384,6 +1488,22 @@
         journal.firsts[m.key] = m.by;
         if (!me || m.by !== me.name) toast(`${m.by} found the first ${m.name.toLowerCase()} on the island.`);
         break;
+      case 'env': {
+        const was = env;
+        setEnv(m.env);
+        if (state === 'play' && was.weather !== env.weather) toast(WEATHER_SAY[env.weather] || '');
+        break;
+      }
+      case 'note':
+        notes.push(m.note); if (notes.length > 40) notes.shift(); renderScraps();
+        if (!ui.board.classList.contains('gone')) renderBoard();
+        if (state === 'play' && (!me || m.note.by !== me.name) && board && Math.hypot(board.x - px, board.z - pz) < 40)
+          toast(m.note.by ? `${m.note.by} pinned a note to the driftwood board.` : 'There is a new note on the driftwood board.');
+        break;
+      case 'patches':
+        if (me && m.id === me.id) { myPatches = m.list; setPatches(hero, m.list); if (!ui.journal.classList.contains('gone')) renderJournal(); }
+        else { const r = remotes.get(m.id); if (r) { r.patches = m.list; setPatches(r.av, m.list); } }
+        break;
       case 'unfire': { const f = fires.get(m.id); if (f) { scene.remove(f.mesh); fires.delete(m.id); } break; }
       case 'movedrop': { const d = drops.get(m.id); if (d) { d.x = m.x; d.z = m.z; d.mesh.position.set(m.x, groundAt(m.x, m.z), m.z); } break; }
       case 'undrop': removeDrop(m.id); break;
@@ -1395,6 +1515,7 @@
       case 'respawned':
         applySelf(m.you);
         hero.root.rotation.x = 0;
+        myPatches = m.you.patches || myPatches; setPatches(hero, myPatches);
         state = 'play'; hideOverlay(); showHud(true);
         toast('You wake up on the beach again.');
         break;
@@ -1442,6 +1563,7 @@
       if (d < RULES.REACH && d < bd) { bd = d; bestO = o; }
     };
     nearbyObjects(px, pz, check); fires.forEach(check); drops.forEach(check); lanterns.forEach(check); washups.forEach(check);
+    if (board) check(board);
     bugs.forEach(b => { const d = Math.hypot((b.cx ?? b.x) - px, (b.cz ?? b.z) - pz); if (d < 1.9 && d < bd) { bd = d; bestO = b; } });
     if (bestO) return bestO;
     const sn = WG.nearestSpring(px, pz);
@@ -1461,6 +1583,7 @@
       case 'ore': return has('pickaxe') ? `Mine ${o.ore === 'iron' ? 'iron' : 'copper'} ore` : `${o.ore === 'iron' ? 'Iron' : 'Copper'} ore (needs a pickaxe)`;
       case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
       case 'drop': return 'Pick up the scattered things';
+      case 'board': return notes.length ? `Read the driftwood board (${notes.length} note${notes.length > 1 ? 's' : ''})` : 'The driftwood board (pin a note)';
       case 'wash': return o.kind === 'strange' ? (o.key === 'door_in_sand' ? 'Try the door' : o.key === 'ringing_bell' ? 'Touch the bell' : o.key === 'footprints' ? 'Look at the footprints' : 'Pick it up') : `Pick up: ${o.label.replace(/^A /, 'a ')}`;
       case 'bug': { const e = journal.entries.find(e => e.key === o.key); return `Catch the ${(e ? e.name : 'bug').toLowerCase()}`; }
       case 'lantern': {
@@ -1482,6 +1605,7 @@
   function act() {
     if (state !== 'play' || cooldown > 0 || !target || !net || knockT > 0) return;
     cooldown = .45;
+    if (target.type === 'board') { togglePanel('board'); return; }
     if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig', 'lantern'].includes(target.type)) hero.swingT = .35;
     net.send({ t: 'act', target: targetKey(target) });
   }
@@ -1527,7 +1651,8 @@
   const keys = {};
   const held = a => !!keys[prefs.binds[a]];
   let waitingBind = null;
-  const panelOpen = () => !ui.book.classList.contains('gone') || !ui.settings.classList.contains('gone') || !ui.journal.classList.contains('gone');
+  const PANELS = ['book', 'settings', 'journal', 'board'];
+  const panelOpen = () => PANELS.some(k => !ui[k].classList.contains('gone')) || !ui.intro.classList.contains('gone');
   window.addEventListener('keydown', e => {
     if (waitingBind) {
       e.preventDefault();
@@ -1543,7 +1668,7 @@
       return;
     }
     if (state !== 'play' && state !== 'dead') return;
-    if (e.code === 'Escape') { e.preventDefault(); if (panelOpen()) closePanels(); else if (state === 'play') togglePanel('settings'); return; }
+    if (e.code === 'Escape') { e.preventDefault(); if (!ui.intro.classList.contains('gone')) closeIntro(); else if (panelOpen()) closePanels(); else if (state === 'play') togglePanel('settings'); return; }
     if (panelOpen()) {
       if ((e.code === prefs.binds.book && !ui.book.classList.contains('gone')) || (e.code === prefs.binds.journal && !ui.journal.classList.contains('gone'))) closePanels();
       return;
@@ -1577,7 +1702,7 @@
 
   // ================= Journal (a tattoo flash sheet) =================
   let journal = { entries: [], firsts: {}, mine: {} };
-  const JCATS = [['bugs', 'Bugs'], ['shells', 'Shells'], ['glass', 'Sea glass'], ['tide', 'From the tide'], ['strange', 'Strange tides']];
+  const JCATS = [['bugs', 'Bugs'], ['moon', 'Under the full moon'], ['shells', 'Shells'], ['glass', 'Sea glass'], ['tide', 'From the tide'], ['strange', 'Strange tides']];
   const iconCache = new Map();
   // Each entry gets a small inked design, drawn once.
   function flashIcon(key, known) {
@@ -1604,6 +1729,28 @@
       fill(beetle ? '#4A3A34' : '#7C9A6B', () => g.ellipse(60, 62, beetle ? 20 : 14, beetle ? 28 : 32, 0, 0, Math.PI * 2));
       fill(beetle ? '#4A3A34' : '#7C9A6B', () => g.arc(60, 30, 10, 0, Math.PI * 2));
       if (beetle) { g.beginPath(); g.moveTo(60, 38); g.lineTo(60, 88); g.stroke(); }
+    } else if (key === 'glass_snail') {
+      fill('#E7DCC8', () => g.ellipse(56, 82, 40, 10, 0, 0, Math.PI * 2));
+      fill('rgba(207,230,234,.8)', () => g.arc(62, 60, 26, 0, Math.PI * 2));
+      g.beginPath(); for (let a = 0; a < Math.PI * 3; a += .15) { const r = 20 * (1 - a / (Math.PI * 3.3)); g.lineTo(62 + Math.cos(a) * r, 60 + Math.sin(a) * r); } g.stroke();
+      g.fillStyle = '#D9605A'; g.beginPath(); g.arc(62, 60, 5, 0, 7); g.fill();
+      g.beginPath(); g.moveTo(22, 78); g.lineTo(14, 62); g.moveTo(28, 78); g.lineTo(26, 60); g.stroke();
+    } else if (key === 'rain_beetle') {
+      for (const sx of [-1, 1]) for (const y of [50, 64, 78]) { g.beginPath(); g.moveTo(60, y); g.lineTo(60 + sx * 32, y + 10); g.stroke(); }
+      fill('#3F5F6A', () => g.ellipse(60, 64, 22, 28, 0, 0, Math.PI * 2)); fill('#3F5F6A', () => g.arc(60, 32, 10, 0, Math.PI * 2));
+      g.fillStyle = '#CFE6EA'; [[52, 56], [68, 70], [56, 80]].forEach(([x, y]) => { g.beginPath(); g.ellipse(x, y, 3, 5, 0, 0, 7); g.fill(); });
+    } else if (key === 'glow_mushroom') {
+      for (const [x, y, k] of [[48, 90, 1], [80, 94, .7]]) {
+        fill('#E9F1DA', () => g.rect(x - 6 * k, y - 40 * k, 12 * k, 40 * k));
+        fill('#9FE3C8', () => { g.moveTo(x - 28 * k, y - 38 * k); g.quadraticCurveTo(x, y - 80 * k, x + 28 * k, y - 38 * k); g.closePath(); });
+      }
+      g.fillStyle = 'rgba(159,227,200,.4)'; g.beginPath(); g.arc(56, 50, 40, 0, 7); g.fill();
+    } else if (key === 'lantern_fish') {
+      fill('#3E4A5A', () => g.ellipse(52, 66, 34, 20, 0, 0, Math.PI * 2));
+      fill('#3E4A5A', () => { g.moveTo(84, 66); g.lineTo(104, 50); g.lineTo(104, 82); g.closePath(); });
+      g.beginPath(); g.moveTo(34, 50); g.quadraticCurveTo(30, 20, 14, 26); g.stroke();
+      g.fillStyle = 'rgba(243,210,122,.5)'; g.beginPath(); g.arc(14, 26, 14, 0, 7); g.fill(); fill('#F3D27A', () => g.arc(14, 26, 6, 0, 7));
+      g.fillStyle = '#F3EAD6'; g.beginPath(); g.arc(34, 62, 4, 0, 7); g.fill();
     } else if (key === 'spiral_shell' || key === 'conch') {
       fill(key === 'conch' ? '#E3A89A' : '#EBD9C3', () => { g.moveTo(22, 80); g.quadraticCurveTo(60, 10, 98, 50); g.quadraticCurveTo(80, 95, 22, 80); });
       g.beginPath(); for (let a = 0; a < Math.PI * 4; a += .15) { const r = 22 * (1 - a / (Math.PI * 4.4)); g.lineTo(66 + Math.cos(a) * r, 56 + Math.sin(a) * r); } g.stroke();
@@ -1646,7 +1793,7 @@
   function renderJournal() {
     const found = Object.keys(journal.mine).length;
     $('journalCount').textContent = `${found} of ${journal.entries.length} found`;
-    $('journalBody').innerHTML = JCATS.map(([cat, title]) => {
+    $('journalBody').innerHTML = renderCloak() + JCATS.map(([cat, title]) => {
       const list = journal.entries.filter(e => e.category === cat);
       if (!list.length) return '';
       return `<h3>${esc(title)}</h3><div class="flash">` + list.map(e => {
@@ -1659,24 +1806,68 @@
       }).join('') + '</div>';
     }).join('');
   }
+  // Your cloak: stitch patches made from things you've found (up to PATCH_SLOTS).
+  function renderCloak() {
+    const slots = RULES.PATCH_SLOTS || 3;
+    return `<h3>Your cloak <small>(${myPatches.length} of ${slots} patches)</small></h3><div class="patches">` + WG.PATCHES.map(pt => {
+      const on = myPatches.includes(pt.key), found = (journal.mine[pt.needs] || 0) > 0;
+      const need = journal.entries.find(e => e.key === pt.needs);
+      const btn = on ? `<button type="button" class="link" data-patch="${pt.key}" data-on="0">Unpick</button>`
+        : found ? `<button type="button" class="main" data-patch="${pt.key}" data-on="1"${myPatches.length >= slots ? ' disabled' : ''}>Stitch on</button>`
+        : `<span class="meta">Find a ${esc(need ? need.name.toLowerCase() : pt.needs)} first</span>`;
+      return `<div class="patch${on ? ' on' : ''}"><i style="background:${hex(PATCH_COL[pt.key])}"></i><div><b>${esc(found || on ? pt.name : '???')}</b>
+        ${found || on ? `<span class="desc">${esc(pt.perk)} <em>${esc(pt.cost)}</em></span>` : ''}</div>${btn}</div>`;
+    }).join('') + '</div>';
+  }
+  $('journalBody').addEventListener('click', e => {
+    const b = e.target.closest('[data-patch]');
+    if (!b || b.disabled || !net) return;
+    net.send({ t: 'patch', key: b.dataset.patch, on: b.dataset.on === '1' });
+  });
+
+  // ================= Driftwood board panel =================
+  function renderBoard() {
+    const list = notes.slice().reverse();
+    $('boardNotes').innerHTML = list.length ? list.map(n => {
+      const when = n.at ? new Date(n.at) : null;
+      return `<div class="scrap"><p>${esc(n.text)}</p><span>${n.by ? '\u2014 ' + esc(n.by) : 'no name'}${when && !isNaN(when) ? ' \u00b7 ' + when.toLocaleDateString() : ''}</span></div>`;
+    }).join('') : '<p class="note">Nothing pinned yet.</p>';
+  }
+  $('boardForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const text = $('boardText').value.trim();
+    if (!text || !net) return;
+    net.send({ t: 'pin', text });
+    $('boardText').value = '';
+  });
+  $('boardText').addEventListener('keydown', e => { if (e.code !== 'Escape') e.stopPropagation(); });
+
+  // ================= First arrival =================
+  function showIntro() {
+    ui.intro.classList.remove('gone');
+    $('introGo').focus({ preventScroll: true });
+  }
+  function closeIntro() { ui.intro.classList.add('gone'); toast('Thirsty. There might be fresh water inland.'); }
+  $('introGo').addEventListener('click', closeIntro);
+
   let stampT = null;
   function stamp(msg) { const el = $('stamp'); el.textContent = msg; el.classList.add('on'); clearTimeout(stampT); stampT = setTimeout(() => el.classList.remove('on'), 3200); }
 
   // ================= Recipe book & settings =================
   function togglePanel(which) {
-    const el = which === 'book' ? ui.book : which === 'journal' ? ui.journal : ui.settings;
+    const el = ui[which];
     const opening = el.classList.contains('gone');
     closePanels();
     if (!opening) return;
     releaseKeys();
-    if (which === 'book') renderBook(); else if (which === 'journal') renderJournal(); else renderSettings();
+    if (which === 'book') renderBook(); else if (which === 'journal') renderJournal(); else if (which === 'board') renderBoard(); else renderSettings();
     el.classList.remove('gone');
     const first = el.querySelector('.x');
     if (first) first.focus({ preventScroll: true });
   }
   function closePanels() {
     waitingBind = null;
-    ui.book.classList.add('gone'); ui.settings.classList.add('gone'); ui.journal.classList.add('gone');
+    PANELS.forEach(k => ui[k].classList.add('gone'));
   }
   document.querySelectorAll('.panel').forEach(p => p.addEventListener('click', e => {
     if (e.target === p || e.target.closest('[data-close]')) closePanels();
@@ -1793,6 +1984,7 @@
   if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, camera, chunks, objects: () => objects, stats, stilled,
     pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); },
     washups: () => washups, bugs: () => bugs, previewJournal: keys => { keys.forEach(k => { journal.mine[k] = 1 + (k.length % 3); journal.firsts[k] = journal.firsts[k] || 'aiman'; }); },
+    setEnv: e => setEnv(e), face: () => face, gy: () => groundAt(px, pz), board: () => board, openPanel: w => togglePanel(w), patches: l => { myPatches = l; setPatches(hero, l); },
     lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); } }; }
 
   // ================= Sky =================
@@ -1843,6 +2035,31 @@
     const friends = [...remotes.keys()];
     const colour = friends.length ? colorFor(friends[(Math.random() * friends.length) | 0]) : CLOAKS[(Math.random() * CLOAKS.length) | 0];
     phantom = { av: makeCastaway(colour), x, z, life: 5 + Math.random() * 4, behind, seen: false };
+  }
+
+  // ================= Dread: the extra one at the fire =================
+  // At camp with friends, warm, at night, with high dread: you count one frog
+  // too many round the fire. No name over its head. Only you can see it.
+  let extra = null, extraNext = 20;
+  function updateExtra(dt) {
+    const fire = [...fires.values()].find(f => f.fuel > 0 && Math.hypot(f.x - px, f.z - pz) < 6);
+    const friends = fire ? [...remotes.values()].filter(r => { const q = r.remote.sample(); return !r.dead && Math.hypot(q.x - fire.x, q.z - fire.z) < 7; }) : [];
+    const ok = state === 'play' && fire && friends.length && stats.warm && isNight(t) && stats.dread >= 50;
+    if (extra) {
+      extra.life -= dt;
+      const a = viewAngle(extra.x, groundAt(extra.x, extra.z) + 1, extra.z);
+      if (a < .18) extra.stare += dt;
+      if (!ok || extra.life <= 0 || extra.stare > 2.5 || Math.hypot(extra.x - px, extra.z - pz) < 1.6) { removeCastaway(extra.av); extra = null; extraNext = 25 + Math.random() * 40; }
+      else poseCastaway(extra.av, extra.x, extra.z, Math.atan2(extra.f.x - extra.x, extra.f.z - extra.z), 0, false, dt, elapsed);
+      return;
+    }
+    if (!ok || (extraNext -= dt) > 0) return;
+    // a seat on the far side of the fire from you, between the others
+    const a = Math.atan2(px - fire.x, pz - fire.z) + Math.PI + (Math.random() - .5) * 1.2, r = 1.8 + Math.random() * .6;
+    const x = fire.x + Math.sin(a) * r, z = fire.z + Math.cos(a) * r;
+    if (friends.some(f => { const q = f.remote.sample(); return Math.hypot(q.x - x, q.z - z) < 1; })) { extraNext = 3; return; }
+    const used = new Set([me.id, ...remotes.keys()].map(colorFor)), free = CLOAKS.filter(c => !used.has(c));
+    extra = { av: makeCastaway(free.length ? free[(Math.random() * free.length) | 0] : CLOAKS[0]), x, z, f: fire, life: 30 + Math.random() * 40, stare: 0 };
   }
 
   // ================= Dread: sounds =================
@@ -1914,8 +2131,13 @@
     // Time runs locally between server snapshots.
     if (inGame()) { t += dt / RULES.DAY_LEN; if (t >= 1) t -= 1; }
     else if (state === 'title' || state === 'connecting') t = .3 + Math.sin(elapsed * .02) * .02;
+    if (window.__dbg && __dbg.t != null) t = __dbg.t;   // debug only
 
-    const sunI = sky(t);
+    let sunI = sky(t);
+    const grey = inGame() ? (env.storm ? .45 : env.rain ? .25 : env.fogStorm ? .2 : 0) : 0;
+    if (grey) { skyCol.lerp(cA.setRGB(.55, .55, .56), grey); sunI *= 1 - grey * .6; }
+    if (inGame() && env.storm && (nextFlash -= dt) <= 0) { nextFlash = 6 + Math.random() * 14; flash = .25; }
+    if (flash > 0) { flash -= dt; skyCol.lerp(cA.setRGB(1, 1, .96), Math.max(0, flash) * 3); sunI = Math.max(sunI, flash * 3); }
     scene.background = skyCol; scene.fog.color.copy(skyCol);
     const ang = (t - .25) * Math.PI * 2;
     sunDir.set(Math.cos(ang), Math.sin(ang), SUN_TILT).normalize();
@@ -1928,7 +2150,8 @@
     mist.position.copy(camera.position); mist.position.y = camera.position.y + 12;
     mist.rotation.y = elapsed * .004;
     mist.material.color.setScalar(.45 + sunI * .55);
-    fireflies.update(elapsed, clamp((-sunDir.y + .08) / .25, 0, 1), focusX, focusZ);
+    fireflies.update(elapsed, clamp((-sunDir.y + .08) / .25, 0, 1) * (env.rain ? .15 : 1), focusX, focusZ);
+    rain.update(elapsed, inGame() && !!env.rain, !!env.storm, camera.position.x, camera.position.y, camera.position.z);
     sun.color.copy(sunCol); sun.intensity = .15 + sunI * .58;
     hemi.intensity = .35 + sunI * .2;
     hemi.color.set(sunI < .2 ? 0x8E9AB8 : 0xFFF6E6);
@@ -1937,18 +2160,22 @@
     // fog map and the ink shader's fog/dread inputs
     if ((fogTimer -= dt) <= 0) {
       fogTimer = .25;
-      const lights = [];
-      fires.forEach(f => { if (f.fuel > 0) lights.push({ x: f.x, z: f.z, r: WG.FIRES[f.kind].warm * 1.4 }); });
-      lanterns.forEach(l => { if (l.clear > 0) lights.push({ x: l.x, z: l.z, r: l.clear }); });   // shrinks as the fog reclaims it
+      const lights = [], k = env.lightMul || 1;   // rain shrinks every light
+      fires.forEach(f => { if (f.fuel > 0) lights.push({ x: f.x, z: f.z, r: WG.FIRES[f.kind].warm * 1.4 * k }); });
+      lanterns.forEach(l => { if (l.clear > 0) lights.push({ x: l.x, z: l.z, r: l.clear * k }); });   // shrinks as the fog reclaims it
+      if (inGame() && myPatches.includes('firefly_jar')) lights.push({ x: px, z: pz, r: 3.5 });
+      remotes.forEach(r => { if (r.patches && r.patches.includes('firefly_jar') && !r.dead) { const q = r.remote.sample(); lights.push({ x: q.x, z: q.z, r: 3.5 }); } });
       updateFogMap(focusX, focusZ, t, lights);
     }
     if (window.__dbg && __dbg.forceDread != null) stats.dread = __dbg.forceDread;   // debug only
     dreadShown += ((inGame() ? stats.dread / 100 : 0) - dreadShown) * Math.min(1, dt * 1.5);
     inkMat.uniforms.dread.value = dreadShown;
+    inkMat.uniforms.seeFar.value = inGame() && myPatches.includes('moon_wing') ? .65 : 1;
     inkMat.uniforms.night.value = WG.nightFactor(t);
     inkMat.uniforms.time.value = elapsed;
     if (knockT > 0) knockT -= dt;
     updatePhantom(dt);
+    updateExtra(dt);
     Sound.update(dt);
     const cloudTint = .35 + sunI * .65;
     updateCrests(elapsed, cloudTint);
@@ -2014,7 +2241,7 @@
             const ox = nx - o.x, oz = nz - o.z, d = Math.hypot(ox, oz), min = radius(o) + .3;
             if (d < min && d > 0) { nx = o.x + ox / d * min; nz = o.z + oz / d * min; }
           };
-          nearbyObjects(nx, nz, push); fires.forEach(push); lanterns.forEach(push);
+          nearbyObjects(nx, nz, push); fires.forEach(push); lanterns.forEach(push); if (board) push(board);
           px = nx; pz = nz;
         }
         const tf = Math.atan2(dx, dz);
@@ -2061,7 +2288,8 @@
       cooldown = Math.max(0, cooldown - dt);
       if (warnedNightDay !== day && t > .72 && t < .8) {
         warnedNightDay = day;
-        toast([...fires.values()].some(f => f.fuel > 0) ? 'Night is coming. Keep a fire fed.' : 'It’s getting dark and cold. A fire would help.');
+        if (env.drowning) toast('The Drowning Moon tonight. The fog will come in thick, and the lanterns will drink their oil fast.');
+        else toast([...fires.values()].some(f => f.fuel > 0) ? 'Night is coming. Keep a fire fed.' : 'It’s getting dark and cold. A fire would help.');
       }
       target = findTarget();
       const lab = label(target);
@@ -2074,7 +2302,8 @@
       $('bEnergy').style.setProperty('--v', nrg.energy + '%');
       $('bDread').style.setProperty('--v', stats.dread + '%');
       $('energyBar').classList.toggle('tired', nrg.exhausted);
-      const dl = `Day ${day} <small>${phaseName(t)}</small>`;
+      const wx = { rain: ' \u00b7 rain', storm: ' \u00b7 storm', fogstorm: ' \u00b7 fog storm' }[env.weather] || '';
+      const dl = `Day ${day} <small>${phaseName(t)}</small><span class="sky${env.drowning ? ' drown' : ''}">${esc(WG.MOON_NAMES[env.phase || 0])}${wx}</span>`;
       if (dl !== lastDayLabel) { $('dayLabel').innerHTML = dl; lastDayLabel = dl; }
       const temp = $('temp');
       if (knockT > 0 || stats.down) { temp.textContent = 'Knocked down\u2026'; temp.className = 'temp cold'; }

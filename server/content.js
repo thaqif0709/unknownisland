@@ -21,6 +21,11 @@ const JOURNAL = [
   { key: 'glass_blue', category: 'glass', name: 'Blue sea glass', rarity: 'uncommon', description: 'The colour of the sea on a morning with no fog.' },
   { key: 'glass_amber', category: 'glass', name: 'Amber sea glass', rarity: 'uncommon', description: 'Warm, like a lantern that forgot to go out.' },
   { key: 'glass_violet', category: 'glass', name: 'Violet sea glass', rarity: 'rare', description: 'Nobody has seen a violet bottle. Where did this come from?' },
+  { key: 'glass_snail', category: 'bugs', name: 'Glass snail', rarity: 'rare', description: 'Only comes out in the rain. You can see its heart beating through the shell.' },
+  { key: 'rain_beetle', category: 'bugs', name: 'Rain beetle', rarity: 'uncommon', description: 'Drinks from the drops on leaves. Shiny as a wet stone.' },
+  // full moon
+  { key: 'glow_mushroom', category: 'moon', name: 'Glowing mushroom', rarity: 'rare', description: 'Grows in the forest on full-moon nights and is gone by morning.' },
+  { key: 'lantern_fish', category: 'moon', name: 'Lantern fish', rarity: 'rare', description: 'Swims into the shallows under a full moon, lit from inside.' },
   // fish
   { key: 'silverfin', category: 'tide', name: 'Silverfin', rarity: 'common', description: 'Washed up with the tide, still cold. Good to eat.' },
   // things the tide should not bring
@@ -60,6 +65,25 @@ const BUGS = [
   { key: 'cricket', when: 'any', biomes: ['meadow', 'highland'], weight: 3 },
   { key: 'bark_beetle', when: 'day', biomes: ['forest'], weight: 4 },
   { key: 'dragonfly', when: 'day', biomes: ['spring', 'meadow', 'beach'], weight: 2, nearWater: true },
+  // only in the rain
+  { key: 'glass_snail', when: 'any', biomes: ['meadow', 'forest', 'spring'], weight: 2, weather: 'rain' },
+  { key: 'rain_beetle', when: 'any', biomes: ['forest', 'meadow'], weight: 3, weather: 'rain' },
+  // only on full-moon nights
+  { key: 'glow_mushroom', when: 'night', biomes: ['forest'], weight: 4, moon: 'full' },
+  { key: 'lantern_fish', when: 'night', biomes: ['sea'], weight: 3, moon: 'full', shallow: true },
 ];
 
-module.exports = { JOURNAL, TIDE, BUGS };
+// Notes the island pins to the driftwood board by itself (overnight). Unsettling,
+// but not part of the story; the story notes come later.
+const ISLAND_NOTES = [
+  'The fire was nice.',
+  'You left something by the water.',
+  'Count yourselves.',
+  'We waited up.',
+  'Don\u2019t go in the fog alone.',
+  'Who has been sleeping in my spot?',
+  'Thank you for the light.',
+  'Closer.',
+];
+
+module.exports = { JOURNAL, TIDE, BUGS, ISLAND_NOTES };
