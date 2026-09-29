@@ -103,17 +103,18 @@
         col = mix(col, ink, e * .92);
         // ---- fog is drawn as stipple and cross-hatching that swallows the design ----
         vec3 fogTint = mix(vec3(.66, .63, .58), vec3(.22, .2, .21), night);
-        col = mix(col, fogTint, fog * .5);
+        col = mix(col, fogTint, fog * .62);   // the fog itself: a soft haze
+        float dk = smoothstep(.55, .9, dread);   // dots and hatching only come in at high dread
         vec2 fp = gl_FragCoord.xy;
         float stip = bay < fog * .85 ? 1. : 0.;
         float h1 = step(.8, fract((fp.x + fp.y) / 6.)) * smoothstep(.45, .6, fog);
         float h2 = step(.8, fract((fp.x - fp.y) / 6.)) * smoothstep(.7, .85, fog);
         float mark = max(stip * .75, max(h1, h2));
-        col = mix(col, mix(vec3(.45, .42, .4), ink, .2 + night * .8), mark * .7);
+        col = mix(col, mix(vec3(.45, .42, .4), ink, .2 + night * .8), mark * .45 * dk);
         // ---- dread: colour drains, stippling spreads, ink creeps in from the edges ----
         float l = dot(col, vec3(.299, .587, .114));
         col = mix(col, vec3(l), dread * .85);
-        col = mix(col, ink, (bay < dread * .45 ? 1. : 0.) * step(l, .6));
+        col = mix(col, ink, (bay < dread * .45 ? 1. : 0.) * step(l, .6) * smoothstep(.6, .85, dread) * .6);
         vec2 q = (vUv - .5) * vec2(res.x / res.y, 1.);
         float edge = length(q) * 1.1 + (noise(vUv * 5. + time * .04) - .5) * .4;
         col = mix(col, ink, smoothstep(.0, .04, edge - (1.3 - dread * .8)));
