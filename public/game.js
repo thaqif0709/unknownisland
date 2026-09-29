@@ -10,51 +10,80 @@
   // ================= Renderer =================
   const stage = document.getElementById('stage');
   const coarse = matchMedia('(pointer: coarse)').matches;
-  // Preview: ?style=pixel renders at low resolution with a limited, dithered palette.
-  const PIXEL = new URLSearchParams(location.search).get('style') === 'pixel';
-  if (PIXEL) document.documentElement.classList.add('pixel');
-  const renderer = new THREE.WebGLRenderer({ antialias: !PIXEL });
-  renderer.setPixelRatio(PIXEL ? 1 : Math.min(window.devicePixelRatio || 1, 2));
+  const renderer = new THREE.WebGLRenderer({ antialias: false });
+  const PR = Math.min(window.devicePixelRatio || 1, 2);
+  renderer.setPixelRatio(PR);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PIXEL ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
-  let pixelRT = null, pixelPost = null;
-  if (PIXEL) {
-    pixelRT = new THREE.WebGLRenderTarget(2, 2, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
-    const mat = new THREE.ShaderMaterial({
-      uniforms: { tDiffuse: { value: pixelRT.texture }, res: { value: new THREE.Vector2(1, 1) } },
-      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
-      fragmentShader: `
-        uniform sampler2D tDiffuse; uniform vec2 res; varying vec2 vUv;
-        float b2(vec2 a){ a = floor(a); return fract(dot(a, vec2(.5, a.y * .75))); }
-        float bayer(vec2 a){ return b2(.5 * a) * .25 + b2(a); }
-        void main(){
-          vec2 px = floor(vUv * res);
-          vec3 c = texture2D(tDiffuse, (px + .5) / res).rgb;
-          c = pow(c, vec3(.95)) * 1.04;
-          float d = bayer(px) - .5;
-          c = floor(c * 8. + d * .35 + .5) / 8.;     // 9 levels per channel, light ordered dither
-          gl_FragColor = vec4(c, 1.);
-        }`,
-      depthTest: false, depthWrite: false,
-    });
-    const ps = new THREE.Scene(); ps.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
-    pixelPost = { scene: ps, cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), mat };
-  }
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   stage.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xBDE8FF, 60, 180);
+  scene.fog = new THREE.Fog(0xEFE3C8, 60, 170);
   const camera = new THREE.PerspectiveCamera(55, 1, .1, 400);
 
+  // ================= Ink pass =================
+  // Illustration look: the scene is drawn once for colour + depth and once for
+  // normals; a full-screen pass then inks every silhouette and crease with a
+  // thick dark line and adds a little paper grain.
+  const colorRT = new THREE.WebGLRenderTarget(2, 2);
+  colorRT.depthTexture = new THREE.DepthTexture(2, 2);
+  colorRT.depthTexture.type = THREE.UnsignedIntType;
+  const normalRT = new THREE.WebGLRenderTarget(2, 2);
+  const normalMat = new THREE.MeshNormalMaterial();
+  const inkMat = new THREE.ShaderMaterial({
+    uniforms: {
+      tColor: { value: colorRT.texture }, tDepth: { value: colorRT.depthTexture }, tNormal: { value: normalRT.texture },
+      res: { value: new THREE.Vector2(1, 1) }, width: { value: 2 }, near: { value: camera.near }, far: { value: camera.far },
+      ink: { value: new THREE.Color(0x2B211F) },
+    },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+    fragmentShader: `
+      uniform sampler2D tColor, tDepth, tNormal; uniform vec2 res; uniform float width, near, far; uniform vec3 ink;
+      varying vec2 vUv;
+      float lin(vec2 uv){ float z = texture2D(tDepth, uv).x * 2. - 1.; return 2. * near * far / (far + near - z * (far - near)); }
+      vec3 nrm(vec2 uv){ return texture2D(tNormal, uv).rgb * 2. - 1.; }
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      void main(){
+        vec3 col = texture2D(tColor, vUv).rgb;
+        float d0 = lin(vUv);
+        float e = 0.;
+        if (d0 < far * .98) {
+          vec3 n0 = nrm(vUv);
+          vec2 o = width / res;
+          for (int i = 0; i < 4; i++) {
+            vec2 dir = i == 0 ? vec2(1., 0.) : i == 1 ? vec2(-1., 0.) : i == 2 ? vec2(0., 1.) : vec2(0., -1.);
+            vec2 uv = vUv + dir * o;
+            float d = lin(uv);
+            e = max(e, smoothstep(.03, .06, (d - d0) / d0));          // silhouettes (drawn on the nearer shape)
+            e = max(e, smoothstep(.45, .7, 1. - dot(n0, nrm(uv))));    // creases
+          }
+          e *= 1. - smoothstep(60., 120., d0);                           // lines fade with distance
+        }
+        col = mix(col, ink, e * .92);
+        col *= .96 + hash(floor(gl_FragCoord.xy / 2.)) * .06;           // paper grain
+        gl_FragColor = vec4(col, 1.);
+      }`,
+    depthTest: false, depthWrite: false,
+  });
+  const inkScene = new THREE.Scene();
+  inkScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), inkMat));
+  const inkCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const noInk = [];   // things drawn with their own outlines (clouds), hidden from the normal pass
+
   // ================= Materials & lights =================
-  // Smooth shading with a faint sheen: soft, toy-like surfaces.
+  // Flat cel shading: three solid tones per colour, like an inked illustration.
+  const gradMap = new THREE.DataTexture(new Uint8Array([120, 120, 120, 255, 190, 190, 190, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat);
+  gradMap.minFilter = gradMap.magFilter = THREE.NearestFilter; gradMap.needsUpdate = true;
   const matCache = new Map();
-  const soft = (c, extra) => new THREE.MeshPhongMaterial(Object.assign({ color: c, shininess: 12, specular: 0x161616 }, extra || {}));
+  const soft = (c, extra) => {
+    const { shininess, specular, ...rest } = extra || {};
+    return new THREE.MeshToonMaterial(Object.assign({ color: c, gradientMap: gradMap }, rest));
+  };
   const softShared = c => { if (!matCache.has(c)) matCache.set(c, soft(c)); return matCache.get(c); };
   const shadows = obj => obj.traverse(m => { if (m.isMesh) m.castShadow = true; });
   const ball = (r, m, w = 18, h = 14) => new THREE.Mesh(new THREE.SphereGeometry(r, w, h), m);
 
-  const hemi = new THREE.HemisphereLight(0xFFFFFF, 0xCDB894, .6);
+  const hemi = new THREE.HemisphereLight(0xFFFFFF, 0xB8A27E, .6);
   const sun = new THREE.DirectionalLight(0xFFF4E0, .9);
   sun.castShadow = true;
   sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
@@ -76,7 +105,7 @@
   const pos = tGeo.attributes.position;
   const cols = new Float32Array(pos.count * 3);
   const C = h => new THREE.Color(h);
-  const cSand = C(0xFBE6B4), cWet = C(0xF0D29C), cDeep = C(0x86D8E6), cGrassA = C(0xAEE27E), cGrassB = C(0x80CC6C), cRock = C(0xCFC8BC), cMoss = C(0x78C77E);
+  const cSand = C(0xE9D7AE), cWet = C(0xD4BE92), cDeep = C(0x7E9EAE), cGrassA = C(0xA3B27E), cGrassB = C(0x7F9A64), cRock = C(0xA9A193), cMoss = C(0x7C9A6B);
   const tmp = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i), h = heightAt(x, z);
@@ -93,21 +122,23 @@
   function smoothT(a, b, x) { const k = clamp((x - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); }
   tGeo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
   tGeo.computeVertexNormals();
-  const terrain = new THREE.Mesh(tGeo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const terrain = new THREE.Mesh(tGeo, soft(0xffffff, { vertexColors: true }));
   terrain.receiveShadow = true;
   scene.add(terrain);
 
   const seaGeo = new THREE.PlaneGeometry(420, 420, 70, 70); seaGeo.rotateX(-Math.PI / 2);
-  const sea = new THREE.Mesh(seaGeo, soft(0x62D0E6, { transparent: true, opacity: .82, shininess: 40, specular: 0x444444 }));
+  const seaMat = soft(0x6F8FA3, { transparent: true, opacity: .92 });
+  const seaInkMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+  const sea = new THREE.Mesh(seaGeo, seaMat);
   sea.receiveShadow = true;
   scene.add(sea);
   const seaBase = Float32Array.from(seaGeo.attributes.position.array);
 
-  const pond = new THREE.Mesh(new THREE.CircleGeometry(2.25, 40), soft(0x8FE6F4, { shininess: 60, specular: 0x555555 }));
+  const pond = new THREE.Mesh(new THREE.CircleGeometry(2.25, 40), soft(0x8FB3BF, { shininess: 60, specular: 0x555555 }));
   pond.rotation.x = -Math.PI / 2; pond.position.set(SPRING.x, 1.62, SPRING.z);
   pond.receiveShadow = true;
   scene.add(pond);
-  const pondRock = soft(0xD8D2C8);
+  const pondRock = soft(0xB3AC9F);
   for (let i = 0; i < 9; i++) {
     const a = i / 9 * Math.PI * 2 + .2, r = 2.45;
     const m = ball(.35 + (i % 3) * .1, pondRock, 12, 10); m.scale.y = .7;
@@ -117,14 +148,48 @@
     scene.add(m);
   }
 
+  // ================= Swirl clouds =================
+  // Curly clouds like the manes and smoke in tattoo flash, drawn on a canvas
+  // with their own ink outline and drifting slowly around the island.
+  function cloudTexture(seed) {
+    const r = mulberry32(seed), c = document.createElement('canvas'); c.width = 512; c.height = 256;
+    const g = c.getContext('2d');
+    const puffs = [];
+    for (let i = 0; i < 6; i++) puffs.push([90 + i * 66 + (r() - .5) * 30, 150 - Math.sin(i / 5 * Math.PI) * 50 + (r() - .5) * 20, 44 + r() * 26]);
+    const circle = ([x, y, rad]) => { g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); g.stroke(); };
+    g.lineWidth = 14; g.strokeStyle = '#2B211F'; g.fillStyle = '#2B211F';
+    puffs.forEach(circle);
+    g.lineWidth = 0; g.strokeStyle = 'transparent';
+    g.fillStyle = '#F3E3BE'; puffs.forEach(([x, y, rad]) => { g.beginPath(); g.arc(x, y, rad - 1, 0, Math.PI * 2); g.fill(); });
+    g.fillStyle = '#E2C78F'; puffs.forEach(([x, y, rad]) => { g.beginPath(); g.arc(x + rad * .18, y + rad * .22, rad * .72, 0, Math.PI * 2); g.fill(); });
+    // curls
+    puffs.forEach(([x, y, rad], i) => {
+      if (i % 2) return;
+      g.beginPath();
+      for (let a = 0; a < Math.PI * 3.2; a += .1) { const rr = rad * .55 * (1 - a / (Math.PI * 3.6)); g.lineTo(x + Math.cos(a + 2) * rr, y + Math.sin(a + 2) * rr); }
+      g.lineWidth = 6; g.strokeStyle = '#2B211F'; g.stroke();
+    });
+    const t = new THREE.CanvasTexture(c);
+    return t;
+  }
+  const clouds = [];
+  for (let i = 0; i < 9; i++) {
+    const mat = new THREE.SpriteMaterial({ map: cloudTexture(100 + i), transparent: true, fog: false, depthWrite: false });
+    const sp = new THREE.Sprite(mat);
+    const a = i / 9 * Math.PI * 2, rad = 30 + (i % 3) * 16;
+    sp.userData = { a, rad, y: 20 + (i % 4) * 4, speed: .004 + (i % 3) * .002 };
+    sp.scale.set(22, 11, 1);
+    scene.add(sp); clouds.push(sp); noInk.push(sp);
+  }
+
   // ================= Flowers and little plants (decoration only) =================
   // Each species grows where it likes: sea pinks on the sand, daisies and tulips
   // on the lowland grass, bluebells by the spring, lavender up the hill,
   // mushrooms in shady patches, and grass tufts everywhere green.
   {
     const frng = mulberry32(4242);
-    const lambert = c => new THREE.MeshLambertMaterial({ color: c });
-    const white = new THREE.Color(0xFFFFFF);
+    const lambert = c => soft(c, { depthWrite: false });
+    const white = new THREE.Color(0xF3EAD6);
     const stemGeo = new THREE.CylinderGeometry(.018, .022, 1, 5); stemGeo.translate(0, .5, 0);
     const G = {
       puff: new THREE.SphereGeometry(.1, 10, 8),
@@ -154,40 +219,41 @@
           if (colors) im.setColorAt(i, colors[(r * colors.length) | 0]);
         });
         im.receiveShadow = true;
-        scene.add(im);
+        scene.add(im); noInk.push(im);
       }
     }
-    const stemM = lambert(0x6BBF5E), tint = lambert(0xFFFFFF);
+    const stemM = lambert(0x6F8F5A), tint = lambert(0xFFFFFF);
+    // (depthWrite off + hidden from the normal pass = no ink lines on tiny things)
     const nearSpring = (x, z) => Math.hypot(x - SPRING.x, z - SPRING.z);
     const shade = (x, z) => fbm(x * .2 + 30, z * .2 - 7);
     // sea pinks: little pink puffs on the dry sand
-    species(60, h => h > .6 && h < .95, [[stemGeo, stemM, 0, null, [1, .14, 1]], [G.puff, tint, .15, ['#FFB3C7', '#FF9EBB', '#FFD1DE'].map(c => new THREE.Color(c))]]);
+    species(60, h => h > .6 && h < .95, [[stemGeo, stemM, 0, null, [1, .14, 1]], [G.puff, tint, .15, ['#D9A09A', '#C98A86', '#E8C0B4'].map(c => new THREE.Color(c))]]);
     // daisies: white petals with a yellow middle
     species(140, (h, x, z) => h > 1.1 && h < 3.4 && nearSpring(x, z) > 7, [[stemGeo, stemM, 0, null, [1, .22, 1]],
-      [G.petals, tint, .22, [white]], [G.dot, lambert(0xFFD43B), .24]]);
+      [G.petals, tint, .22, [white]], [G.dot, lambert(0xE0A33A), .24]]);
     // tulips: bright cups on taller stems
     species(90, (h, x, z) => h > 1.2 && h < 3 && shade(x, z) < .5, [[stemGeo, stemM, 0, null, [1, .32, 1]],
-      [G.cup, tint, .32, ['#FF5C7A', '#FFB547', '#FF8FB1', '#C77DFF', '#FFFFFF'].map(c => new THREE.Color(c))]]);
+      [G.cup, tint, .32, ['#C4574F', '#E0A33A', '#D98C8C', '#8C7BA8', '#F1E6CC'].map(c => new THREE.Color(c))]]);
     // bluebells around the spring
     species(80, (h, x, z) => h > 1.1 && nearSpring(x, z) > 3 && nearSpring(x, z) < 9, [[stemGeo, stemM, 0, null, [1, .2, 1]],
-      [G.bell, tint, .2, ['#6F8BFF', '#8EA6FF', '#5C6BC0'].map(c => new THREE.Color(c))], [G.bell, tint, .14, ['#8EA6FF'].map(c => new THREE.Color(c))]]);
+      [G.bell, tint, .2, ['#5F7FA8', '#7E97B8', '#4F6687'].map(c => new THREE.Color(c))], [G.bell, tint, .14, ['#7E97B8'].map(c => new THREE.Color(c))]]);
     // lavender up the hill
-    species(110, h => h > 3.4 && h < 6.6, [[stemGeo, stemM, 0, null, [1, .18, 1]], [G.spike, lambert(0xA98BEA), .3]]);
+    species(110, h => h > 3.4 && h < 6.6, [[stemGeo, stemM, 0, null, [1, .18, 1]], [G.spike, lambert(0x8C7BA8), .3]]);
     // mushrooms in shady patches of the lowland
-    species(40, (h, x, z) => h > 1.2 && h < 4.5 && shade(x, z) > .58, [[stemGeo, lambert(0xFFF4E6), 0, null, [3.2, .14, 3.2]],
-      [G.cap, tint, .12, ['#FF5C5C', '#E0795A', '#FFB547'].map(c => new THREE.Color(c))], [G.dot, lambert(0xFFFFFF), .2, null, [.6, .6, .6]]]);
+    species(40, (h, x, z) => h > 1.2 && h < 4.5 && shade(x, z) > .58, [[stemGeo, lambert(0xEFE3C8), 0, null, [3.2, .14, 3.2]],
+      [G.cap, tint, .12, ['#B8504A', '#C0704F', '#E0A33A'].map(c => new THREE.Color(c))], [G.dot, lambert(0xFFFFFF), .2, null, [.6, .6, .6]]]);
     // grass tufts
-    species(420, h => h > 1 && h < 6, [[G.tuft, lambert(0x7FCB63), .14], [G.tuft, lambert(0x92D670), .12, null, [.8, .8, .8]]]);
+    species(160, h => h > 1 && h < 6, [[G.tuft, lambert(0x7F9A64), .14], [G.tuft, lambert(0x93A873), .12, null, [.8, .8, .8]]]);
   }
 
   // ================= Plants and rocks =================
   // Positions come from the server; small visual details (leaf angles, colors)
   // come from an RNG seeded by the object's id so everyone sees the same thing.
-  const trunkM = [soft(0xB98A5E), soft(0xA67A52)], barkM = soft(0x9B6E4C);
-  const palmLeaf = [soft(0x7FD36B), soft(0x62C26A)];
-  const treeLeaf = [soft(0x7CCB6B), soft(0x95D66F), soft(0x5FBA6E), soft(0xF7B6CB)];   // the pink one is blossom
-  const coconutM = soft(0x9A6B45), berryM = soft(0xFF5C7A, { shininess: 60, specular: 0x666666 }), bushM = [soft(0x6CC468), soft(0x84D172)];
-  const rockM = [soft(0xCBC5BC), soft(0xB9B3AB)];
+  const trunkM = [soft(0x9A7A5E), soft(0x8A6A52)], barkM = soft(0x7A5A45);
+  const palmLeaf = [soft(0x86A06A), soft(0x6F8F5A)];
+  const treeLeaf = [soft(0x6E8F5E), soft(0x809A62), soft(0x5C7D55), soft(0xD8928F)];   // the pink one is blossom
+  const coconutM = soft(0x7A5A45), berryM = soft(0xC4574F, { shininess: 60, specular: 0x666666 }), bushM = [soft(0x6A8A5A), soft(0x7C9868)];
+  const rockM = [soft(0xA9A193), soft(0x948E83)];
 
   function makePalm(rng) {
     const g = new THREE.Group();
@@ -215,7 +281,7 @@
     g.rotation.y = rng() * Math.PI * 2;
     return { g, nuts };
   }
-  const pineM = [soft(0x4FA86A), soft(0x5DB878)], blueberryM = soft(0x5B7BE8, { shininess: 60, specular: 0x666666 });
+  const pineM = [soft(0x4F6F5A), soft(0x5E7F66)], blueberryM = soft(0x5873A8, { shininess: 60, specular: 0x666666 });
   function makeTree(rng, species) {
     const g = new THREE.Group();
     if (species === 'pine') {
@@ -251,7 +317,7 @@
     g.add(berries);
     return { g, berries };
   }
-  const pebbleM = soft(0xE6D6B8), mossM = soft(0x86C77A);
+  const pebbleM = soft(0xD9C9A6), mossM = soft(0x7C9A6B);
   function makeRock(rng, s, species) {
     const g = new THREE.Group();
     const m = new THREE.Mesh(new THREE.IcosahedronGeometry(.62 * s, 2), species === 'pebble' ? pebbleM : rockM[(rng() * 2) | 0]);
@@ -262,10 +328,10 @@
     }
     return g;
   }
-  const oreRockM = soft(0x9C97A6), oreM = { copper: soft(0xF08C4A, { shininess: 80, specular: 0x886644 }), iron: soft(0xE4E9F2, { shininess: 90, specular: 0x999999 }) };
+  const oreRockM = soft(0x8E8A92), oreM = { copper: soft(0xD0803F, { shininess: 80, specular: 0x886644 }), iron: soft(0xD5D8DA, { shininess: 90, specular: 0x999999 }) };
   function makeOre(rng, s, ore) {
     const g = new THREE.Group();
-    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(.66 * s, 2), ore === 'iron' ? soft(0x7E6F78) : oreRockM);
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(.66 * s, 2), ore === 'iron' ? soft(0x6E6570) : oreRockM);
     m.scale.set(1, .75, .9); m.position.y = .3 * s; g.add(m);
     for (let i = 0; i < 7; i++) {
       const a = rng() * 6.28, y = .15 + rng() * .5;
@@ -274,7 +340,7 @@
     }
     return g;
   }
-  const dirtM = soft(0xA9784F), holeM = soft(0x5E4030), sproutM = soft(0x7CCB6B);
+  const dirtM = soft(0x9A6E4C), holeM = soft(0x4A3328), sproutM = soft(0x6E8F5E);
   function makeDig(rng) {
     const g = new THREE.Group();
     const mound = new THREE.Group();
@@ -329,12 +395,13 @@
   buildProps(WG.generateObjects(7));
 
   // ================= Castaways =================
-  const SHIRTS = [0xFF7A8A, 0x6EC6FF, 0x8EDB7A, 0xFFC857, 0xB79CFF, 0x5FD6C4, 0xFF9ED2, 0xFFA66B, 0x7B8CFF, 0xE0E0E0];
+  const SHIRTS = [0xC4574F, 0x5F7FA8, 0x7C9A6B, 0xE0A33A, 0x8C7BA8, 0x5E9A92, 0xD98C8C, 0xD0803F, 0x4F6687, 0xD9CFBF];
   const shirtFor = id => SHIRTS[(id - 1) % SHIRTS.length];
   const hex = c => '#' + c.toString(16).padStart(6, '0');
-  const shortsM = soft(0x5B6FB5), skinM = soft(0xFFD2B0), hatM = soft(0xFFE3A3), shoeM = soft(0x8A5A44);
-  const eyeM = new THREE.MeshBasicMaterial({ color: 0x2A2438 }), shineM = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
-  const blushM = new THREE.MeshBasicMaterial({ color: 0xFF9AA8, transparent: true, opacity: .7 });
+  const shortsM = soft(0x4F6687), skinM = soft(0xE9C4A0), hatM = soft(0xE3C98E), shoeM = soft(0x6A4A3A);
+  const eyeM = new THREE.MeshBasicMaterial({ color: 0xE0A33A }), pupilM = new THREE.MeshBasicMaterial({ color: 0x2B211F }),
+    shineM = new THREE.MeshBasicMaterial({ color: 0xFFF8EA });
+  const blushM = new THREE.MeshBasicMaterial({ color: 0xD98C8C, transparent: true, opacity: .7 });
 
   // A chibi castaway: big round head, small round body, stubby limbs.
   function makeCastaway(shirt) {
@@ -345,8 +412,9 @@
     const shorts = new THREE.Mesh(new THREE.CylinderGeometry(.27, .29, .2, 16), shortsM); shorts.position.y = .66; body.add(shorts);
     const head = ball(.38, skinM, 24, 18); head.position.y = 1.55; body.add(head);
     for (const sx of [-1, 1]) {
-      const eye = ball(.055, eyeM, 10, 8); eye.scale.z = .6; eye.position.set(sx * .13, 1.58, .345); body.add(eye);
-      const shine = ball(.018, shineM, 6, 4); shine.position.set(sx * .13 + .02, 1.6, .375); body.add(shine);
+      const eye = ball(.07, eyeM, 12, 10); eye.scale.z = .5; eye.position.set(sx * .13, 1.58, .34); body.add(eye);
+      const pupil = ball(.035, pupilM, 8, 6); pupil.scale.z = .5; pupil.position.set(sx * .13, 1.575, .372); body.add(pupil);
+      const shine = ball(.014, shineM, 6, 4); shine.position.set(sx * .13 + .02, 1.6, .385); body.add(shine);
       const cheek = ball(.06, blushM, 10, 8); cheek.scale.set(1, .6, .4); cheek.position.set(sx * .22, 1.47, .3); body.add(cheek);
     }
     const brim = new THREE.Mesh(new THREE.CylinderGeometry(.54, .56, .05, 28), hatM); brim.position.y = 1.82; body.add(brim);
@@ -391,8 +459,8 @@
 
   // ================= Fires =================
   let fires = new Map();
-  const logM = soft(0x9B6A48), flameA = new THREE.MeshBasicMaterial({ color: 0xFF9A3C }), flameB = new THREE.MeshBasicMaterial({ color: 0xFFE27A });
-  const clayM = soft(0xD08C5C);
+  const logM = soft(0x7A5A45), flameA = new THREE.MeshBasicMaterial({ color: 0xE0843A }), flameB = new THREE.MeshBasicMaterial({ color: 0xF3D48A });
+  const clayM = soft(0xB8704F);
   function addFire(src) {
     const g = new THREE.Group();
     const kind = WG.FIRES[src.kind] ? src.kind : 'campfire';
@@ -892,11 +960,10 @@
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
     renderer.setSize(w, h, false);
-    if (PIXEL) {
-      const k = Math.max(2, Math.round(h / 190));   // about 190 "pixels" tall
-      pixelRT.setSize(Math.ceil(w / k), Math.ceil(h / k));
-      pixelPost.mat.uniforms.res.value.set(Math.ceil(w / k), Math.ceil(h / k));
-    }
+    const rw = Math.floor(w * PR), rh = Math.floor(h * PR);
+    colorRT.setSize(rw, rh); normalRT.setSize(rw, rh);
+    inkMat.uniforms.res.value.set(rw, rh);
+    inkMat.uniforms.width.value = Math.max(1.5, rh / 420);   // line thickness follows screen size
     camera.aspect = w / h; camera.fov = w / h < .8 ? 68 : 55;
     camera.updateProjectionMatrix();
   }
@@ -904,8 +971,8 @@
 
   // ================= Sky =================
   const skyKeys = [
-    [0, 0x2B2F5E, 0x7A86D8, .08], [.2, 0x3A3F7A, 0x8C94E0, .1], [.25, 0xFFC4B0, 0xFFD0B0, .5], [.32, 0xBDE8FF, 0xFFF4E0, .9],
-    [.5, 0xA8E0FF, 0xFFFFFF, 1], [.68, 0xC2E6FF, 0xFFF0D6, .85], [.75, 0xFFB3A0, 0xFFB38A, .5], [.8, 0x4A4E90, 0x9FA5E8, .1], [1, 0x2B2F5E, 0x7A86D8, .08]
+    [0, 0x2E3444, 0x7E8AAE, .1], [.2, 0x3A4052, 0x8E9AB8, .12], [.25, 0xE8B89A, 0xFFD2A8, .5], [.32, 0xF0E2C4, 0xFFF1DC, .9],
+    [.5, 0xF1E6CC, 0xFFF6E6, 1], [.68, 0xEFDDBE, 0xFFE9C8, .85], [.75, 0xD98C7A, 0xFFB38A, .5], [.8, 0x46485E, 0x9CA3C4, .12], [1, 0x2E3444, 0x7E8AAE, .1]
   ];
   const cA = new THREE.Color(), cB = new THREE.Color(), skyCol = new THREE.Color(), sunCol = new THREE.Color();
   function sky(tt) {
@@ -936,9 +1003,15 @@
     sun.target.position.set(px, 0, pz);
     sun.color.copy(sunCol); sun.intensity = .15 + sunI * .58;
     hemi.intensity = .35 + sunI * .2;
-    hemi.color.set(sunI < .2 ? 0x9CA4F0 : 0xFFFFFF);
+    hemi.color.set(sunI < .2 ? 0x8E9AB8 : 0xFFF6E6);
     const night = isNight(t);
 
+    const cloudTint = .35 + sunI * .65;
+    clouds.forEach(c => {
+      const u = c.userData, a = u.a + elapsed * u.speed;
+      c.position.set(Math.cos(a) * u.rad, u.y, Math.sin(a) * u.rad);
+      c.material.color.setRGB(cloudTint, cloudTint, Math.min(1, cloudTint * 1.08));
+    });
     const sp = seaGeo.attributes.position;
     for (let i = 0; i < sp.count; i++) {
       const x = seaBase[i * 3], z = seaBase[i * 3 + 2];
@@ -1063,10 +1136,20 @@
       camera.lookAt(px, py + 1.3, pz);
     }
 
-    if (PIXEL) {
-      renderer.setRenderTarget(pixelRT); renderer.render(scene, camera);
-      renderer.setRenderTarget(null); renderer.render(pixelPost.scene, pixelPost.cam);
-    } else renderer.render(scene, camera);
+    renderer.setRenderTarget(colorRT); renderer.render(scene, camera);
+    const bg = scene.background, fog = scene.fog;
+    scene.background = null; scene.fog = null; scene.overrideMaterial = normalMat;
+    noInk.forEach(o => { o.visible = false; });
+    sea.visible = false;
+    renderer.setRenderTarget(normalRT); renderer.setClearColor(0x000000, 1); renderer.clear(); renderer.render(scene, camera);
+    scene.overrideMaterial = null;
+    // The sea goes into the normal buffer in a flat odd colour, so the shoreline reads as a crease and gets inked.
+    sea.visible = true; sea.material = seaInkMat;
+    renderer.autoClear = false; renderer.render(sea, camera); renderer.autoClear = true;
+    sea.material = seaMat;
+    noInk.forEach(o => { o.visible = true; });
+    scene.background = bg; scene.fog = fog;
+    renderer.setRenderTarget(null); renderer.render(inkScene, inkCam);
     requestAnimationFrame(tick);
   }
 

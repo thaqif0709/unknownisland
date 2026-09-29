@@ -1,6 +1,6 @@
 # Unknown Island
 
-A cute survival island you share with your friends, played in the browser.
+An illustrated survival island you share with your friends, played in the browser.
 Find water and food, chop trees, gather stone, dig clay, mine ore, craft tools, and
 keep a fire going through the cold nights. The island is persistent: whatever you chop, pick or build stays that
 way for everyone, and time keeps passing even when nobody is playing.
@@ -13,7 +13,7 @@ way for everyone, and time keeps passing even when nobody is playing.
 - **The database** is on Neon. It stores accounts, where everyone is, what they're
   carrying, and every tree, rock and fire that's been changed.
 - **The game page** (`public/`) is what players see. It draws the island with
-  three.js in a soft, cute style, and sends your moves to the server.
+  three.js in an inked illustration style (bold outlines, flat colours, cream paper), and sends your moves to the server.
 
 When nobody is playing, the free Render server goes to sleep. The next person to
 visit wakes it up (this can take up to a minute). When the island wakes, it works

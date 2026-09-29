@@ -6,10 +6,19 @@ deliberately not written here; they live only in Render's environment settings.
 
 ## What this is
 
-A cute, soft-shaded 3D survival browser game, no game engine: plain HTML/CSS/JS
-with three.js r128 for rendering. (It started watercolor-styled, briefly went low
-poly, and Thaqif settled on smooth and cutesy: pastel colors, round shapes, chibi
-castaways, real shadows, Fredoka font.) It started as a single-player prototype
+A 3D survival browser game in an inked illustration style, no game engine:
+plain HTML/CSS/JS with three.js r128 for rendering. (Style history: watercolor,
+low poly, soft and cute, pixel-art previews; Thaqif then chose a neo-traditional
+tattoo/illustration look from a reference image: thick dark ink outlines, flat
+three-tone cel shading, muted earthy palette on cream paper, curly swirl clouds.)
+
+Rendering: toon materials with a 3-step gradient; the scene is drawn once for
+colour+depth and once with MeshNormalMaterial, then a full-screen pass inks
+depth jumps and normal creases (`inkMat` in public/game.js). The sea is drawn
+into the normal buffer in pure red so the shoreline gets a line. Tiny
+decorations (flowers, tufts) have depthWrite off and are hidden from the normal
+pass so they stay as uninked dabs; swirl clouds are canvas sprites with their
+own outline. It started as a single-player prototype
 (Castaway, https://claude.ai/artifact/67m4EsRbAwp9zuvBU89AD7) and is now a
 private, persistent multiplayer island for Thaqif and friends (about 2 to 10 players).
 
