@@ -238,6 +238,10 @@ planned separately by Thaqif):
   (`blocksInput()` excludes it from the set that does) and its panel
   backdrop is nearly transparent and pushed toward the top of the screen,
   so you can keep walking and see your surroundings while it's open.
+  Player markers (yours and everyone else's, on both the full map and the
+  minimap) sit on a bright cream halo so they read clearly against any
+  biome colour underneath; each player's marker and halo use their own
+  cloak colour (`colorFor(id)`), same as their name tag and online-list dot.
   Client-only; nothing new from the server.
 - **Intro cutscene (done).** In-engine, about 73 s, skippable (button, Esc,
   Enter, Space): the chart inks itself, a storm with the reed boat and
