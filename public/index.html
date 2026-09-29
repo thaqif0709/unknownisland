@@ -22,6 +22,13 @@
 :root[data-theme="dark"]{ --card:#2E2D48; --card-ink:#F2EAD8; --soft:#B7B3D6; --field:#3A3958; }
 *,*::before,*::after{box-sizing:inherit}
 [hidden]{display:none !important}
+@font-face{font-family:"Pixelify Sans";src:url(/fonts/pixelify-sans-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Pixelify Sans";src:url(/fonts/pixelify-sans-latin-600-normal.woff2) format("woff2");font-weight:600 700;font-display:swap}
+.pixel{--hand:"Pixelify Sans", monospace}
+.pixel #stage canvas{image-rendering:pixelated}
+.pixel .hud,.pixel .inv,.pixel .online,.pixel .prompt,.pixel .card,.pixel .sheet,.pixel .card button,.pixel .sheet button.main,.pixel input,.pixel .recipe,.pixel .bind button,.pixel .tabs button{border-radius:0 !important;box-shadow:4px 4px 0 rgba(40,34,70,.35)}
+.pixel .hud,.pixel .inv,.pixel .online,.pixel .card,.pixel .sheet{border:3px solid var(--ink)}
+.pixel .bar,.pixel .bar i{border-radius:0}
 html,body{height:100%;margin:0;overflow:hidden}
 body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-user-select:none;user-select:none;touch-action:none}
 #stage{position:fixed;inset:0}

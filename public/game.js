@@ -10,10 +10,36 @@
   // ================= Renderer =================
   const stage = document.getElementById('stage');
   const coarse = matchMedia('(pointer: coarse)').matches;
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  // Preview: ?style=pixel renders at low resolution with a limited, dithered palette.
+  const PIXEL = new URLSearchParams(location.search).get('style') === 'pixel';
+  if (PIXEL) document.documentElement.classList.add('pixel');
+  const renderer = new THREE.WebGLRenderer({ antialias: !PIXEL });
+  renderer.setPixelRatio(PIXEL ? 1 : Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = PIXEL ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
+  let pixelRT = null, pixelPost = null;
+  if (PIXEL) {
+    pixelRT = new THREE.WebGLRenderTarget(2, 2, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { tDiffuse: { value: pixelRT.texture }, res: { value: new THREE.Vector2(1, 1) } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
+      fragmentShader: `
+        uniform sampler2D tDiffuse; uniform vec2 res; varying vec2 vUv;
+        float b2(vec2 a){ a = floor(a); return fract(dot(a, vec2(.5, a.y * .75))); }
+        float bayer(vec2 a){ return b2(.5 * a) * .25 + b2(a); }
+        void main(){
+          vec2 px = floor(vUv * res);
+          vec3 c = texture2D(tDiffuse, (px + .5) / res).rgb;
+          c = pow(c, vec3(.95)) * 1.04;
+          float d = bayer(px) - .5;
+          c = floor(c * 8. + d * .35 + .5) / 8.;     // 9 levels per channel, light ordered dither
+          gl_FragColor = vec4(c, 1.);
+        }`,
+      depthTest: false, depthWrite: false,
+    });
+    const ps = new THREE.Scene(); ps.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
+    pixelPost = { scene: ps, cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), mat };
+  }
   stage.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -866,6 +892,11 @@
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
     renderer.setSize(w, h, false);
+    if (PIXEL) {
+      const k = Math.max(2, Math.round(h / 190));   // about 190 "pixels" tall
+      pixelRT.setSize(Math.ceil(w / k), Math.ceil(h / k));
+      pixelPost.mat.uniforms.res.value.set(Math.ceil(w / k), Math.ceil(h / k));
+    }
     camera.aspect = w / h; camera.fov = w / h < .8 ? 68 : 55;
     camera.updateProjectionMatrix();
   }
@@ -1032,7 +1063,10 @@
       camera.lookAt(px, py + 1.3, pz);
     }
 
-    renderer.render(scene, camera);
+    if (PIXEL) {
+      renderer.setRenderTarget(pixelRT); renderer.render(scene, camera);
+      renderer.setRenderTarget(null); renderer.render(pixelPost.scene, pixelPost.cam);
+    } else renderer.render(scene, camera);
     requestAnimationFrame(tick);
   }
 
