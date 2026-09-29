@@ -644,7 +644,7 @@
   // Positions come from the server; small visual details (leaf angles, colors)
   // come from an RNG seeded by the object's id so everyone sees the same thing.
   const trunkM = [soft(0x9A7A5E), soft(0x8A6A52)], barkM = soft(0x7A5A45);
-  const palmLeaf = [soft(0x86A06A), soft(0x6F8F5A)];   // (the leafy texture is defined just below)
+  const palmLeaf = [soft(0x86A06A), soft(0x6F8F5A)]; palmLeaf.forEach(m => { m.userData.leafy = true; });   // (the leafy texture is defined just below)
   // Foliage texture, inked: little scalloped leaf marks all over, and toward the
   // underside (the bottom of the texture on spheres and cones) a darker band with
   // cross-hatching, so every clump of leaves reads as lit from above.
@@ -3145,6 +3145,17 @@
   // board and the carving stones are always too tall.
   const _box = new THREE.Box3();
   const canopyRadius = o => (topOf(o), o._canopy || .5);
+  const FROG_H = 1.75;   // how tall a frog is, for bumping into leaves
+  // The leaves of a tree are solid: bump your head on them from below, or be stopped by them from the side.
+  function leafCeiling(x, z, y) {
+    let c = Infinity;
+    nearbyObjects(x, z, o => {
+      if ((o.type !== 'tree' && o.type !== 'palm') || o.state.gone || !o.mesh) return;
+      topOf(o);
+      if (y < o._leafBottom && Math.hypot(o.x - x, o.z - z) < o._leafR) c = Math.min(c, o._leafBottom);
+    });
+    return c;
+  }
   function topOf(o) {
     // measured from the model when it's built (cached until it grows or changes)
     if (o.mesh && (o.type === 'rock' || o.type === 'ore' || o.type === 'bush' || o.type === 'tree' || o.type === 'palm')) {
@@ -3153,6 +3164,12 @@
         o.mesh.updateMatrixWorld(true); _box.setFromObject(o.mesh);
         o._top = Math.max(.2, _box.max.y - o.mesh.position.y);
         o._canopy = Math.max(.4, Math.min(_box.max.x - _box.min.x, _box.max.z - _box.min.z) * .32);   // the flat-ish middle of the leafy top
+        if (o.type === 'tree' || o.type === 'palm') {   // where the leaves start, and how far they spread
+          const lb = new THREE.Box3(); let any = false;
+          o.mesh.traverse(m => { if (m.isMesh && m.material && m.material.userData.leafy) { lb.union(new THREE.Box3().setFromObject(m)); any = true; } });
+          o._leafBottom = any ? lb.min.y - o.mesh.position.y : o._top;
+          o._leafR = any ? Math.min(lb.max.x - lb.min.x, lb.max.z - lb.min.z) * .42 : .5;
+        }
         o._topKey = key;
       }
       return o._top;
@@ -3202,7 +3219,11 @@
     if (h.charge >= 0) { h.charge += dt; if (!canJump()) h.charge = -1; }
     else if ((keys[prefs.binds.jump] || jumpBtnHeld) && canJump()) h.charge = 0;   // pressed just before landing: start charging now
     h.floor = floorAt(px, pz, h.y);
-    if (h.air) { h.v -= GRAVITY * dt; h.y += h.v * dt; if (h.y <= h.floor) { h.y = h.floor; h.v = 0; h.air = false; h.land = .18; } }
+    if (h.air) {
+      h.v -= GRAVITY * dt; h.y += h.v * dt;
+      if (h.v > 0) { const ceil = leafCeiling(px, pz, h.y - h.v * dt); if (h.y + FROG_H > ceil) { h.y = Math.max(h.floor, ceil - FROG_H); h.v = 0; } }   // bonk: the leaves stop you
+      if (h.y <= h.floor) { h.y = h.floor; h.v = 0; h.air = false; h.land = .18; }
+    }
     else {
       if (h.y > h.floor + .02) { h.air = true; h.v = 0; }   // walked off the edge: drop
       else h.y = h.floor;
@@ -3379,6 +3400,13 @@
           const push = o => {
             if (o.state.gone || o.type === 'dig') return;
             if (hop.y > 0 && hop.y >= topOf(o) - .05) return;   // high enough (or standing on top): pass over it
+            // off the ground (jumping, or standing on something) and up among the leaves: they're solid.
+            // On foot you walk under and around trees as before, so palms and their coconuts stay reachable.
+            if ((o.type === 'tree' || o.type === 'palm') && o.mesh && hop.y > .05 && hop.y + FROG_H > o._leafBottom && hop.y < o._top) {
+              const ox = nx - o.x, oz = nz - o.z, d = Math.hypot(ox, oz), min = o._leafR + .25;   // up among the leaves: they're solid
+              if (d < min && d > 0) { nx = o.x + ox / d * min; nz = o.z + oz / d * min; }
+              return;
+            }
             const ox = nx - o.x, oz = nz - o.z, d = Math.hypot(ox, oz), min = radius(o) + .3;
             if (d < min && d > 0) { nx = o.x + ox / d * min; nz = o.z + oz / d * min; }
           };
