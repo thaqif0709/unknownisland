@@ -43,11 +43,16 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 .temp{font-size:15px;min-height:1.2em}
 .temp.cold{color:var(--blue);font-weight:600} .temp.warm{color:var(--ochre);font-weight:600}
 
-.online{position:fixed;right:14px;top:calc(env(safe-area-inset-top,0px) + 12px);pointer-events:none;
+.topRight{position:fixed;right:14px;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;
+  align-items:flex-end;gap:10px;z-index:1}
+.online{pointer-events:none;
   background:rgba(245,236,215,.94);padding:8px 14px 10px;border-radius:18px;font-size:15px;max-width:44vw;transition:opacity .4s;border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
 .online b{font-size:17px;display:block}
 .online span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .online i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+.minimap{transition:opacity .4s}
+.minimap:not(.hidden){pointer-events:auto;cursor:pointer}
+.minimap canvas{display:block;width:150px;height:150px;border-radius:50%;border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink);background:#4A6F91}
 
 .inv{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);pointer-events:none;
   background:rgba(245,236,215,.94);padding:8px 14px;border-radius:18px;font-size:17px;transition:opacity .4s;border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
@@ -207,6 +212,7 @@ kbd.k{font-family:var(--hand);font-weight:600;border:2px solid var(--ink);border
   .prompt kbd{display:none}
   .gear{bottom:auto;right:auto;left:14px;top:calc(env(safe-area-inset-top,0px) + 196px)}
   .online{font-size:13px}
+  .minimap canvas{width:110px;height:110px}
 }
 .joy{position:fixed;width:110px;height:110px;margin:-55px 0 0 -55px;border-radius:50%;border:2px solid rgba(52,51,90,.35);
   background:rgba(255,255,255,.35);pointer-events:none;display:none}
@@ -251,7 +257,12 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
   <div class="stat"><span>Dread</span><div class="bar b-dread"><i id="bDread" style="--v:0%"></i></div></div>
   <div class="temp" id="temp"></div>
 </div>
-<div class="online hidden" id="online"></div>
+<div class="topRight" id="topRight">
+  <div class="online hidden" id="online"></div>
+  <div class="minimap hidden" id="minimap" title="Open the map" aria-label="Open the map">
+    <canvas id="minimapCanvas" width="150" height="150"></canvas>
+  </div>
+</div>
 <div class="inv hidden" id="inv"><div class="items" id="invList"></div><div class="tools" id="toolList"></div>
   <span class="craft" id="craftHint"></span></div>
 <button class="gear hidden" id="btnSettings" type="button" aria-label="Settings" title="Settings (Esc)">&#9881;</button>
