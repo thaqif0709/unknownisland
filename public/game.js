@@ -30,42 +30,111 @@
   colorRT.depthTexture.type = THREE.UnsignedIntType;
   const normalRT = new THREE.WebGLRenderTarget(2, 2);
   const normalMat = new THREE.MeshNormalMaterial();
+  // Fog map: a small texture around you holding fog density (0-1) from the
+  // shared fog rule, so the fog drawn here is the same fog the server uses.
+  const FOG_N = 64, FOG_CELL = 4, FOG_SIZE = FOG_N * FOG_CELL;
+  const fogData = new Uint8Array(FOG_N * FOG_N * 4);
+  const fogTex = new THREE.DataTexture(fogData, FOG_N, FOG_N, THREE.RGBAFormat);
+  fogTex.magFilter = fogTex.minFilter = THREE.LinearFilter;
+  const fogOrigin = new THREE.Vector2();
   const inkMat = new THREE.ShaderMaterial({
     uniforms: {
       tColor: { value: colorRT.texture }, tDepth: { value: colorRT.depthTexture }, tNormal: { value: normalRT.texture },
       res: { value: new THREE.Vector2(1, 1) }, width: { value: 2 }, near: { value: camera.near }, far: { value: camera.far },
       useNormals: { value: 1 },
       ink: { value: new THREE.Color(0x2B211F) },
+      fogTex: { value: fogTex }, fogOrigin: { value: fogOrigin }, fogSize: { value: FOG_SIZE },
+      invProj: { value: camera.projectionMatrixInverse }, camWorld: { value: camera.matrixWorld }, camPos: { value: camera.position },
+      night: { value: 0 }, time: { value: 0 }, dread: { value: 0 },
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
     fragmentShader: `
-      uniform sampler2D tColor, tDepth, tNormal; uniform vec2 res; uniform float width, near, far, useNormals; uniform vec3 ink;
+      uniform sampler2D tColor, tDepth, tNormal, fogTex;
+      uniform vec2 res, fogOrigin; uniform float width, near, far, useNormals, fogSize, night, time, dread;
+      uniform vec3 ink, camPos; uniform mat4 invProj, camWorld;
       varying vec2 vUv;
       float lin(vec2 uv){ float z = texture2D(tDepth, uv).x * 2. - 1.; return 2. * near * far / (far + near - z * (far - near)); }
       vec3 nrm(vec2 uv){ return texture2D(tNormal, uv).rgb * 2. - 1.; }
       float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+        return mix(mix(hash(i), hash(i + vec2(1., 0.)), f.x), mix(hash(i + vec2(0., 1.)), hash(i + vec2(1., 1.)), f.x), f.y); }
+      float b2(vec2 a){ a = floor(a); return fract(dot(a, vec2(.5, a.y * .75))); }
+      float bayer(vec2 a){ return b2(.5 * a) * .25 + b2(a); }
+      float fogField(vec2 xz){
+        vec2 f = (xz - fogOrigin) / fogSize;
+        if (f.x < 0. || f.y < 0. || f.x > 1. || f.y > 1.) return 1.;   // beyond the map: assume the worst
+        return texture2D(fogTex, f).r;
+      }
       void main(){
-        vec3 col = texture2D(tColor, vUv).rgb;
-        float d0 = lin(vUv);
+        // dread: the lines start to tremble
+        vec2 jit = vec2(sin(time * 23. + vUv.y * 90.), cos(time * 19. + vUv.x * 70.)) * dread * dread * 1.6 / res;
+        vec2 uv = vUv + jit;
+        vec3 col = texture2D(tColor, uv).rgb;
+        float raw = texture2D(tDepth, uv).x;
+        float d0 = lin(uv);
+        bool sky = d0 >= far * .98;
+        // ---- fog: density along the view, from where you stand and where you look ----
+        float fCam = fogField(camPos.xz);
+        float fog = fCam * .85;
+        if (!sky) {
+          vec4 v = invProj * vec4(uv * 2. - 1., raw * 2. - 1., 1.); v /= v.w;
+          vec3 wp = (camWorld * v).xyz;
+          float fPix = fogField(wp.xz);
+          fog = max(max(fPix * smoothstep(1.5, 18., d0), fCam * smoothstep(2., 16., d0)), fPix * .35);
+        }
+        fog = clamp(fog * (.85 + noise(gl_FragCoord.xy * .015 + time * .06) * .3), 0., 1.);
+        float bay = bayer(floor(gl_FragCoord.xy / 2.));
+        // ---- ink lines (they blow out wider as dread rises) ----
         float e = 0.;
-        if (d0 < far * .98) {
-          vec3 n0 = nrm(vUv);
-          vec2 o = width / res;
+        if (!sky) {
+          vec3 n0 = nrm(uv);
+          vec2 o = width * (1. + dread * 1.3) / res;
           for (int i = 0; i < 4; i++) {
             vec2 dir = i == 0 ? vec2(1., 0.) : i == 1 ? vec2(-1., 0.) : i == 2 ? vec2(0., 1.) : vec2(0., -1.);
-            vec2 uv = vUv + dir * o;
-            float d = lin(uv);
-            e = max(e, smoothstep(.03, .06, (d - d0) / d0));          // silhouettes (drawn on the nearer shape)
-            if (useNormals > .5) e = max(e, smoothstep(.45, .7, 1. - dot(n0, nrm(uv))));    // creases
+            vec2 suv = uv + dir * o;
+            float d = lin(suv);
+            e = max(e, smoothstep(.03, .06, (d - d0) / d0));
+            if (useNormals > .5) e = max(e, smoothstep(.45, .7, 1. - dot(n0, nrm(suv))));
           }
-          e *= 1. - smoothstep(60., 120., d0);                           // lines fade with distance
+          e *= 1. - smoothstep(60., 120., d0);
+          e *= mix(1., step(fog * .95, bay), fog);   // in fog, the linework dissolves into dots
         }
         col = mix(col, ink, e * .92);
+        // ---- fog is drawn as stipple and cross-hatching that swallows the design ----
+        vec3 fogTint = mix(vec3(.66, .63, .58), vec3(.22, .2, .21), night);
+        col = mix(col, fogTint, fog * .5);
+        vec2 fp = gl_FragCoord.xy;
+        float stip = bay < fog * .85 ? 1. : 0.;
+        float h1 = step(.8, fract((fp.x + fp.y) / 6.)) * smoothstep(.45, .6, fog);
+        float h2 = step(.8, fract((fp.x - fp.y) / 6.)) * smoothstep(.7, .85, fog);
+        float mark = max(stip * .75, max(h1, h2));
+        col = mix(col, mix(vec3(.45, .42, .4), ink, .2 + night * .8), mark * .7);
+        // ---- dread: colour drains, stippling spreads, ink creeps in from the edges ----
+        float l = dot(col, vec3(.299, .587, .114));
+        col = mix(col, vec3(l), dread * .85);
+        col = mix(col, ink, (bay < dread * .45 ? 1. : 0.) * step(l, .6));
+        vec2 q = (vUv - .5) * vec2(res.x / res.y, 1.);
+        float edge = length(q) * 1.1 + (noise(vUv * 5. + time * .04) - .5) * .4;
+        col = mix(col, ink, smoothstep(.0, .04, edge - (1.3 - dread * .8)));
         col *= .96 + hash(floor(gl_FragCoord.xy / 2.)) * .06;           // paper grain
         gl_FragColor = vec4(col, 1.);
       }`,
     depthTest: false, depthWrite: false,
   });
+  // Rebuild the fog map around a point (a few times a second).
+  const fogHeights = new Map();
+  let fogEnv = {};
+  function updateFogMap(cx, cz, tt, lights) {
+    const ox = Math.floor(cx / FOG_CELL) * FOG_CELL - FOG_SIZE / 2, oz = Math.floor(cz / FOG_CELL) * FOG_CELL - FOG_SIZE / 2;
+    fogOrigin.set(ox, oz);
+    if (fogHeights.size > 30000) fogHeights.clear();
+    for (let j = 0; j < FOG_N; j++) for (let i = 0; i < FOG_N; i++) {
+      const x = ox + (i + .5) * FOG_CELL, z = oz + (j + .5) * FOG_CELL, k = x + ',' + z;
+      let h = fogHeights.get(k); if (h === undefined) { h = heightAt(x, z); fogHeights.set(k, h); }
+      fogData[(j * FOG_N + i) * 4] = WG.fogAt(x, z, h, tt, lights, fogEnv) * 255;
+    }
+    fogTex.needsUpdate = true;
+  }
   const inkScene = new THREE.Scene();
   inkScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), inkMat));
   const inkCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -892,12 +961,28 @@
     fires.set(f.id, f);
     return f;
   }
+  // Sacks of things dropped when someone was knocked down.
+  let drops = new Map();
+  const sackM = soft(0xB59A72), tieM = soft(0x7A5A45);
+  function addDrop(d) {
+    if (drops.has(d.id)) return;
+    const g = new THREE.Group();
+    const sack = ball(.32, sackM); sack.scale.set(1, .75, .9); sack.position.y = .22; g.add(sack);
+    const neck = new THREE.Mesh(new THREE.ConeGeometry(.12, .22, 8), sackM); neck.position.y = .5; g.add(neck);
+    const tie = new THREE.Mesh(new THREE.TorusGeometry(.09, .025, 6, 12), tieM); tie.rotation.x = Math.PI / 2; tie.position.y = .45; g.add(tie);
+    g.position.set(d.x, groundAt(d.x, d.z), d.z); g.rotation.y = d.id;
+    shadows(g); scene.add(g);
+    drops.set(d.id, { id: d.id, type: 'drop', x: d.x, z: d.z, r: .4, mesh: g, state: {} });
+  }
+  function removeDrop(id) { const d = drops.get(id); if (d) { scene.remove(d.mesh); drops.delete(id); } }
+  function clearDrops() { drops.forEach(d => scene.remove(d.mesh)); drops = new Map(); }
   function clearFires() { fires.forEach(f => scene.remove(f.mesh)); fires = new Map(); }
 
   // ================= State =================
   let state = 'title';              // title | connecting | play | dead
   let me = null;                    // { id, name }
-  let stats = { health: 100, hunger: 80, thirst: 70, inv: { wood: 0, stone: 0 }, tools: [], warm: false };
+  let stats = { health: 100, hunger: 80, thirst: 70, inv: { wood: 0, stone: 0 }, tools: [], warm: false, dread: 0, fog: 0, down: false };
+  let knockT = 0, dreadShown = 0, fogTimer = 0;
   const nrg = { energy: 100, exhausted: false, rest: 0 };   // predicted locally, corrected by the server
   let running = false, runToggle = false;
   let px = SPAWN.x, pz = SPAWN.z, face = Math.PI, cooldown = 0, deadT = 0, deathInfo = null;
@@ -998,7 +1083,7 @@
     showAuth();
   });
 
-  $('goIsland').addEventListener('click', enterIsland);
+  $('goIsland').addEventListener('click', () => { Sound.init(); enterIsland(); });
 
   async function boot() {
     if (!token()) return showAuth();
@@ -1056,6 +1141,7 @@
         for (const [id, st] of m.states) if (objects[id]) objects[id].state = st;
         for (const o of objects) applyState(o);
         clearFires(); m.fires.forEach(addFire);
+        clearDrops(); (m.drops || []).forEach(addDrop);
         resetRemotes(); m.players.forEach(addRemote);
         if (hero) removeCastaway(hero);
         hero = makeCastaway(colorFor(me.id));
@@ -1080,7 +1166,8 @@
         }
         break;
       case 'me':
-        Object.assign(stats, { health: m.health, hunger: m.hunger, thirst: m.thirst, inv: m.inv, tools: m.tools, warm: m.warm });
+        Object.assign(stats, { health: m.health, hunger: m.hunger, thirst: m.thirst, inv: m.inv, tools: m.tools, warm: m.warm,
+          dread: m.dread, fog: m.fog, down: m.down });
         // Energy runs locally for a snappy feel; follow the server if we drift.
         if (Math.abs(nrg.energy - m.energy) > 12 || nrg.exhausted !== m.exhausted) { nrg.energy = m.energy; nrg.exhausted = m.exhausted; }
         if (!ui.book.classList.contains('gone')) renderBook();
@@ -1102,6 +1189,12 @@
         break;
       }
       case 'toast': toast(m.msg); break;
+      case 'knocked':
+        if (me && m.id === me.id) { knockT = RULES.KNOCK ? RULES.KNOCK.DOWN_MS / 1000 : 3; }
+        else { const r = remotes.get(m.id); if (r) r.knockT = 3; }
+        break;
+      case 'drop': addDrop(m.drop); break;
+      case 'undrop': removeDrop(m.id); break;
       case 'dawn':
         if (state === 'play') toast(`Morning of day ${m.day}. You made it through the night.`);
         break;
@@ -1127,7 +1220,7 @@
 
   function applySelf(you) {
     px = you.x; pz = you.z; face = you.face;
-    Object.assign(stats, { health: you.health, hunger: you.hunger, thirst: you.thirst, inv: you.inv, tools: you.tools });
+    Object.assign(stats, { health: you.health, hunger: you.hunger, thirst: you.thirst, inv: you.inv, tools: you.tools, dread: you.dread || 0 });
     Object.assign(nrg, { energy: you.energy, exhausted: you.exhausted, rest: 0 });
   }
 
@@ -1156,7 +1249,7 @@
       const d = Math.hypot(o.x - px, o.z - pz) - radius(o);
       if (d < RULES.REACH && d < bd) { bd = d; bestO = o; }
     };
-    nearbyObjects(px, pz, check); fires.forEach(check);
+    nearbyObjects(px, pz, check); fires.forEach(check); drops.forEach(check);
     if (bestO) return bestO;
     const sn = WG.nearestSpring(px, pz);
     if (Math.hypot(px - sn.x, pz - sn.z) < RULES.SPRING_REACH) return { type: 'spring' };
@@ -1174,6 +1267,7 @@
       case 'rock': return o.species === 'pebble' ? 'Pick up stones' : 'Gather stone';
       case 'ore': return has('pickaxe') ? `Mine ${o.ore === 'iron' ? 'iron' : 'copper'} ore` : `${o.ore === 'iron' ? 'Iron' : 'Copper'} ore (needs a pickaxe)`;
       case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
+      case 'drop': return 'Pick up the scattered things';
       case 'fire': { const n = o.kind === 'hearth' ? 'hearth' : 'fire';
         return (stats.inv.wood || 0) > 0 ? (o.fuel > 0 ? `Add wood to the ${n}` : 'Relight with wood') : `${n[0].toUpperCase() + n.slice(1)} (needs wood)`; }
     }
@@ -1181,10 +1275,10 @@
   const has = tool => stats.tools.includes(tool);
   function targetKey(o) {
     if (o.type === 'spring' || o.type === 'sea') return o.type;
-    return (o.type === 'fire' ? 'f' : 'o') + o.id;
+    return (o.type === 'fire' ? 'f' : o.type === 'drop' ? 'd' : 'o') + o.id;
   }
   function act() {
-    if (state !== 'play' || cooldown > 0 || !target || !net) return;
+    if (state !== 'play' || cooldown > 0 || !target || !net || knockT > 0) return;
     cooldown = .45;
     if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig'].includes(target.type)) hero.swingT = .35;
     net.send({ t: 'act', target: targetKey(target) });
@@ -1214,7 +1308,7 @@
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
-  let prefs = { binds: { ...DEFAULT_BINDS }, sens: 1, invertY: false, quality: 'auto' };
+  let prefs = { binds: { ...DEFAULT_BINDS }, sens: 1, invertY: false, quality: 'auto', sounds: true };
   try { const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null'); if (saved) prefs = { ...prefs, ...saved, binds: { ...DEFAULT_BINDS, ...saved.binds } }; } catch (e) {}
   const savePrefs = () => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch (e) {} };
   function keyLabel(code) {
@@ -1326,6 +1420,7 @@
     $('sens').value = prefs.sens;
     $('invertY').checked = prefs.invertY;
     $('quality').value = prefs.quality;
+    $('sounds').checked = prefs.sounds !== false;
   }
   $('binds').addEventListener('click', e => {
     const b = e.target.closest('[data-bind]');
@@ -1337,6 +1432,7 @@
   $('sens').addEventListener('input', e => { prefs.sens = +e.target.value; savePrefs(); });
   $('invertY').addEventListener('change', e => { prefs.invertY = e.target.checked; savePrefs(); });
   $('quality').addEventListener('change', e => { prefs.quality = e.target.value; savePrefs(); applyQuality(); });
+  $('sounds').addEventListener('change', e => { prefs.sounds = e.target.checked; savePrefs(); if (prefs.sounds) Sound.init(); });
   $('resume').addEventListener('click', closePanels);
   $('logout2').addEventListener('click', async () => {
     closePanels();
@@ -1400,7 +1496,7 @@
     resize();
   }
   applyQuality();
-  if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, chunks, objects: () => objects }; }
+  if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, chunks, objects: () => objects, stats }; }
 
   // ================= Sky =================
   const skyKeys = [
@@ -1415,6 +1511,86 @@
     sunCol.copy(cA.set(a[2])).lerp(cB.set(b[2]), f);
     return a[3] + (b[3] - a[3]) * f;
   }
+
+  // ================= Dread: false things =================
+  // At high dread you see a frog where no one is: at the edge of your view,
+  // gone when you look straight at it or walk up to it. Sometimes it waits
+  // behind you and is only there when you turn round.
+  let phantom = null, phantomNext = 12;
+  const _v = new THREE.Vector3();
+  function viewAngle(x, y, z) {   // angle between the camera's forward and a point
+    _v.set(x, y, z).sub(camera.position).normalize();
+    const f = new THREE.Vector3(); camera.getWorldDirection(f);
+    return Math.acos(clamp(f.dot(_v), -1, 1));
+  }
+  function updatePhantom(dt) {
+    const d = stats.dread;
+    if (phantom) {
+      phantom.life -= dt;
+      const a = viewAngle(phantom.x, groundAt(phantom.x, phantom.z) + 1, phantom.z);
+      const inView = a < camera.fov * Math.PI / 360 * 1.1;
+      if (inView) phantom.seen = true;
+      const gone = phantom.life <= 0 || Math.hypot(phantom.x - px, phantom.z - pz) < 7 || a < .2
+        || (phantom.behind && phantom.seen && (phantom.seenFor = (phantom.seenFor || 0) + (inView ? dt : 0)) > .6);
+      if (gone || d < 45 || state !== 'play') { removeCastaway(phantom.av); phantom = null; phantomNext = 6 + Math.random() * 14 * (1.3 - d / 100); }
+      else poseCastaway(phantom.av, phantom.x, phantom.z, Math.atan2(px - phantom.x, pz - phantom.z), 0, false, dt, 0);
+      return;
+    }
+    if (state !== 'play' || d < 65 || (phantomNext -= dt) > 0) return;
+    const behind = Math.random() < .4;
+    const camYaw = Math.atan2(px - camera.position.x, pz - camera.position.z);   // direction you're looking
+    const side = (Math.random() < .5 ? -1 : 1) * (behind ? Math.PI * (.75 + Math.random() * .2) : .5 + Math.random() * .25);
+    const ang = camYaw + side, dist = 11 + Math.random() * 8;
+    const x = px + Math.sin(ang) * dist, z = pz + Math.cos(ang) * dist;
+    if (heightAt(x, z) < .3) { phantomNext = 2; return; }
+    const friends = [...remotes.keys()];
+    const colour = friends.length ? colorFor(friends[(Math.random() * friends.length) | 0]) : CLOAKS[(Math.random() * CLOAKS.length) | 0];
+    phantom = { av: makeCastaway(colour), x, z, life: 5 + Math.random() * 4, behind, seen: false };
+  }
+
+  // ================= Dread: sounds =================
+  // Faint footsteps behind you and whispers, made from filtered noise.
+  const Sound = {
+    ctx: null, noise: null, next: 8,
+    init() {
+      if (this.ctx) return;
+      try {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const len = this.ctx.sampleRate, buf = this.ctx.createBuffer(1, len, len), d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+        this.noise = buf;
+      } catch (e) { this.ctx = null; }
+    },
+    burst(at, dur, filterType, freq, q, gain, pan) {
+      const c = this.ctx, src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      src.buffer = this.noise; f.type = filterType; f.frequency.value = freq; f.Q.value = q;
+      g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(gain, at + dur * .25); g.gain.linearRampToValueAtTime(0, at + dur);
+      let node = g;
+      if (c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; g.connect(p); node = p; }
+      src.connect(f); f.connect(g); node.connect(c.destination);
+      src.start(at, Math.random() * .5, dur + .05);
+      return f;
+    },
+    footsteps() {
+      const c = this.ctx, pan = Math.random() * 1.6 - .8, n = 3 + (Math.random() * 3 | 0);
+      for (let i = 0; i < n; i++) this.burst(c.currentTime + i * .55, .14, 'lowpass', 280, 1, .22, pan);
+    },
+    whisper() {
+      const c = this.ctx, t0 = c.currentTime, pan = Math.random() * 1.6 - .8;
+      for (let i = 0; i < 3; i++) {
+        const f = this.burst(t0 + i * .35, .9, 'bandpass', 2200 + Math.random() * 1400, 7, .05, pan);
+        f.frequency.linearRampToValueAtTime(1400 + Math.random() * 1600, t0 + i * .35 + .9);
+      }
+    },
+    update(dt) {
+      if (!this.ctx || prefs.sounds === false || state !== 'play') return;
+      const d = stats.dread;
+      if (d < 40 || (this.next -= dt) > 0) return;
+      this.next = 4 + Math.random() * 10 * (1.4 - d / 100);
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      if (d > 55 && Math.random() < .5) this.whisper(); else this.footsteps();
+    },
+  };
 
   // ================= Loop =================
   const clock = new THREE.Clock();
@@ -1452,6 +1628,21 @@
     hemi.color.set(sunI < .2 ? 0x8E9AB8 : 0xFFF6E6);
     const night = isNight(t);
 
+    // fog map and the ink shader's fog/dread inputs
+    if ((fogTimer -= dt) <= 0) {
+      fogTimer = .25;
+      const lights = [];
+      fires.forEach(f => { if (f.fuel > 0) lights.push({ x: f.x, z: f.z, r: WG.FIRES[f.kind].warm * 1.4 }); });
+      updateFogMap(focusX, focusZ, t, lights);
+    }
+    if (window.__dbg && __dbg.forceDread != null) stats.dread = __dbg.forceDread;   // debug only
+    dreadShown += ((inGame() ? stats.dread / 100 : 0) - dreadShown) * Math.min(1, dt * 1.5);
+    inkMat.uniforms.dread.value = dreadShown;
+    inkMat.uniforms.night.value = WG.nightFactor(t);
+    inkMat.uniforms.time.value = elapsed;
+    if (knockT > 0) knockT -= dt;
+    updatePhantom(dt);
+    Sound.update(dt);
     const cloudTint = .35 + sunI * .65;
     updateCrests(elapsed, cloudTint);
     updatePuffs(dt, elapsed);
@@ -1493,7 +1684,7 @@
     // Your own castaway: moved locally, reported to the server.
     let moving = false, wantSprint = false;
     if (state === 'play') {
-      const free = !panelOpen();
+      const free = !panelOpen() && knockT <= 0 && !stats.down;
       let ix = free ? (held('right') || keys.ArrowRight ? 1 : 0) - (held('left') || keys.ArrowLeft ? 1 : 0) + joy.x : 0;
       let iz = free ? (held('forward') || keys.ArrowUp ? 1 : 0) - (held('back') || keys.ArrowDown ? 1 : 0) - joy.y : 0;
       const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
@@ -1526,12 +1717,13 @@
         lastSent = { at: now, x: px, z: pz, face, moving, sprint: wantSprint };
       }
     }
-    if (hero) poseCastaway(hero, px, pz, face, moving ? (running ? 2 : 1) : 0, state === 'dead', dt, elapsed);
+    if (hero) poseCastaway(hero, px, pz, face, moving ? (running ? 2 : 1) : 0, state === 'dead' || knockT > 0, dt, elapsed);
 
     // Other castaways, played back smoothly.
     remotes.forEach(r => {
       const s = r.remote.sample();
-      poseCastaway(r.av, s.x, s.z, s.face, s.moving, !!s.dead, dt, elapsed);
+      if (r.knockT > 0) r.knockT -= dt;
+      poseCastaway(r.av, s.x, s.z, s.face, s.moving, !!s.dead || r.knockT > 0, dt, elapsed);
       tagV.set(s.x, Math.max(groundAt(s.x, s.z), -.75) + 2.05, s.z).project(camera);
       const dist = Math.hypot(s.x - camera.position.x, s.z - camera.position.z);
       if (tagV.z > 1 || dist > 45) r.tag.style.display = 'none';
@@ -1559,11 +1751,14 @@
       $('bFood').style.setProperty('--v', stats.hunger + '%');
       $('bWater').style.setProperty('--v', stats.thirst + '%');
       $('bEnergy').style.setProperty('--v', nrg.energy + '%');
+      $('bDread').style.setProperty('--v', stats.dread + '%');
       $('energyBar').classList.toggle('tired', nrg.exhausted);
       const dl = `Day ${day} <small>${phaseName(t)}</small>`;
       if (dl !== lastDayLabel) { $('dayLabel').innerHTML = dl; lastDayLabel = dl; }
       const temp = $('temp');
-      if (nrg.exhausted) { temp.textContent = 'Exhausted. Catch your breath.'; temp.className = 'temp cold'; }
+      if (knockT > 0 || stats.down) { temp.textContent = 'Knocked down\u2026'; temp.className = 'temp cold'; }
+      else if (nrg.exhausted) { temp.textContent = 'Exhausted. Catch your breath.'; temp.className = 'temp cold'; }
+      else if (stats.fog > .5) { temp.textContent = 'The fog is thick here.'; temp.className = 'temp cold'; }
       else if (night) { temp.textContent = stats.warm ? 'Warm by the fire' : 'Cold'; temp.className = 'temp ' + (stats.warm ? 'warm' : 'cold'); }
       else { temp.textContent = ''; temp.className = 'temp'; }
       renderInventory();

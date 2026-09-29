@@ -47,6 +47,19 @@
     EXHAUST_RECOVER: 35,
     EXHAUSTED_MULT: 0.75,    // walking speed while exhausted
     SPRINT_HUNGER: 0.9,      // extra hunger per second while sprinting
+    // Dread (0-100) changes what you perceive. Per-second rates:
+    DREAD: {
+      FOG: 2.4,          // times the fog density where you stand
+      DARK: 1,           // at night with no light nearby
+      ALONE_NIGHT: .6,   // no friend within FRIEND_RADIUS, at night
+      ALONE_DAY: .1,
+      LIGHT: -5,         // warm by a fire (or lantern)
+      DAY: -1.5,         // daylight, out of the fog
+      FRIENDS: -1.5,     // a friend nearby
+      EAT: -6,           // each time you eat
+      FRIEND_RADIUS: 12,
+    },
+    KNOCK: { HEALTH: 20, DREAD: 25, DROP: .5, DOWN_MS: 3000 },
   };
 
   // Things you can carry (inventory keys and their names).
@@ -76,6 +89,14 @@
   };
 
   const isNight = t => t < 0.22 || t >= 0.8;
+  // 0 by day, 1 at night, easing in through dusk and out through dawn.
+  function nightFactor(t) {
+    if (t >= .72 && t < .84) return smoothstep(.72, .84, t);
+    if (t >= .84 || t < .2) return 1;
+    if (t < .3) return 1 - smoothstep(.2, .3, t);
+    return 0;
+  }
+  function smoothstep(a, b, x) { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); }
   function phaseName(t) {
     if (isNight(t)) return 'night';
     if (t < 0.3) return 'dawn'; if (t < 0.45) return 'morning'; if (t < 0.62) return 'midday';
@@ -132,6 +153,24 @@
       const k2 = smooth(2.6, 1.2, sd); h = h * (1 - k2) + 1.65 * k2;
     }
     return Math.max(h, -6);
+  }
+
+  // ================= Fog =================
+  // The fog is the antagonist. It always sits over the deep sea; at dusk it
+  // rises from the sea like a tide, filling low ground and valleys first; on a
+  // normal night it covers the lowlands (the hills stay clear); at dawn it
+  // drains away. Light (fires, lanterns) cuts clear circles out of it.
+  // env: { drowning: bool (thickest nights), fogStorm: bool (fog by day) }
+  function fogFront(t, env = {}) {
+    const top = env.drowning ? 40 : 7.5;
+    return -2 + (top + 2) * nightFactor(t) + (env.fogStorm ? 9 : 0);
+  }
+  // lights: [{ x, z, r }] clear radius r
+  function fogAt(x, z, h, t, lights = [], env = {}) {
+    const front = fogFront(t, env);
+    let f = Math.max(smoothstep(-1.5, -4.5, h), smoothstep(front + 2.5, front - 1.5, h));
+    for (const L of lights) f *= smoothstep(L.r * .8, L.r * 1.5, Math.hypot(x - L.x, z - L.z));
+    return Math.max(0, Math.min(1, f));
   }
 
   // Biomes: what grows where.
@@ -275,7 +314,7 @@
 
   const WorldGen = {
     RULES, ITEMS, RECIPES, FIRES, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
-    isNight, phaseName, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
+    isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
     generateObjects, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, speedMult,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;

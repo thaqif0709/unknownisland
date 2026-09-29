@@ -37,6 +37,7 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 .bar i{display:block;height:100%;width:var(--v,100%);border-radius:18px;opacity:.85;transition:width .3s}
 .b-health i{background:var(--rose)} .b-food i{background:var(--ochre)} .b-water i{background:var(--blue)} .b-energy i{background:var(--leaf)}
 .b-energy.tired i{background:#A99C8F}
+.b-dread i{background:var(--ink)}
 .temp{font-size:15px;min-height:1.2em}
 .temp.cold{color:var(--blue);font-weight:600} .temp.warm{color:var(--ochre);font-weight:600}
 
@@ -154,6 +155,7 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
   <div class="stat"><span>Food</span><div class="bar b-food"><i id="bFood"></i></div></div>
   <div class="stat"><span>Water</span><div class="bar b-water"><i id="bWater"></i></div></div>
   <div class="stat"><span>Energy</span><div class="bar b-energy" id="energyBar"><i id="bEnergy"></i></div></div>
+  <div class="stat"><span>Dread</span><div class="bar b-dread"><i id="bDread" style="--v:0%"></i></div></div>
   <div class="temp" id="temp"></div>
 </div>
 <div class="online hidden" id="online"></div>
@@ -189,6 +191,8 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
     <h3>Camera</h3>
     <label class="row">Look sensitivity <input type="range" id="sens" min="0.3" max="2.5" step="0.1"></label>
     <label class="row check"><input type="checkbox" id="invertY"> Invert up and down</label>
+    <h3>Sound</h3>
+    <label class="row check"><input type="checkbox" id="sounds"> Creepy sounds (footsteps and whispers when your dread is high)</label>
     <h3>Graphics</h3>
     <label class="row">Quality <select id="quality"><option value="auto">Auto (Low on phones)</option><option value="high">High</option><option value="low">Low (faster)</option></select></label>
     <p class="note">Low turns off shadows and some outlines so older phones run smoothly.</p>

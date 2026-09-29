@@ -121,6 +121,27 @@ material (`bake`) to keep draw calls down. The layout comes once from
 `/api/world` (gzipped, ~28 KB); the welcome message only carries non-default
 object states. The sea, clouds and fireflies follow the camera.
 
+## Narrative systems (from the narrative brief)
+
+Built so far (non-progression systems only; quests/story progression are being
+planned separately by Thaqif):
+
+- **Phase 1, fog and dread (done).** Fog is one shared rule, `fogAt()` in
+  world-gen, used by the server (dread, gameplay) and client (drawing). It always
+  sits over deep sea; at dusk a "front" rises from the sea, filling low ground
+  first (normal night: up to ~7.5 height, hills stay clear); fires cut clear
+  circles (radius = warmth x 1.4). The client builds a 64x64 fog map around the
+  focus point (4-unit cells) every 0.25 s and the ink shader reconstructs each
+  pixel's world position to draw fog as tint + stipple + cross-hatching; ink lines
+  dissolve into dots in fog. Dread (0-100, saved in `island_members.dread`) rises
+  in fog, darkness and solitude and falls near fire, in daylight, with friends and
+  when eating (`RULES.DREAD`). The shader's `dread` uniform drains colour, spreads
+  stippling, trembles and blows out lines, and creeps ink in from the edges. At
+  high dread the client shows phantom frogs and plays footsteps/whispers (Web Audio,
+  toggle in Settings). `Island.knock(p)` knocks a player down (health, dread,
+  half the inventory into a sack saved in the `drops` table; anyone can pick it up).
+  Nothing calls `knock` yet; the Stilled will (Phase 2).
+
 ## Content model (added after v1)
 
 - **Object list:** the original 84 objects (ids 0-83) are unchanged. Ore rocks
