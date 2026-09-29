@@ -272,7 +272,7 @@ planned separately by Thaqif):
 ## Survival rules
 
 All in `RULES` in `server/shared/world-gen.js` (the server sends them to clients):
-day 1200 s, loosely Minecraft's 20-minute day (about 11.6 min light incl. short dawn/dusk, 8.4 min night; t: 0 midnight, .25 sunrise, .5 noon, .75 sunset; night is t < .22 or
+day = 11 min 36 s of daylight (RULES.DAYLIGHT_LEN, incl. short dawn/dusk) + 5 min night (RULES.NIGHT_LEN); the clock runs faster at night (WG.advanceT); t: 0 midnight, .25 sunrise, .5 noon, .75 sunset; night is t < .22 or
 t ≥ .8; the day counter increments at sunrise); hunger −0.28/s, thirst −0.42/s;
 start 100/80/70; −1.6/s health each when hunger or thirst is 0; −0.6/s at night
 away from a lit fire (radius 5.5); +0.8/s regen when both > 35 and unhurt; spring

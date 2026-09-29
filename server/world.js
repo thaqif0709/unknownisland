@@ -278,7 +278,7 @@ class Island {
   // because regrowth only depends on the final day number.
   advance(sec) {
     if (sec <= 0) return [];
-    const before = this.time, after = before + sec / RULES.DAY_LEN;
+    const before = this.time, after = WG.advanceT(before, sec);
     const sunrises = Math.floor(after - 0.25) - Math.floor(before - 0.25);
     const noons = Math.floor(after - 0.5) - Math.floor(before - 0.5);
     if (noons > 0 && !sunrises) { this.rollWeather(); this.updateEnv(); }

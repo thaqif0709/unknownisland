@@ -8,7 +8,11 @@
   const RULES = {
     // Real seconds per in-game day, loosely Minecraft's: 20 minutes, of which about
     // 10 min is day, 8 min 20 s is night, and dusk and dawn are short in between.
-    DAY_LEN: 1200,
+    // Daylight (sunrise to sunset, including both) and night, in real seconds.
+    // Time simply runs faster through the night. DAY_LEN is the whole cycle.
+    DAYLIGHT_LEN: 696,       // 11 min 36 s
+    NIGHT_LEN: 300,          // 5 min
+    DAY_LEN: 996,
     HUNGER_DRAIN: 0.28,      // per second while moving (standing still costs no hunger or thirst)
     THIRST_DRAIN: 0.42,
     STARVE_DMG: 1.6,         // per second each, when hunger or thirst is 0
@@ -150,6 +154,30 @@
   };
 
   const isNight = t => t < 0.22 || t >= 0.8;
+  // Clock speed (day-fraction per real second): night covers .42 of the dial in
+  // NIGHT_LEN seconds, daylight .58 in DAYLIGHT_LEN.
+  const tRate = t => isNight(t - Math.floor(t)) ? .42 / RULES.NIGHT_LEN : .58 / RULES.DAYLIGHT_LEN;
+  const nextEdge = f => f < .22 ? .22 : f < .8 ? .8 : 1;
+  // Move the clock t (days, unbounded) forward by sec real seconds.
+  function advanceT(t, sec) {
+    const whole = Math.floor(sec / RULES.DAY_LEN);   // full days first
+    t += whole; sec -= whole * RULES.DAY_LEN;
+    while (sec > 0) {
+      const f = t - Math.floor(t), r = tRate(t), d = nextEdge(f) - f, need = d / r;
+      if (sec < need) return t + sec * r;
+      t += d + 1e-9; sec -= need;
+    }
+    return t;
+  }
+  // Real seconds until the clock next reaches target (0-1) from t.
+  function secondsUntil(t, target) {
+    let f = t - Math.floor(t), sec = 0, left = ((target - f) % 1 + 1) % 1;
+    while (left > 1e-9) {
+      const edge = nextEdge(f), d = Math.min(edge - f, left), r = tRate(f);
+      sec += d / r; left -= d; f = edge >= 1 && d === edge - f ? 0 : f + d;
+    }
+    return sec;
+  }
   // 0 by day, 1 at night, easing in through dusk and out through dawn.
   function nightFactor(t) {
     if (t >= .74 && t < .82) return smoothstep(.74, .82, t);
@@ -429,7 +457,7 @@
   const WorldGen = {
     RULES, ITEMS, RECIPES, FIRES, PATCHES, MOON_NAMES, moonPhase, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
-    generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, speedMult,
+    generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;
   else root.WorldGen = WorldGen;

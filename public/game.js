@@ -3114,7 +3114,7 @@
     updateChunks(focusX, focusZ);
 
     // Time runs locally between server snapshots.
-    if (inGame()) { t += dt / RULES.DAY_LEN; if (t >= 1) t -= 1; }
+    if (inGame()) { t = WG.advanceT(t, dt); if (t >= 1) t -= 1; }
     else if (state === 'title' || state === 'connecting') t = .3 + Math.sin(elapsed * .02) * .02;
     if (Cut.on && Cut.tod != null) {   // t holds the island's real time here (snaps keep it right)
       const d = ((t - Cut.tod) % 1 + 1.5) % 1 - .5;   // shortest way round the clock
@@ -3325,7 +3325,7 @@
       $('energyBar').classList.toggle('tired', nrg.exhausted);
       const wx = { rain: ' \u00b7 rain', storm: ' \u00b7 storm', fogstorm: ' \u00b7 fog storm' }[env.weather] || '';
       // countdown to the next nightfall or dawn (real minutes:seconds)
-      const toT = target => ((target - t) % 1 + 1) % 1 * RULES.DAY_LEN;
+      const toT = target => WG.secondsUntil(t, target);
       const left = night ? toT(.22) : toT(.8), mm = Math.floor(left / 60), ss = Math.floor(left % 60);
       const clock = `<span class="timer${night ? ' night' : left < 30 ? ' soon' : ''}">${night ? '\u263e Dawn in' : '\u2600 Night in'} ${mm}:${String(ss).padStart(2, '0')}</span>`;
       const dl = `Day ${day} <small>${phaseName(t)}</small>${clock}<span class="sky${env.drowning ? ' drown' : ''}">${esc(WG.MOON_NAMES[env.phase || 0])}${wx}</span>`;
