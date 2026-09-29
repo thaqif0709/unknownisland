@@ -72,6 +72,7 @@ class Island {
     for (const d of await store.loadDiscoveries(id)) isl.noteDiscovery(d.key, d.playerId, d.name, d.first, d.count);
     isl.washups = await store.loadWashups(id);
     isl.notes = await store.loadNotes(id);
+    isl.sleeperLoad(await store.loadEvents(id));
     isl.updateEnv();
     return isl;
   }
@@ -100,6 +101,7 @@ class Island {
     const entry = this.content.journal.find(e => e.key === key);
     if (first) this.broadcast({ t: 'discovery', key, by: p.name, first: true, name: entry.name });
     this.send(p, { t: 'journal', key, count, first: this.discoveries.get(key).first.name });
+    if (this.sleeper) this.sleeperOnFind(key);
   }
   journalView(p) {
     const firsts = {}, mine = {};
@@ -119,12 +121,12 @@ class Island {
     try { await this.runTide(); } finally { this.tiding = false; }
   }
   async runTide() {
-    const T = this.content.tide.filter(t => (t.minDay || 1) <= this.day);
+    const T = this.content.tide.filter(t => (t.minDay || 1) <= this.day && t.weight > 0);
     if (!T.length) return;
     const total = T.reduce((a, t) => a + t.weight, 0);
     const pick = () => { let r = Math.random() * total; for (const t of T) if ((r -= t.weight) <= 0) return t; return T[0]; };
-    const old = this.washups;
-    this.washups = [];
+    const old = this.washups.filter(w => !(w.data && w.data.sleeper));   // the Sleeper's gifts stay until taken
+    this.washups = this.washups.filter(w => w.data && w.data.sleeper);
     if (old.length && this.players.size) this.broadcast({ t: 'unwash', ids: old.map(w => w.id) });
     try { await this.store.clearWashups(this.id); } catch (e) { console.error('[island] tide clear failed', e.message); }
     const n = Math.round((8 + Math.floor(Math.random() * 5)) * (this.stormLastNight ? RULES.WEATHER.STORM_TIDE : 1));
@@ -226,6 +228,7 @@ class Island {
     const entry = this.content.journal.find(e => e.key === b.key);
     this.send(p, { t: 'toast', msg: `${entry ? entry.name : 'A bug'}. Crunchy.` });
     this.discover(p, b.key);
+    this.sleeperOnBug();
     this.broadcast({ t: 'bugs', list: this.bugs.map(b => [b.id, b.key, b.x, b.z]) });
     this.fx(p, 'swing');
     this.sendMe(p);
@@ -237,6 +240,7 @@ class Island {
     const env = { phase, drowning: phase === 0, fullMoon: phase === 4, weather: w,
       rain: w === 'rain' || w === 'storm', storm: w === 'storm', fogStorm: w === 'fogstorm' };
     env.lightMul = env.rain ? RULES.WEATHER.RAIN_LIGHT : 1;
+    if (this.sleeper) Object.assign(env, this.sleeperEnv());
     const changed = JSON.stringify(env) !== JSON.stringify(this.env);
     this.env = env;
     if (changed && this.players && this.players.size) this.broadcast({ t: 'env', env });
@@ -265,6 +269,7 @@ class Island {
       this.stormLastNight = this.env.storm;
       this.rollWeather();
       this.updateEnv();
+      if (this.sleeper) { this.sleeperDawn(sunrises); this.updateEnv(); }
       if (this.content) this.tide();   // async; the sea brings new things
       return this.dawn();
     }
@@ -423,8 +428,8 @@ class Island {
       washups: this.washups.map(w => this.washView(w)),
       bugs: this.bugs.map(b => [b.id, b.key, b.x, b.z]),
       journal: this.journalView(p),
-      env: this.env, board: this.board, notes: this.notes,
-      firstArrival: m.x == null,
+      env: this.env, board: this.board, notes: this.notes, carvings: this.sleeperView(),
+      firstArrival: m.x == null, seenIntro: !!m.seen_intro,
       players: [...this.players.values()].filter(q => q !== p).map(q => this.publicView(q)),
       rules: RULES,
     });
@@ -481,6 +486,7 @@ class Island {
     const lights = this.lights();
     const D = RULES.DREAD, nf = WG.nightFactor(this.time);
     this.updateStilled(dt, lights);
+    if ((this.sleeperTimer = (this.sleeperTimer || 0) - dt) <= 0) { this.sleeperCheck(1 - this.sleeperTimer); this.sleeperTimer = 1; }
     this.updateBugs(dt);
     for (const p of this.players.values()) {
       if (p.dead) continue;
@@ -554,6 +560,7 @@ class Island {
       case 'respawn': return this.onRespawn(p);
       case 'pin': return this.onPin(p, msg);
       case 'patch': return this.onPatch(p, msg);
+      case 'intro-seen': return this.store.setSeenIntro(p.id, true).catch(e => console.error('[island] intro flag not saved', e.message));
       case 'ping': return this.send(p, { t: 'pong', c: msg.c });
     }
   }
@@ -600,8 +607,9 @@ class Island {
       return say('Salty. That only made it worse.');
     }
 
-    const m = /^([ofdlwb])(\d+)$/.exec(target);
+    const m = /^([ofdlwbc])(\d+)$/.exec(target);
     if (!m) return;
+    if (m[1] === 'c') return this.sleeperOffer(p, +m[2]);
     if (m[1] === 'w') return this.takeWashup(p, +m[2]);
     if (m[1] === 'b') return this.catchBug(p, +m[2]);
     if (m[1] === 'd') return this.pickUp(p, +m[2]);
@@ -849,7 +857,7 @@ class Island {
     const L = RULES.LANTERN;
     if (l.lit) {
       const heldDays = l.clearedSince ? Math.max(0, (this.lastTickAt - l.clearedSince) / 1000 / RULES.DAY_LEN) : 0;
-      const rate = (1 + Math.min(L.HELD_MAX, heldDays * L.HELD_PER_DAY)) * (this.env.drowning ? L.DROWNING_MULT : 1);
+      const rate = (1 + Math.min(L.HELD_MAX, heldDays * L.HELD_PER_DAY)) * (this.env.drowning ? L.DROWNING_MULT : 1) * (this.env.press ? RULES.SLEEPER.PRESS_BURN : 1);
       const lasts = l.fuel / rate;
       this.lanternsDirty.add(l.id);
       if (sec < lasts) { l.fuel -= sec * rate; return; }
@@ -998,5 +1006,7 @@ class Island {
     return this.saving;
   }
 }
+
+Object.assign(Island.prototype, require('./sleeper'));
 
 module.exports = { Island };

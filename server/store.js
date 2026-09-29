@@ -62,7 +62,19 @@ function createPgStore(url) {
         player_id INT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
         item_key TEXT NOT NULL, slot INT NOT NULL,
         PRIMARY KEY (island_id, player_id, slot))`);
+      // The Sleeper: editable requests, and a log of what happened on each island
+      await q(`CREATE TABLE IF NOT EXISTS sleeper_requests (
+        request_key TEXT PRIMARY KEY, text TEXT NOT NULL, conditions JSONB NOT NULL, reward JSONB NOT NULL DEFAULT '[]',
+        penalty JSONB NOT NULL DEFAULT '[]', min_day INT NOT NULL DEFAULT 1, weight REAL NOT NULL DEFAULT 1,
+        days INT NOT NULL DEFAULT 3, stone TEXT, done_text TEXT, fail_text TEXT, enabled BOOLEAN NOT NULL DEFAULT true)`);
+      await q(`CREATE TABLE IF NOT EXISTS island_events (
+        id SERIAL PRIMARY KEY, island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
+        event_key TEXT NOT NULL, starts_at TIMESTAMPTZ NOT NULL DEFAULT now(), ends_at TIMESTAMPTZ, state JSONB NOT NULL DEFAULT '{}')`);
+      await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS seen_intro BOOLEAN NOT NULL DEFAULT false`);
       const C = require('./content');
+      for (const r of C.SLEEPER) await q(`INSERT INTO sleeper_requests (request_key, text, conditions, reward, penalty, min_day, days, stone, done_text, fail_text)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT DO NOTHING`,
+        [r.key, r.text, r.conditions, JSON.stringify(r.reward || []), JSON.stringify(r.penalty || []), r.minDay || 1, r.days || 3, r.stone || null, r.doneText || null, r.failText || null]);
       for (const e of C.JOURNAL) await q(`INSERT INTO journal_entries (entry_key, category, name, description, rarity) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
         [e.key, e.category, e.name, e.description, e.rarity]);
       for (const t of C.TIDE) await q(`INSERT INTO tide_table (item_key, weight, min_day, conditions, kind, label, gives, entry_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING`,
@@ -115,8 +127,8 @@ function createPgStore(url) {
     },
     async getMember(islandId, playerId) {
       await q(`INSERT INTO island_members (island_id, player_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [islandId, playerId]);
-      const r = await q(`SELECT x, z, face, health, hunger, thirst, wood, stone, inventory, dread FROM island_members
-                         WHERE island_id = $1 AND player_id = $2`, [islandId, playerId]);
+      const r = await q(`SELECT m.x, m.z, m.face, m.health, m.hunger, m.thirst, m.wood, m.stone, m.inventory, m.dread, p.seen_intro
+                         FROM island_members m JOIN players p ON p.id = m.player_id WHERE m.island_id = $1 AND m.player_id = $2`, [islandId, playerId]);
       return r.rows[0];
     },
     // One transaction per save so the island, objects, fires and players stay consistent.
@@ -167,7 +179,10 @@ function createPgStore(url) {
     async loadContent() {
       const j = await q('SELECT entry_key, category, name, description, rarity FROM journal_entries ORDER BY category, entry_key');
       const t = await q('SELECT item_key, weight, min_day, conditions, kind, label, gives, entry_key FROM tide_table');
+      const sl = await q('SELECT request_key, text, conditions, reward, penalty, min_day, weight, days, stone, done_text, fail_text FROM sleeper_requests WHERE enabled');
       return {
+        sleeper: sl.rows.map(r => ({ key: r.request_key, text: r.text, conditions: r.conditions, reward: r.reward, penalty: r.penalty, minDay: r.min_day,
+          weight: r.weight, days: r.days, stone: r.stone, doneText: r.done_text, failText: r.fail_text })),
         journal: j.rows.map(r => ({ key: r.entry_key, category: r.category, name: r.name, description: r.description, rarity: r.rarity })),
         tide: t.rows.map(r => ({ key: r.item_key, weight: r.weight, minDay: r.min_day, conditions: r.conditions, kind: r.kind, label: r.label, gives: r.gives, entry: r.entry_key })),
       };
@@ -190,7 +205,7 @@ function createPgStore(url) {
       return r.rows[0].id;
     },
     async deleteWashup(id) { await q('DELETE FROM washups WHERE id = $1', [id]); },
-    async clearWashups(islandId) { await q('DELETE FROM washups WHERE island_id = $1', [islandId]); },
+    async clearWashups(islandId) { await q(`DELETE FROM washups WHERE island_id = $1 AND NOT (data ? 'sleeper')`, [islandId]); },
     async loadNotes(islandId) {
       const r = await q(`SELECT n.id, n.text, n.note_key, n.pinned_at, p.username FROM board_notes n LEFT JOIN players p ON p.id = n.pinned_by
                          WHERE n.island_id = $1 ORDER BY n.id DESC LIMIT 40`, [islandId]);
@@ -200,6 +215,18 @@ function createPgStore(url) {
       const r = await q('INSERT INTO board_notes (island_id, text, pinned_by, note_key) VALUES ($1, $2, $3, $4) RETURNING id, pinned_at', [islandId, text, playerId, key || null]);
       await q(`DELETE FROM board_notes WHERE island_id = $1 AND id NOT IN (SELECT id FROM board_notes WHERE island_id = $1 ORDER BY id DESC LIMIT 40)`, [islandId]);
       return { id: r.rows[0].id, at: new Date(r.rows[0].pinned_at).getTime() };
+    },
+    async setSeenIntro(playerId, seen) { await q('UPDATE players SET seen_intro = $2 WHERE id = $1', [playerId, !!seen]); },
+    async loadEvents(islandId) {
+      const r = await q('SELECT id, event_key, state, ends_at FROM island_events WHERE island_id = $1 ORDER BY id DESC LIMIT 60', [islandId]);
+      return r.rows.reverse().map(e => ({ id: e.id, key: e.event_key, state: e.state, ended: !!e.ends_at }));
+    },
+    async insertEvent(islandId, key, state) {
+      const r = await q('INSERT INTO island_events (island_id, event_key, state) VALUES ($1, $2, $3) RETURNING id', [islandId, key, state]);
+      return r.rows[0].id;
+    },
+    async updateEvent(id, state, ended) {
+      await q('UPDATE island_events SET state = $2, ends_at = CASE WHEN $3 THEN COALESCE(ends_at, now()) END WHERE id = $1', [id, state, !!ended]);
     },
     async loadPatches(islandId, playerId) {
       const r = await q('SELECT item_key FROM cloak_items WHERE island_id = $1 AND player_id = $2 ORDER BY slot', [islandId, playerId]);
@@ -224,6 +251,7 @@ function createPgStore(url) {
 
 function createMemoryStore() {
   let nextPlayer = 1, nextFire = 1, nextDrop = 1, nextWashup = 1;
+  const events = []; let nextEvent = 1;
   const discoveries = []; let washups = []; const notes = []; const patches = new Map(); let nextNote = 1;
   const players = new Map(), sessions = new Map(), members = new Map();
   const islands = new Map([
@@ -269,7 +297,7 @@ function createMemoryStore() {
     async getMember(islandId, playerId) {
       const key = islandId + ':' + playerId;
       if (!members.has(key)) members.set(key, { x: null, z: null, face: 3.14159, health: 100, hunger: 80, thirst: 70, wood: 0, stone: 0, inventory: {}, dread: 0 });
-      return clone(members.get(key));
+      return { ...clone(members.get(key)), seen_intro: !!(players.get(playerId) || {}).seenIntro };
     },
     async saveIsland(snap) {
       const i = islands.get(snap.id);
@@ -292,8 +320,13 @@ function createMemoryStore() {
     async moveDrop(id, x, z) { for (const i of islands.values()) for (const d of i.drops) if (d.id === id) Object.assign(d, { x, z }); },
     async loadContent() {
       const C = require('./content');
-      return { journal: clone(C.JOURNAL), tide: C.TIDE.map(t => ({ minDay: 1, gives: {}, conditions: {}, ...clone(t) })) };
+      return { journal: clone(C.JOURNAL), tide: C.TIDE.map(t => ({ minDay: 1, gives: {}, conditions: {}, ...clone(t) })),
+        sleeper: C.SLEEPER.map(r => ({ minDay: 1, weight: 1, days: 3, stone: null, reward: [], penalty: [], ...clone(r) })) };
     },
+    async setSeenIntro(playerId, seen) { const p = players.get(playerId); if (p) p.seenIntro = !!seen; },
+    async loadEvents(islandId) { return clone(events.filter(e => e.islandId === islandId).slice(-60)); },
+    async insertEvent(islandId, key, state) { const id = nextEvent++; events.push({ id, islandId, key, state: clone(state), ended: false }); return id; },
+    async updateEvent(id, state, ended) { const e = events.find(e => e.id === id); if (e) { e.state = clone(state); e.ended = e.ended || !!ended; } },
     async loadDiscoveries(islandId) { return clone(discoveries.filter(d => d.islandId === islandId)); },
     async recordDiscovery(islandId, playerId, key, first) {
       const d = discoveries.find(d => d.islandId === islandId && d.playerId === playerId && d.key === key);
@@ -303,7 +336,7 @@ function createMemoryStore() {
     async loadWashups(islandId) { return clone(washups.filter(w => w.islandId === islandId)); },
     async insertWashup(islandId, w) { const id = nextWashup++; washups.push({ ...clone(w), id, islandId }); return id; },
     async deleteWashup(id) { washups = washups.filter(w => w.id !== id); },
-    async clearWashups(islandId) { washups = washups.filter(w => w.islandId !== islandId); },
+    async clearWashups(islandId) { washups = washups.filter(w => w.islandId !== islandId || (w.data && w.data.sleeper)); },
     async loadNotes(islandId) { return clone(notes.filter(n => n.islandId === islandId).slice(-40)); },
     async pinNote(islandId, text, playerId, key) {
       const n = { id: nextNote++, islandId, text, key: key || null, by: playerId ? (players.get(playerId) || {}).username : null, at: Date.now() };

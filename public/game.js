@@ -367,7 +367,7 @@
   let env = { phase: 4, lightMul: 1 };
   function setEnv(e) {
     env = Object.assign({ lightMul: 1 }, e || {});
-    fogEnv = { drowning: !!env.drowning, fogStorm: !!env.fogStorm };
+    fogEnv = { drowning: !!env.drowning, fogStorm: !!env.fogStorm, calm: !!env.calm, press: !!env.press };
     moonDisc.material.map = moonTexture(env.phase || 0); moonDisc.material.needsUpdate = true;
     fogTimer = 0;
   }
@@ -393,7 +393,7 @@
       geo.attributes.position.needsUpdate = true;
     } };
   })();
-  let flash = 0, nextFlash = 8;
+  let flash = 0, nextFlash = 8, tremor = 0, nextTremor = 20;   // lightning; small tremors on Drowning nights
 
   // Fireflies: soft blinking lights over the grass and among the trees at night.
   const fireflies = (() => {
@@ -1114,6 +1114,13 @@
         add(new THREE.SphereGeometry(.05, 8, 6), bellM, .38, 1, .08); g.rotation.y = r() * 3; break; }
       case 'ringing_bell': { add(new THREE.BoxGeometry(1.6, .1, .4), plankM, 0, .1, 0); add(new THREE.CylinderGeometry(.03, .03, .7, 6), plankM, 0, .5, 0);
         const bell = add(new THREE.CylinderGeometry(.08, .22, .3, 12), bellM, 0, .72, 0); g.userData.bell = bell; break; }
+      case 'carved_mask': { const m = add(new THREE.SphereGeometry(.3, 10, 8), plankM, 0, .08, 0); m.scale.set(.8, .25, 1.05);
+        for (const sx of [-1, 1]) add(new THREE.BoxGeometry(.1, .03, .025), mouthM, sx * .1, .15, .08).rotation.x = -Math.PI / 2; break; }
+      case 'eye_stone': { add(new THREE.SphereGeometry(.18, 12, 9), pondRock, 0, .14, 0);
+        const ring = add(new THREE.TorusGeometry(.1, .025, 6, 16), mouthM, 0, .16, .16); ring.scale.z = .5; break; }
+      case 'old_tooth': { const t2 = add(new THREE.ConeGeometry(.16, 1.3, 8), shellM, 0, .15, 0); t2.rotation.set(Math.PI / 2 - .2, 0, 1.2); break; }
+      case 'sleeper_gift': { add(new THREE.SphereGeometry(.28, 10, 8), clayM, 0, .24, 0).scale.y = .9;
+        add(new THREE.CylinderGeometry(.12, .16, .14, 10), clayM, 0, .5, 0); add(new THREE.CircleGeometry(.1, 10), mouthM, 0, .575, 0).rotation.x = -Math.PI / 2; break; }
       case 'your_cloak': { const c = add(new THREE.SphereGeometry(.5, 12, 8), softShared(me ? colorFor(me.id) : 0x8A6A52), 0, .06, 0); c.scale.set(1.3, .18, .9); break; }
       case 'footprints': {   // a line of webbed prints from the sea to the target, and none back
         const tx = w.data.tx, tz = w.data.tz, len = Math.hypot(tx - w.x, tz - w.z), n = Math.min(80, Math.floor(len / .7));
@@ -1199,6 +1206,88 @@
     });
   }
 
+  // ================= The Sleeper's carving stones =================
+  // Standing stones with a carved face. The text is drawn on a canvas; when the
+  // Sleeper changes it, the old words flake away and the new ones ink themselves in.
+  const carveStoneM = soft(0x8E877C), carveDarkM = soft(0x6F685F);
+  let carvings = new Map();
+  function makeCarvingStone(c) {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.62, .8, 2.1, 7), carveStoneM); body.scale.z = .55; body.position.y = 1.05; g.add(body);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(.3, .62, .4, 7), carveStoneM); top.scale.z = .55; top.position.y = 2.3; g.add(top);
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.1, .2, 7), carveDarkM); foot.position.y = .08; g.add(foot);
+    const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 400;
+    const tex = new THREE.CanvasTexture(canvas);
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(.96, 1.5), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+    face.position.set(0, 1.25, .47); g.add(face); noInk.add(face);
+    g.position.set(c.x, groundAt(c.x, c.z) - .05, c.z); g.rotation.y = c.face;
+    shadows(g); face.castShadow = false; scene.add(g);
+    return { mesh: g, face, canvas, tex };
+  }
+  function wrapText(g, text, width) {
+    const lines = [], words = String(text).split(/\s+/);
+    let line = '';
+    for (const w of words) { const t = line ? line + ' ' + w : w; if (g.measureText(t).width > width && line) { lines.push(line); line = w; } else line = t; }
+    if (line) lines.push(line);
+    return lines;
+  }
+  // Draw one carving. reveal: 0-1 how much of the new text has inked in; fade: how much of the old text is left.
+  function drawCarving(c, reveal = 1, fade = 0) {
+    const g = c.canvas.getContext('2d'), W = 256, H = 400;
+    g.clearRect(0, 0, W, H);
+    const carve = (text, alpha, clipY, worn) => {
+      g.save(); g.globalAlpha = alpha;
+      if (clipY < H) { g.beginPath(); g.rect(0, 0, W, clipY); g.clip(); }
+      g.font = '600 30px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'top';
+      const lines = wrapText(g, text, 214), y0 = Math.max(60, 190 - lines.length * 19);
+      lines.forEach((l, i) => {
+        const r = mulberry32(i * 31 + l.length);
+        g.fillStyle = 'rgba(233,225,207,.55)'; g.fillText(l, W / 2 + 1.5, y0 + i * 40 + 2);   // the groove's lit edge
+        g.fillStyle = worn ? '#4A433C' : '#221A18'; g.fillText(l, W / 2 + (r() - .5) * 2, y0 + i * 40);
+      });
+      // a spiral mark above, like the oldest carvings
+      g.strokeStyle = worn ? '#4A433C' : '#221A18'; g.lineWidth = 4; g.beginPath();
+      for (let a = 0; a < Math.PI * 5; a += .2) { const rr = 16 * (1 - a / (Math.PI * 5.4)); g.lineTo(W / 2 + Math.cos(a) * rr, 32 + Math.sin(a) * rr); }
+      g.stroke(); g.restore();
+      return y0 + lines.length * 40;
+    };
+    if (fade > 0 && c.old) carve(c.old, fade, H, c.oldWorn);
+    const end = carve(c.text, c.state === 'idle' ? .55 : 1, reveal >= 1 ? H : 60 + reveal * 300, c.state === 'idle');
+    if (c.tally && reveal >= 1) {   // tally marks: one scratch per part done
+      const [have, need] = c.tally;
+      g.strokeStyle = '#221A18'; g.lineWidth = 4; g.lineCap = 'round';
+      const n = Math.min(need, 12), x0 = W / 2 - n * 7;
+      for (let i = 0; i < n; i++) { g.globalAlpha = i < have ? 1 : .22; g.beginPath(); g.moveTo(x0 + i * 14 + 7, end + 18); g.lineTo(x0 + i * 14 + 4, end + 50); g.stroke(); }
+      g.globalAlpha = 1;
+    }
+    if (fade > 0) {   // flakes where the old words are breaking away
+      g.fillStyle = '#8E877C';
+      for (let i = 0; i < 90 * fade; i++) g.fillRect(Math.random() * W, 60 + Math.random() * 300, 3, 3);
+    }
+    c.tex.needsUpdate = true;
+  }
+  function setCarvings(list, changedId, why) {
+    for (const v of list) {
+      let c = carvings.get(v.id);
+      if (!c) { c = Object.assign({ id: v.id, type: 'carving', r: .8, state: {} }, makeCarvingStone(v)); carvings.set(v.id, c); }
+      const textChanged = c.text !== undefined && c.text !== v.text;
+      if (textChanged) { c.old = c.text; c.oldWorn = c.stateName === 'idle'; c.anim = 0; }
+      Object.assign(c, { key: v.key, x: v.x, z: v.z, text: v.text, stateName: v.state, tally: v.tally, offer: v.offer });
+      if (c.anim == null) drawCarving(c);   // otherwise the re-inking redraws it
+    }
+    if (why === 'new' && state === 'play') { const c = carvings.get(changedId); if (c && Math.hypot(c.x - px, c.z - pz) < 60) toast('Somewhere close, stone scrapes on stone.'); }
+    if (!ui.carvingPanel.classList.contains('gone')) renderCarving();
+  }
+  function animateCarvings(dt) {
+    carvings.forEach(c => {
+      if (c.anim == null) return;
+      c.anim += dt / 3;
+      if (c.anim >= 1) { c.anim = null; c.old = null; drawCarving(c); return; }
+      drawCarving(c, clamp((c.anim - .35) / .65, 0, 1), clamp(1 - c.anim / .4, 0, 1));
+    });
+  }
+  function clearCarvings() { carvings.forEach(c => { scene.remove(c.mesh); noInk.delete(c.face); }); carvings = new Map(); }
+
   // ================= The driftwood board =================
   // Grey driftwood planks on two posts, by the first lantern. Notes are paper scraps.
   let board = null;
@@ -1260,7 +1349,7 @@
   const $ = id => document.getElementById(id);
   const ui = { hud: $('hud'), inv: $('inv'), prompt: $('prompt'), toast: $('toast'), overlay: $('overlay'), online: $('online'),
     touch: $('touchUi'), banner: $('banner'), tags: $('tags'), gear: $('btnSettings'), book: $('book'), settings: $('settings'), journal: $('journal'),
-    board: $('boardPanel'), intro: $('intro') };
+    board: $('boardPanel'), intro: $('intro'), carvingPanel: $('carvingPanel') };
   let myPatches = [];
   const WEATHER_SAY = { clear: 'The sky clears.', rain: 'It starts to rain. Fires burn smaller in the wet.',
     storm: 'A storm rolls in. The sea will bring things up tomorrow.', fogstorm: 'The fog is coming in, in broad daylight.' };
@@ -1419,6 +1508,7 @@
         if (m.journal) journal = m.journal;
         setEnv(m.env);
         notes = m.notes || []; setBoard(m.board);
+        clearCarvings(); setCarvings(m.carvings || []);
         resetRemotes(); m.players.forEach(addRemote);
         if (hero) removeCastaway(hero);
         hero = makeCastaway(colorFor(me.id));
@@ -1451,6 +1541,7 @@
         // Energy runs locally for a snappy feel; follow the server if we drift.
         if (Math.abs(nrg.energy - m.energy) > 12 || nrg.exhausted !== m.exhausted) { nrg.energy = m.energy; nrg.exhausted = m.exhausted; }
         if (!ui.book.classList.contains('gone')) renderBook();
+        if (!ui.carvingPanel.classList.contains('gone')) renderCarving();
         break;
       case 'join': addRemote(m.player); renderOnline(); toast(`${m.player.name} washed up on the island.`); break;
       case 'leave': {
@@ -1494,6 +1585,7 @@
         if (state === 'play' && was.weather !== env.weather) toast(WEATHER_SAY[env.weather] || '');
         break;
       }
+      case 'carvings': setCarvings(m.list, m.changed, m.why); break;
       case 'note':
         notes.push(m.note); if (notes.length > 40) notes.shift(); renderScraps();
         if (!ui.board.classList.contains('gone')) renderBoard();
@@ -1564,6 +1656,7 @@
     };
     nearbyObjects(px, pz, check); fires.forEach(check); drops.forEach(check); lanterns.forEach(check); washups.forEach(check);
     if (board) check(board);
+    carvings.forEach(check);
     bugs.forEach(b => { const d = Math.hypot((b.cx ?? b.x) - px, (b.cz ?? b.z) - pz); if (d < 1.9 && d < bd) { bd = d; bestO = b; } });
     if (bestO) return bestO;
     const sn = WG.nearestSpring(px, pz);
@@ -1583,6 +1676,7 @@
       case 'ore': return has('pickaxe') ? `Mine ${o.ore === 'iron' ? 'iron' : 'copper'} ore` : `${o.ore === 'iron' ? 'Iron' : 'Copper'} ore (needs a pickaxe)`;
       case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
       case 'drop': return 'Pick up the scattered things';
+      case 'carving': return o.offer && o.tally ? `Read the ${o.key} stone (it wants ${WG.ITEMS[o.offer].toLowerCase()})` : `Read the ${o.key} stone`;
       case 'board': return notes.length ? `Read the driftwood board (${notes.length} note${notes.length > 1 ? 's' : ''})` : 'The driftwood board (pin a note)';
       case 'wash': return o.kind === 'strange' ? (o.key === 'door_in_sand' ? 'Try the door' : o.key === 'ringing_bell' ? 'Touch the bell' : o.key === 'footprints' ? 'Look at the footprints' : 'Pick it up') : `Pick up: ${o.label.replace(/^A /, 'a ')}`;
       case 'bug': { const e = journal.entries.find(e => e.key === o.key); return `Catch the ${(e ? e.name : 'bug').toLowerCase()}`; }
@@ -1606,6 +1700,7 @@
     if (state !== 'play' || cooldown > 0 || !target || !net || knockT > 0) return;
     cooldown = .45;
     if (target.type === 'board') { togglePanel('board'); return; }
+    if (target.type === 'carving') { readCarving(target); return; }
     if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig', 'lantern'].includes(target.type)) hero.swingT = .35;
     net.send({ t: 'act', target: targetKey(target) });
   }
@@ -1651,7 +1746,7 @@
   const keys = {};
   const held = a => !!keys[prefs.binds[a]];
   let waitingBind = null;
-  const PANELS = ['book', 'settings', 'journal', 'board'];
+  const PANELS = ['book', 'settings', 'journal', 'board', 'carvingPanel'];
   const panelOpen = () => PANELS.some(k => !ui[k].classList.contains('gone')) || !ui.intro.classList.contains('gone');
   window.addEventListener('keydown', e => {
     if (waitingBind) {
@@ -1702,7 +1797,7 @@
 
   // ================= Journal (a tattoo flash sheet) =================
   let journal = { entries: [], firsts: {}, mine: {} };
-  const JCATS = [['bugs', 'Bugs'], ['moon', 'Under the full moon'], ['shells', 'Shells'], ['glass', 'Sea glass'], ['tide', 'From the tide'], ['strange', 'Strange tides']];
+  const JCATS = [['bugs', 'Bugs'], ['moon', 'Under the full moon'], ['shells', 'Shells'], ['glass', 'Sea glass'], ['tide', 'From the tide'], ['strange', 'Strange tides'], ['relics', 'Left by the stones']];
   const iconCache = new Map();
   // Each entry gets a small inked design, drawn once.
   function flashIcon(key, known) {
@@ -1729,6 +1824,18 @@
       fill(beetle ? '#4A3A34' : '#7C9A6B', () => g.ellipse(60, 62, beetle ? 20 : 14, beetle ? 28 : 32, 0, 0, Math.PI * 2));
       fill(beetle ? '#4A3A34' : '#7C9A6B', () => g.arc(60, 30, 10, 0, Math.PI * 2));
       if (beetle) { g.beginPath(); g.moveTo(60, 38); g.lineTo(60, 88); g.stroke(); }
+    } else if (key === 'carved_mask') {
+      fill('#8A6A52', () => g.ellipse(60, 60, 30, 40, 0, 0, Math.PI * 2));
+      for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(60 + sx * 22, 48); g.quadraticCurveTo(60 + sx * 12, 54, 60 + sx * 4, 48); g.stroke(); }
+      g.beginPath(); g.moveTo(40, 78); g.quadraticCurveTo(60, 90, 80, 78); g.stroke();
+      g.beginPath(); g.moveTo(60, 22); g.lineTo(60, 34); g.moveTo(46, 26); g.lineTo(50, 36); g.moveTo(74, 26); g.lineTo(70, 36); g.stroke();
+    } else if (key === 'eye_stone') {
+      fill('#B3AC9F', () => g.arc(60, 60, 36, 0, Math.PI * 2));
+      fill('#2B211F', () => g.ellipse(60, 60, 18, 12, 0, 0, Math.PI * 2));
+      g.fillStyle = '#E9E1CF'; g.beginPath(); g.arc(66, 56, 4, 0, 7); g.fill();
+    } else if (key === 'old_tooth') {
+      fill('#EBD9C3', () => { g.moveTo(30, 30); g.quadraticCurveTo(80, 20, 92, 96); g.quadraticCurveTo(70, 60, 30, 50); g.closePath(); });
+      g.beginPath(); g.moveTo(36, 40); g.quadraticCurveTo(66, 38, 82, 80); g.stroke();
     } else if (key === 'glass_snail') {
       fill('#E7DCC8', () => g.ellipse(56, 82, 40, 10, 0, 0, Math.PI * 2));
       fill('rgba(207,230,234,.8)', () => g.arc(62, 60, 26, 0, Math.PI * 2));
@@ -1842,6 +1949,33 @@
   });
   $('boardText').addEventListener('keydown', e => { if (e.code !== 'Escape') e.stopPropagation(); });
 
+  // ================= Reading a carving =================
+  let reading = null;
+  function readCarving(c) {
+    reading = c;
+    togglePanel('carvingPanel');
+    if (isNight(t)) {   // at night you can hear it
+      Sound.init(); Sound.breath();
+      $('carveEar').textContent = 'You press your ear to the stone. Something far beneath it is breathing, slow and deep.';
+    } else $('carveEar').textContent = '';
+  }
+  function renderCarving() {
+    const c = reading && carvings.get(reading.id);
+    if (!c) return;
+    $('carveTitle').textContent = `The ${c.key} stone`;
+    $('carveText').textContent = c.text;
+    $('carveText').className = 'carved ' + (c.stateName || '');
+    const [have, need] = c.tally || [0, 0];
+    $('carveTally').textContent = c.tally && need > 1 ? `Marks scratched beneath: ${have} of ${need}.` : '';
+    $('carveNote').textContent = c.stateName === 'active' ? 'Nobody knows what happens if it is ignored. It changes at dawn.'
+      : c.stateName === 'done' ? 'The carving is fresh. Something was given back.' : c.stateName === 'failed' ? 'The words look angry, somehow.' : 'Old words, worn soft.';
+    const b = $('carveOffer'), n = c.offer ? (stats.inv[c.offer] || 0) : 0;
+    b.hidden = !(c.offer && c.stateName === 'active');
+    b.disabled = n <= 0;
+    b.textContent = n > 0 ? `Leave ${Math.min(n, need - have)} ${WG.ITEMS[c.offer].toLowerCase()} at its foot` : `You have no ${c.offer ? WG.ITEMS[c.offer].toLowerCase() : ''}`;
+  }
+  $('carveOffer').addEventListener('click', () => { if (reading && net) { net.send({ t: 'act', target: 'c' + reading.id }); if (hero) hero.swingT = .35; } });
+
   // ================= First arrival =================
   function showIntro() {
     ui.intro.classList.remove('gone');
@@ -1860,7 +1994,8 @@
     closePanels();
     if (!opening) return;
     releaseKeys();
-    if (which === 'book') renderBook(); else if (which === 'journal') renderJournal(); else if (which === 'board') renderBoard(); else renderSettings();
+    if (which === 'book') renderBook(); else if (which === 'journal') renderJournal(); else if (which === 'board') renderBoard();
+    else if (which === 'carvingPanel') renderCarving(); else renderSettings();
     el.classList.remove('gone');
     const first = el.querySelector('.x');
     if (first) first.focus({ preventScroll: true });
@@ -1984,7 +2119,8 @@
   if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, camera, chunks, objects: () => objects, stats, stilled,
     pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); },
     washups: () => washups, bugs: () => bugs, previewJournal: keys => { keys.forEach(k => { journal.mine[k] = 1 + (k.length % 3); journal.firsts[k] = journal.firsts[k] || 'aiman'; }); },
-    setEnv: e => setEnv(e), face: () => face, gy: () => groundAt(px, pz), board: () => board, openPanel: w => togglePanel(w), patches: l => { myPatches = l; setPatches(hero, l); },
+    setEnv: e => setEnv(e), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
+    recarve: (id, text, st) => { const c = carvings.get(id); setCarvings([{ id, key: c.key, x: c.x, z: c.z, face: c.mesh.rotation.y, text, state: st || 'active', tally: [2, 5] }], id, 'new'); }, face: () => face, gy: () => groundAt(px, pz), board: () => board, openPanel: w => togglePanel(w), patches: l => { myPatches = l; setPatches(hero, l); },
     lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); } }; }
 
   // ================= Sky =================
@@ -2093,6 +2229,17 @@
         gn.gain.setValueAtTime(vol * g, t0); gn.gain.exponentialRampToValueAtTime(.0001, t0 + 3);
         o.connect(gn); gn.connect(c.destination); o.start(t0); o.stop(t0 + 3.1);
       }
+    },
+    breath() {   // something enormous breathing under the ground: two slow swells of low noise
+      if (!this.ctx || prefs.sounds === false) return;
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      const t0 = this.ctx.currentTime;
+      for (let i = 0; i < 2; i++) { this.burst(t0 + i * 3.2, 2.2, 'lowpass', 180, .7, .35, 0); this.burst(t0 + i * 3.2 + 1.2, 1.6, 'lowpass', 120, .7, .22, 0); }
+    },
+    rumble() {
+      if (!this.ctx || prefs.sounds === false) return;
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+      this.burst(this.ctx.currentTime, 1.8, 'lowpass', 70, 1, .5, 0);
     },
     footsteps() {
       const c = this.ctx, pan = Math.random() * 1.6 - .8, n = 3 + (Math.random() * 3 | 0);
@@ -2241,7 +2388,7 @@
             const ox = nx - o.x, oz = nz - o.z, d = Math.hypot(ox, oz), min = radius(o) + .3;
             if (d < min && d > 0) { nx = o.x + ox / d * min; nz = o.z + oz / d * min; }
           };
-          nearbyObjects(nx, nz, push); fires.forEach(push); lanterns.forEach(push); if (board) push(board);
+          nearbyObjects(nx, nz, push); fires.forEach(push); lanterns.forEach(push); carvings.forEach(push); if (board) push(board);
           px = nx; pz = nz;
         }
         const tf = Math.atan2(dx, dz);
@@ -2261,6 +2408,8 @@
     if (hero) poseCastaway(hero, px, pz, face, moving ? (running ? 2 : 1) : 0, state === 'dead' || knockT > 0, dt, elapsed);
 
     animateBugs(elapsed);
+    animateCarvings(dt);
+    if (state === 'play' && env.drowning && isNight(t) && (nextTremor -= dt) <= 0) { nextTremor = 25 + Math.random() * 35; tremor = 1.6; Sound.rumble(); }
     washups.forEach(w => { if (w.mesh.userData.bell) w.mesh.userData.bell.rotation.z = Math.sin(elapsed * 3 + w.id) * .25; });
     stilled.forEach(s => {
       const p = s.remote.sample();
@@ -2333,6 +2482,7 @@
       let cy = py + 1.2 + Math.sin(pitch) * camDist;
       cy = Math.max(cy, heightAt(cx, cz) + .8, .8);
       camera.position.set(cx, cy, cz);
+      if (tremor > 0) { tremor -= dt; const k = Math.min(1, tremor) * .07; camera.position.x += (Math.random() - .5) * k; camera.position.y += (Math.random() - .5) * k; }
       camera.lookAt(px, py + 1.3, pz);
     }
 

@@ -82,6 +82,8 @@
       STORM_TIDE: 1.6,                      // more wash-ups the morning after a storm
     },
     PATCH_SLOTS: 3,
+    // The Sleeper: requests carved on the stones. Days to answer, and what its moods do.
+    SLEEPER: { DAYS: 3, CALM_TOP: 1.5, PRESS_TOP: 4, PRESS_BURN: 1.5, FOG_WALK: .7, GATHER_RADIUS: 6, REACH: 2.2 },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {
       PER_PLAYER: 2, ALONE_EXTRA: 1, DREAD_EXTRA: 1, MAX: 12,
@@ -209,9 +211,12 @@
   // normal night it covers the lowlands (the hills stay clear); at dawn it
   // drains away. Light (fires, lanterns) cuts clear circles out of it.
   // env: { drowning: bool (thickest nights), fogStorm: bool (fog by day) }
+  // calm: the Sleeper holds its dreams back for a night; press: it pushes them harder.
   function fogFront(t, env = {}) {
-    const top = env.drowning ? 40 : 7.5;
-    return -2 + (top + 2) * nightFactor(t) + (env.fogStorm ? 9 : 0);
+    let top = env.drowning ? 40 : 7.5;
+    if (env.calm) top = RULES.SLEEPER.CALM_TOP;
+    else if (env.press) top += RULES.SLEEPER.PRESS_TOP;
+    return -2 + (top + 2) * nightFactor(t) + (env.fogStorm && !env.calm ? 9 : 0);
   }
   // lights: [{ x, z, r }] clear radius r
   function fogAt(x, z, h, t, lights = [], env = {}) {
@@ -245,6 +250,22 @@
     const big = new Set(byHeight.slice(0, 4).map(x => x[1]));
     const list = out.map((l, i) => ({ id: i, x: +l.x.toFixed(2), z: +l.z.toFixed(2), big: big.has(i) }));
     lanternCache.set(seed, list);
+    return list;
+  }
+
+  // Carving stones: where the Sleeper speaks. One by the beach camp, one at the
+  // main spring, one on the highest ground. Ids are the index in this list.
+  const carvingCache = new Map();
+  function generateCarvings(seed) {
+    if (carvingCache.has(seed)) return carvingCache.get(seed);
+    const L = generateLanterns(seed), rng = mulberry32((seed ^ 0x51EE9) >>> 0);
+    const free = (x, z) => heightAt(x, z) > 1.2 && L.every(l => Math.hypot(l.x - x, l.z - z) > 3.5);
+    const near = (x0, z0) => { for (let r = 0; r < 14; r += .5) { const a = rng() * Math.PI * 2, x = x0 + Math.cos(a) * r, z = z0 + Math.sin(a) * r; if (free(x, z)) return [x, z]; } return [x0, z0]; };
+    let best = [0, 0], bh = -1;   // the highest walkable point (coarse search)
+    for (let x = -ISL; x <= ISL; x += 4) for (let z = -ISL; z <= ISL; z += 4) { const h = heightAt(x, z); if (h > bh && h < 24) { bh = h; best = [x, z]; } }
+    const spots = [['shore', ...near(L[0].x - 3.5, L[0].z + 2.5)], ['spring', ...near(SPRING.x - 7, SPRING.z - 5)], ['ridge', ...near(best[0] + 3, best[1] + 3)]];
+    const list = spots.map(([key, x, z], id) => ({ id, key, x: +x.toFixed(2), z: +z.toFixed(2), face: Math.atan2(SPAWN.x - x, SPAWN.z - z) }));
+    carvingCache.set(seed, list);
     return list;
   }
 
@@ -390,7 +411,7 @@
   const WorldGen = {
     RULES, ITEMS, RECIPES, FIRES, PATCHES, MOON_NAMES, moonPhase, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
-    generateObjects, generateLanterns, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, speedMult,
+    generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, speedMult,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;
   else root.WorldGen = WorldGen;
