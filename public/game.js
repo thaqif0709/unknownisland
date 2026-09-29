@@ -206,30 +206,32 @@
     scene.add(sp); clouds.push(sp); noInk.push(sp);
   }
 
-  // Smoky mist: wispy swirling bands all around the horizon, for texture in the sky.
+  // Smoky mist: a soft, continuous haze around the horizon. Built from many
+  // overlapping soft blobs (no outlines), faded out at the top and bottom, and
+  // drawn so the left and right edges wrap without a seam.
   function mistTexture() {
-    const c = document.createElement('canvas'); c.width = 2048; c.height = 256;
+    const W = 2048, H = 256, c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d'), r = mulberry32(77);
-    for (let band = 0; band < 26; band++) {
-      const y = 70 + r() * 130, x = r() * 2048, len = 260 + r() * 520, amp = 6 + r() * 14, w = 10 + r() * 22;
-      g.beginPath();
-      for (let k = 0; k <= 1; k += .01) g.lineTo(x + k * len, y + Math.sin(k * 6.3 + band) * amp);
-      g.lineWidth = w; g.lineCap = 'round'; g.strokeStyle = `rgba(243,227,190,${.25 + r() * .3})`; g.stroke();
-      if (r() < .45) {   // a curl at the end of some wisps
-        const cx = x + len, cy = y + Math.sin(6.3 + band) * amp;
-        g.beginPath();
-        for (let a = 0; a < Math.PI * 2.6; a += .1) { const rr = 26 * (1 - a / (Math.PI * 3)); g.lineTo(cx + Math.cos(a - 1.6) * rr, cy + 26 + Math.sin(a - 1.6) * rr); }
-        g.lineWidth = 4; g.strokeStyle = 'rgba(43,33,31,.35)'; g.stroke();
+    const puff = (x, y, rx, ry, a) => {
+      for (const ox of [-W, 0, W]) {   // wrap around
+        const grd = g.createRadialGradient(x + ox, y, 0, x + ox, y, rx);
+        grd.addColorStop(0, `rgba(243,232,208,${a})`); grd.addColorStop(.55, `rgba(238,226,200,${a * .55})`); grd.addColorStop(1, 'rgba(236,224,198,0)');
+        g.save(); g.translate(x + ox, y); g.scale(1, ry / rx); g.translate(-(x + ox), -y);
+        g.fillStyle = grd; g.beginPath(); g.arc(x + ox, y, rx, 0, Math.PI * 2); g.fill(); g.restore();
       }
-      g.beginPath();
-      for (let k = 0; k <= 1; k += .01) g.lineTo(x + k * len, y + Math.sin(k * 6.3 + band) * amp + w * .45);
-      g.lineWidth = 2.5; g.strokeStyle = 'rgba(43,33,31,.22)'; g.stroke();
-    }
+    };
+    for (let i = 0; i < 90; i++) puff(r() * W, 110 + (r() - .5) * 70, 120 + r() * 220, 30 + r() * 40, .12 + r() * .16);
+    for (let i = 0; i < 40; i++) puff(r() * W, 105 + (r() - .5) * 40, 60 + r() * 90, 14 + r() * 16, .1 + r() * .12);   // denser wisps
+    // fade to nothing at the top and bottom so it melts into the sky
+    g.globalCompositeOperation = 'destination-in';
+    const fade = g.createLinearGradient(0, 0, 0, H);
+    fade.addColorStop(0, 'rgba(0,0,0,0)'); fade.addColorStop(.3, 'rgba(0,0,0,1)'); fade.addColorStop(.62, 'rgba(0,0,0,1)'); fade.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = fade; g.fillRect(0, 0, W, H);
     const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.repeat.x = 2;
     return t;
   }
   const mist = new THREE.Mesh(new THREE.CylinderGeometry(220, 220, 90, 48, 1, true),
-    new THREE.MeshBasicMaterial({ map: mistTexture(), transparent: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+    new THREE.MeshBasicMaterial({ map: mistTexture(), transparent: true, opacity: .85, side: THREE.BackSide, fog: false, depthWrite: false }));
   mist.renderOrder = -1;
   scene.add(mist); noInk.push(mist);
 
