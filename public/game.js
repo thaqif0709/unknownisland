@@ -69,7 +69,8 @@
         // dread: the lines start to tremble
         vec2 jit = vec2(sin(time * 23. + vUv.y * 90.), cos(time * 19. + vUv.x * 70.)) * dread * dread * 1.6 / res;
         vec2 uv = vUv + jit;
-        vec3 col = texture2D(tColor, uv).rgb;
+        vec4 c4 = texture2D(tColor, uv);
+        vec3 col = c4.rgb;
         float raw = texture2D(tDepth, uv).x;
         float d0 = lin(uv);
         bool sky = d0 >= far * .98;
@@ -116,6 +117,9 @@
         vec2 q = (vUv - .5) * vec2(res.x / res.y, 1.);
         float edge = length(q) * 1.1 + (noise(vUv * 5. + time * .04) - .5) * .4;
         col = mix(col, ink, smoothstep(.0, .04, edge - (1.3 - dread * .8)));
+        // The Stilled: negative space. No outline, no shading, no fog tint, only
+        // a little of the fog's stipple nibbling at them so they're half seen.
+        if (c4.a < .5) col = mix(c4.rgb, vec3(.55, .52, .48), mark * .35);
         col *= .96 + hash(floor(gl_FragCoord.xy / 2.)) * .06;           // paper grain
         gl_FragColor = vec4(col, 1.);
       }`,
@@ -939,6 +943,42 @@
     av.body.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
   }
 
+  // ================= The Stilled =================
+  // Pale, faceless figures drawn as holes in the world: flat colour, marked
+  // (alpha 0) so the ink pass leaves them without outlines or shading.
+  const stilledMat = new THREE.ShaderMaterial({
+    uniforms: { col: { value: new THREE.Color(0xE9E1CF) } },
+    vertexShader: 'void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
+    fragmentShader: 'uniform vec3 col; void main(){ gl_FragColor = vec4(col, 0.); }',
+    blending: THREE.NoBlending, depthWrite: false,
+  });
+  function makeStilled(id) {
+    const g = new THREE.Group();
+    const part = (geo, x, y, z, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(geo, stilledMat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); m.renderOrder = 10; g.add(m); return m; };
+    part(new THREE.SphereGeometry(.3, 12, 9), 0, 1.62, 0, 1.25, .72, 1);
+    for (const sx of [-1, 1]) part(new THREE.SphereGeometry(.11, 8, 6), sx * .19, 1.78, .05);
+    part(new THREE.CylinderGeometry(.14, .22, .78, 10), 0, 1.02, 0);
+    for (const sx of [-1, 1]) {
+      const arm = part(new THREE.CylinderGeometry(.045, .04, .82, 6), sx * .27, .9, .06); arm.rotation.z = sx * .06; arm.rotation.x = -.12;
+      part(new THREE.CylinderGeometry(.06, .05, .64, 6), sx * .1, .32, 0);
+    }
+    g.children[0].rotation.z = (WG.hash2(id, 3) - .5) * .5;   // a head tilted just wrong
+    scene.add(g);
+    return g;
+  }
+  const stilled = new Map();   // id -> { remote, mesh }
+  function syncStilled(list) {
+    const seen = new Set();
+    for (const [id, x, z, f] of list || []) {
+      seen.add(id);
+      let s = stilled.get(id);
+      if (!s) { s = { remote: new Net.Remote(x, z, f), mesh: makeStilled(id) }; stilled.set(id, s); }
+      else s.remote.push(x, z, f, 0, 0);
+    }
+    for (const [id, s] of stilled) if (!seen.has(id)) { scene.remove(s.mesh); stilled.delete(id); }
+  }
+  function clearStilled() { stilled.forEach(s => scene.remove(s.mesh)); stilled.clear(); }
+
   // ================= Fires =================
   let fires = new Map();
   const logM = soft(0x7A5A45), flameA = new THREE.MeshBasicMaterial({ color: 0xE0843A }), flameB = new THREE.MeshBasicMaterial({ color: 0xF3D48A });
@@ -990,7 +1030,7 @@
   let warnedNightDay = 0, target = null;
   let hero = null;
   const remotes = new Map();        // id -> { name, remote, av, tag }
-  let net = null, lastSent = { at: 0, x: 0, z: 0, face: 0, moving: false, sprint: false };
+  let net = null, lastSent = { at: 0, x: 0, z: 0, face: 0, moving: false, sprint: false, cam: 0 };
 
   const $ = id => document.getElementById(id);
   const ui = { hud: $('hud'), inv: $('inv'), prompt: $('prompt'), toast: $('toast'), overlay: $('overlay'), online: $('online'),
@@ -1142,6 +1182,7 @@
         for (const o of objects) applyState(o);
         clearFires(); m.fires.forEach(addFire);
         clearDrops(); (m.drops || []).forEach(addDrop);
+        clearStilled();
         resetRemotes(); m.players.forEach(addRemote);
         if (hero) removeCastaway(hero);
         hero = makeCastaway(colorFor(me.id));
@@ -1160,6 +1201,7 @@
       }
       case 'snap':
         t = m.time; day = m.day;
+        syncStilled(m.s);
         for (const [id, x, z, f, moving, dead] of m.p) {
           const r = remotes.get(id);
           if (r) { r.remote.push(x, z, f, moving, dead); r.dead = !!dead; }
@@ -1229,7 +1271,7 @@
     state = 'title';
     showHud(false);
     ui.banner.classList.add('hidden');
-    resetRemotes();
+    resetRemotes(); clearStilled();
     if (hero) { removeCastaway(hero); hero = null; }
   }
 
@@ -1496,7 +1538,8 @@
     resize();
   }
   applyQuality();
-  if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, chunks, objects: () => objects, stats }; }
+  if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, chunks, objects: () => objects, stats, stilled,
+    pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); } }; }
 
   // ================= Sky =================
   const skyKeys = [
@@ -1710,14 +1753,20 @@
         moving = true;
       }
       const now = performance.now();
+      const cam = Math.atan2(px - camera.position.x, pz - camera.position.z);   // which way you're looking
       const changed = Math.abs(px - lastSent.x) > .01 || Math.abs(pz - lastSent.z) > .01 || Math.abs(face - lastSent.face) > .02
-        || moving !== lastSent.moving || wantSprint !== lastSent.sprint;
+        || moving !== lastSent.moving || wantSprint !== lastSent.sprint || Math.abs(cam - lastSent.cam) > .04;
       if (net && net.open && ((changed && now - lastSent.at > 66) || now - lastSent.at > 1000)) {
-        net.send({ t: 'pos', x: px, z: pz, face, moving, sprint: wantSprint });
-        lastSent = { at: now, x: px, z: pz, face, moving, sprint: wantSprint };
+        net.send({ t: 'pos', x: px, z: pz, face, moving, sprint: wantSprint, cam });
+        lastSent = { at: now, x: px, z: pz, face, moving, sprint: wantSprint, cam };
       }
     }
     if (hero) poseCastaway(hero, px, pz, face, moving ? (running ? 2 : 1) : 0, state === 'dead' || knockT > 0, dt, elapsed);
+
+    stilled.forEach(s => {
+      const p = s.remote.sample();
+      s.mesh.position.set(p.x, groundAt(p.x, p.z), p.z); s.mesh.rotation.y = p.face;
+    });
 
     // Other castaways, played back smoothly.
     remotes.forEach(r => {

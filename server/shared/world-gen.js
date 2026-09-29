@@ -60,6 +60,18 @@
       FRIEND_RADIUS: 12,
     },
     KNOCK: { HEALTH: 20, DREAD: 25, DROP: .5, DOWN_MS: 3000 },
+    // The Stilled: pale figures that only exist in fog, and only move unwatched.
+    STILLED: {
+      PER_PLAYER: 2, ALONE_EXTRA: 1, DREAD_EXTRA: 1, MAX: 12,
+      SPEED: 2.4,              // walking is 4.6, so you can outpace them
+      FOG_MIN: .35,            // they cannot step where fog is thinner than this
+      SPAWN_MIN: 22, SPAWN_MAX: 42,
+      VIEW_HALF_ANGLE: .85,    // radians either side of a player's camera direction
+      VIEW_RANGE: 60,
+      NOTICE: 10, NOTICE_PER_DREAD: .4, NOTICE_ALONE: 8,
+      REACH: 1.1, KNOCK_COOLDOWN_MS: 20000,
+      NEAR_DREAD: 3, NEAR_RADIUS: 15,   // dread per second while one is close
+    },
   };
 
   // Things you can carry (inventory keys and their names).

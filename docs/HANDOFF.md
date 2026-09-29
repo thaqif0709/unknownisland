@@ -140,7 +140,18 @@ planned separately by Thaqif):
   high dread the client shows phantom frogs and plays footsteps/whispers (Web Audio,
   toggle in Settings). `Island.knock(p)` knocks a player down (health, dread,
   half the inventory into a sack saved in the `drops` table; anyone can pick it up).
-  Nothing calls `knock` yet; the Stilled will (Phase 2).
+  The Stilled call it.
+- **Phase 2, the Stilled (done).** Server-side (`updateStilled` in world.js,
+  tuning in `RULES.STILLED`): at night they spawn in fog 22-42 units from players
+  (2 per player, +1 if alone, +1 if dread > 70, max 12, doubled on Drowning
+  nights), never in plain sight. Clients send their camera yaw with position; a
+  Stilled inside any player's view cone (±0.85 rad, 60 units) is frozen. Unwatched,
+  it walks (2.4 u/s) toward the player it has noticed (notice radius grows with
+  dread and solitude), only through fog >= 0.35, so light and clear air stop it.
+  Reaching you knocks you down (20 s cooldown) and it vanishes; they fade when
+  their spot clears. Being within 15 units raises dread. Client draws them with a
+  shader that writes alpha 0 into the colour target; the ink pass sees that and
+  leaves them as flat pale negative space with only a little fog stipple.
 
 ## Content model (added after v1)
 

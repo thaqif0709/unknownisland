@@ -31,6 +31,7 @@ class Island {
     this.fires = data.fires.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: FIRES[f.kind] ? f.kind : 'campfire' }));
     this.drops = (data.drops || []).map(d => ({ id: d.id, x: d.x, z: d.z, items: d.items }));
     this.env = {};   // weather and moon flags for the fog (later phases)
+    this.stilled = []; this.nextStilled = 1; this.stilledTimer = 0;
     this.players = new Map();   // playerId -> live player
     this.dirty = new Set();     // object ids changed since the last save
     this.timer = null;
@@ -125,7 +126,7 @@ class Island {
       tools: (Array.isArray(saved.tools) ? saved.tools : []).filter(t => WG.recipeById(t)),
       dead: m.health <= 0, cause: '', moving: false, warm: false,
       energy: 100, exhausted: false, rest: 0, wantSprint: false, running: false,
-      dread: m.dread || 0, fog: 0, knockedUntil: 0,
+      dread: m.dread || 0, fog: 0, knockedUntil: 0, camYaw: null, lastKnockAt: 0,
       lastPosAt: Date.now(), nextActAt: 0,
     };
     this.players.set(p.id, p);
@@ -192,6 +193,7 @@ class Island {
     const night = isNight(this.time);
     const lights = this.lights();
     const D = RULES.DREAD, nf = WG.nightFactor(this.time);
+    this.updateStilled(dt, lights);
     for (const p of this.players.values()) {
       if (p.dead) continue;
       p.warm = this.fires.some(f => f.fuel > 0 && Math.hypot(f.x - p.x, f.z - p.z) < FIRES[f.kind].warm);
@@ -205,6 +207,7 @@ class Island {
       else dd += D.FRIENDS;
       if (p.warm) dd += D.LIGHT;
       if (nf < .5 && p.fog < .3) dd += D.DAY;
+      if (this.stilled.some(s => Math.hypot(s.x - p.x, s.z - p.z) < RULES.STILLED.NEAR_RADIUS)) dd += RULES.STILLED.NEAR_DREAD;
       p.dread = Math.max(0, Math.min(100, p.dread + dd * dt));
       p.running = WG.stepEnergy(p, dt, p.wantSprint && p.moving);
       // Hunger and thirst only go down while you're moving; standing still costs nothing.
@@ -228,6 +231,7 @@ class Island {
     const snap = JSON.stringify({
       t: 'snap', time: this.time, day: this.day,
       p: [...this.players.values()].map(p => [p.id, r2(p.x), r2(p.z), r2(p.face), p.moving ? (p.running ? 2 : 1) : 0, p.dead ? 1 : 0]),
+      s: this.stilled.map(s => [s.id, r2(s.x), r2(s.z), r2(s.face)]),
     });
     for (const p of this.players.values()) this.sendRaw(p, snap);
 
@@ -256,7 +260,8 @@ class Island {
     }
   }
 
-  onPos(p, { x, z, face, moving, sprint }) {
+  onPos(p, { x, z, face, moving, sprint, cam }) {
+    if (num(cam)) p.camYaw = cam;
     if (p.dead || !num(x) || !num(z) || !num(face)) return;
     const now = Date.now();
     if (p.knockedUntil > now) { p.lastPosAt = now; p.moving = false; if (Math.hypot(x - p.x, z - p.z) > .3) this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }
@@ -427,6 +432,77 @@ class Island {
   }
 
   fx(p, kind, obj) { this.broadcast({ t: 'fx', id: p.id, k: kind, o: obj }); }
+
+  // ================= The Stilled =================
+  // Pale figures in the fog. They spawn at night in fog near players, never
+  // enter light or clear air, and move only while no player is looking at them.
+  fogHere(x, z, lights) { return WG.fogAt(x, z, heightAt(x, z), this.time, lights, this.env); }
+  watched(s) {
+    const S = RULES.STILLED;
+    for (const p of this.players.values()) {
+      if (p.dead || p.camYaw == null) continue;
+      const dx = s.x - p.x, dz = s.z - p.z, d = Math.hypot(dx, dz);
+      if (d > S.VIEW_RANGE) continue;
+      let a = Math.atan2(dx, dz) - p.camYaw;
+      while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2;
+      if (Math.abs(a) < S.VIEW_HALF_ANGLE) return true;
+    }
+    return false;
+  }
+  isAlone(p) {
+    for (const q of this.players.values()) if (q !== p && !q.dead && Math.hypot(q.x - p.x, q.z - p.z) < RULES.DREAD.FRIEND_RADIUS) return false;
+    return true;
+  }
+  updateStilled(dt, lights) {
+    const S = RULES.STILLED, now = Date.now(), players = [...this.players.values()].filter(p => !p.dead);
+    // fade: gone when their spot clears (dawn, a fire) or nobody is near
+    this.stilled = this.stilled.filter(s => this.fogHere(s.x, s.z, lights) > .2
+      && players.some(p => Math.hypot(p.x - s.x, p.z - s.z) < 90));
+    // spawn, a few times a second at most
+    if ((this.stilledTimer -= dt) <= 0) {
+      this.stilledTimer = .5;
+      let want = 0;
+      for (const p of players) want += S.PER_PLAYER + (this.isAlone(p) ? S.ALONE_EXTRA : 0) + (p.dread > 70 ? S.DREAD_EXTRA : 0);
+      if (WG.nightFactor(this.time) < .6) want = 0;
+      want = Math.min(S.MAX, want * (this.env.drowning ? 2 : 1));
+      if (this.stilled.length < want && players.length) {
+        const p = players[(Math.random() * players.length) | 0];
+        for (let tries = 0; tries < 8; tries++) {
+          const a = Math.random() * Math.PI * 2, r = S.SPAWN_MIN + Math.random() * (S.SPAWN_MAX - S.SPAWN_MIN);
+          const x = p.x + Math.sin(a) * r, z = p.z + Math.cos(a) * r;
+          if (heightAt(x, z) < .3 || this.fogHere(x, z, lights) < .6) continue;
+          const s = { id: this.nextStilled++, x, z, face: Math.atan2(p.x - x, p.z - z) };
+          if (this.watched(s)) continue;   // never appear in plain sight
+          this.stilled.push(s);
+          break;
+        }
+      }
+    }
+    // move whoever is unwatched towards the player they have noticed
+    for (const s of this.stilled) {
+      if (this.watched(s)) continue;
+      let best = null, bestScore = -1e9;
+      for (const p of players) {
+        const d = Math.hypot(p.x - s.x, p.z - s.z);
+        const notice = S.NOTICE + p.dread * S.NOTICE_PER_DREAD + (this.isAlone(p) ? S.NOTICE_ALONE : 0);
+        if (d > notice) continue;
+        const score = p.dread / 100 + (this.isAlone(p) ? .5 : 0) - d / 60;
+        if (score > bestScore) { bestScore = score; best = p; }
+      }
+      if (!best) continue;
+      const dx = best.x - s.x, dz = best.z - s.z, d = Math.hypot(dx, dz);
+      if (d < S.REACH) {
+        if (now - best.lastKnockAt > S.KNOCK_COOLDOWN_MS) { best.lastKnockAt = now; this.knock(best); s.gone = true; }
+        continue;
+      }
+      const step = Math.min(d, S.SPEED * dt), base = Math.atan2(dx, dz);
+      for (const off of [0, .6, -.6, 1.2, -1.2]) {   // go round clear patches if it can
+        const nx = s.x + Math.sin(base + off) * step, nz = s.z + Math.cos(base + off) * step;
+        if (this.fogHere(nx, nz, lights) >= S.FOG_MIN && heightAt(nx, nz) > .2) { s.x = nx; s.z = nz; s.face = base; break; }
+      }
+    }
+    this.stilled = this.stilled.filter(s => !s.gone);
+  }
 
   // Light sources that clear fog: lit fires (lanterns join them later).
   lights() {
