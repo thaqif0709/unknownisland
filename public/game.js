@@ -266,17 +266,25 @@
       puffs.push([x0 + (x1 - x0) * k + (r() - .5) * 24, 180 - Math.sin(k * Math.PI) * (kind === 'long' ? 34 : 56) + (r() - .5) * 18, rad]);
     }
     if (kind === 'tall') for (let i = 0; i < 3; i++) puffs.push([180 + i * 70 + (r() - .5) * 30, 95 + (r() - .5) * 20, 34 + r() * 16]);
-    for (const p of puffs) p[2] = Math.min(p[2], p[1] - 10, 246 - p[1], p[0] - 10, 502 - p[0]);
-    g.fillStyle = '#2B211F'; puffs.forEach(([x, y, rad]) => { g.beginPath(); g.arc(x, y, rad + 7, 0, Math.PI * 2); g.fill(); });
-    g.fillStyle = '#F3E3BE'; puffs.forEach(([x, y, rad]) => { g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); });
-    g.fillStyle = '#E2C78F'; puffs.forEach(([x, y, rad]) => { g.beginPath(); g.arc(x + rad * .18, y + rad * .22, rad * .72, 0, Math.PI * 2); g.fill(); });
-    const curls = r() < .5 ? 2 : 1;
-    puffs.forEach(([x, y, rad], i) => {
+    // billows: smaller round bumps piled along the top of each puff, so the edge is lumpy and soft
+    const base = puffs.slice();
+    for (const [x, y, rad] of base) {
+      const nb = 3 + ((r() * 3) | 0);
+      for (let j = 0; j < nb; j++) { const a = Math.PI * (1.08 + r() * .84), d = rad * (.62 + r() * .2); puffs.push([x + Math.cos(a) * d, y + Math.sin(a) * d, rad * (.42 + r() * .22)]); }
+    }
+    for (const p of puffs) p[2] = Math.max(6, Math.min(p[2], p[1] - 8, 248 - p[1], p[0] - 8, 504 - p[0]));
+    const circle = (x, y, rad) => { g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); };
+    g.fillStyle = '#2B211F'; puffs.forEach(([x, y, rad]) => circle(x, y, rad + 5));   // ink outline
+    g.fillStyle = '#C9D6E4'; puffs.forEach(([x, y, rad]) => circle(x, y, rad));       // soft blue-grey underside
+    g.fillStyle = '#FFFDF7'; puffs.forEach(([x, y, rad]) => circle(x - rad * .06, y - rad * .16, rad * .86));   // sunlit tops
+    g.fillStyle = 'rgba(255,255,255,.9)'; puffs.forEach(([x, y, rad]) => circle(x - rad * .2, y - rad * .34, rad * .38));   // highlights
+    const curls = 3;   // only the odd puff gets an ink curl now
+    base.forEach(([x, y, rad], i) => {
       if ((i + seed) % (curls + 1)) return;
       const turns = 2.6 + r() * 1.2, dirn = r() < .5 ? 1 : -1;
       g.beginPath();
       for (let a = 0; a < Math.PI * turns; a += .1) { const rr = rad * .55 * (1 - a / (Math.PI * (turns + .4))); g.lineTo(x + Math.cos(dirn * a + 2) * rr, y + Math.sin(dirn * a + 2) * rr); }
-      g.lineWidth = 6; g.lineCap = 'round'; g.strokeStyle = '#2B211F'; g.stroke();
+      g.lineWidth = 4; g.lineCap = 'round'; g.strokeStyle = 'rgba(43,33,31,.75)'; g.stroke();
     });
     const t = new THREE.CanvasTexture(c);
     t.userData = { kind };
@@ -2652,8 +2660,9 @@
   // ================= Sky =================
   const skyKeys = [
     // dawn and dusk are short (about a minute and a half each at 20 minutes a day)
-    [0, 0x2E3444, 0x7E8AAE, .1], [.21, 0x3A4052, 0x8E9AB8, .12], [.25, 0xE8B89A, 0xFFD2A8, .5], [.29, 0xF0E2C4, 0xFFF1DC, .9],
-    [.5, 0xF1E6CC, 0xFFF6E6, 1], [.71, 0xEFDDBE, 0xFFE9C8, .85], [.75, 0xD98C7A, 0xFFB38A, .5], [.79, 0x46485E, 0x9CA3C4, .12], [1, 0x2E3444, 0x7E8AAE, .1]
+    // a clear blue by day, warm at sunrise and sunset, deep blue at night
+    [0, 0x283450, 0x7E8AAE, .1], [.21, 0x34425E, 0x8E9AB8, .12], [.25, 0xF0B9A0, 0xFFD2A8, .5], [.29, 0xA9D0EA, 0xFFF1DC, .9],
+    [.5, 0x8EC3EA, 0xFFF6E6, 1], [.71, 0xA7CDE8, 0xFFE9C8, .85], [.75, 0xE89A7E, 0xFFB38A, .5], [.79, 0x3E4868, 0x9CA3C4, .12], [1, 0x283450, 0x7E8AAE, .1]
   ];
   const cA = new THREE.Color(), cB = new THREE.Color(), skyCol = new THREE.Color(), sunCol = new THREE.Color();
   function sky(tt) {
@@ -3134,7 +3143,7 @@
       const far = dry ? 400 : 58;   // underwater you can't see the island at all
       if (camera.far !== far) { camera.far = far; camera.updateProjectionMatrix(); inkMat.uniforms.far.value = far; }
     }
-    scene.background = skyCol; scene.fog.color.copy(skyCol);
+    scene.background = skyCol; scene.fog.color.copy(skyCol).lerp(cB.set(0xEFE6D2), .35 * sunI);
     const ang = (t - .25) * Math.PI * 2;
     sunDir.set(Math.cos(ang), Math.sin(ang), SUN_TILT).normalize();
     moonDir.set(-Math.cos(ang), -Math.sin(ang), SUN_TILT).normalize();
@@ -3146,7 +3155,9 @@
     if (Cut.on && Cut.under > .5) sunDisc.visible = moonDisc.visible = false;
     mist.position.copy(camera.position); mist.position.y = camera.position.y + 12;
     mist.rotation.y = elapsed * .004;
-    mist.material.color.setScalar(.45 + sunI * .55);
+    // the haze takes on the sky's colour (lighter), and thins out by day so the blue shows
+    mist.material.color.copy(skyCol).lerp(cB.setRGB(1, 1, 1), .45).multiplyScalar(.6 + sunI * .4);
+    mist.material.opacity = .85 - sunI * .45;
     fireflies.update(elapsed, clamp((-sunDir.y + .08) / .25, 0, 1) * (env.rain ? .15 : 1), focusX, focusZ);
     rain.update(elapsed, inGame() && !!env.rain && !(Cut.on && Cut.under > .5), !!env.storm, camera.position.x, camera.position.y, camera.position.z);
     sun.color.copy(sunCol); sun.intensity = .15 + sunI * .58;
