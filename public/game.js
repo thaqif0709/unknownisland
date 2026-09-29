@@ -1187,7 +1187,7 @@
     av.legL.rotation.z = av.legR.rotation.z = 0; av.head.rotation.x = 0; av.body.rotation.x = 0; kL.rotation.x = kR.rotation.x = 0;
     av.legL.position.z = av.legR.position.z = .17 * k;   // hips forward a touch so the knees clear the robe
     if (k > .01) {
-      av.body.position.y = -.5 * k;
+      av.body.position.y = -.3 * k;   // the robe's hem rests on the ground, not under it
       av.body.rotation.x = slouch;   // lean forward from the hips
       av.legL.rotation.x = av.legR.rotation.x = -2.15 * k - slouch;   // thighs forward and up
       kL.rotation.x = kR.rotation.x = 2.05 * k;                       // shins folded back down: knees up
