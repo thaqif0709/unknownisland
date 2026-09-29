@@ -1901,7 +1901,7 @@
       case 'undrop': removeDrop(m.id); break;
       case 'dropitems': { const d = drops.get(m.id); if (d) d.items = m.items; break; }
       case 'hold': { const r = remotes.get(m.id); if (r) setHeld(r.av, m.key); break; }
-      case 'jump': { const r = remotes.get(m.id); if (r) r.hop = { t: 0, mul: clamp(+m.mul || 1, 1, 2) }; break; }
+      case 'jump': { const r = remotes.get(m.id); if (r) r.hop = { t: 0, mul: clamp(+m.mul || 1, 1, 3) }; break; }
       case 'dawn':
         if (state === 'play') toast(`Morning of day ${m.day}. You made it through the night.`);
         break;
@@ -2064,7 +2064,7 @@
   const ACTIONS = [
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
-    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'], ['jump', 'Jump (hold to jump higher)', 'Space'], ['cycle', 'Next item slot (Shift: back)', 'KeyQ'],
+    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'], ['jump', 'Jump (hold to leap higher and forward)', 'Space'], ['cycle', 'Next item slot (Shift: back)', 'KeyQ'],
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -3187,18 +3187,20 @@
   // A short hop: up about a frog's height, legs tucked, a squash on landing.
   // Purely for fun (and for friends to see); it doesn't change where you can walk.
   const JUMP_V = 5.4, GRAVITY = 17, AIR = 2 * JUMP_V / GRAVITY;
-  // Hold to charge: a tap is a normal hop, a full charge (CHARGE_FULL s) goes twice as high.
-  const CHARGE_FULL = .55;
+  // Hold to charge: a tap is a normal hop, a full charge (CHARGE_FULL s) goes three times as high
+  // and launches you forward in the direction you're facing.
+  const CHARGE_FULL = .55, LEAP_SPEED = 4.2;   // forward speed of a full-charge leap (walking is 4.6)
   let jumpBtnHeld = false; let camLift = 0;
   const hop = { y: 0, v: 0, air: false, land: 0, charge: -1 };
   const canJump = () => !(state !== 'play' || hop.air || knockT > 0 || stats.down || nrg.exhausted || panelOpen() || heightAt(px, pz) < .1);   // not while wading
   function startCharge() { if (canJump() && hop.charge < 0) hop.charge = 0; }
   function releaseJump() {
     if (hop.charge < 0) return;
-    const mul = 1 + clamp(hop.charge / CHARGE_FULL, 0, 1);   // height x1 .. x2
+    const k = clamp(hop.charge / CHARGE_FULL, 0, 1), mul = 1 + k * 2;   // height x1 .. x3
     hop.charge = -1;
     if (!canJump()) return;
     hop.air = true; hop.v = JUMP_V * Math.sqrt(mul); hop.mul = mul;   // height grows with speed squared
+    hop.fwd = k * LEAP_SPEED; hop.fx = Math.sin(face); hop.fz = Math.cos(face);   // the leap forward (none for a tap)
     WG.spendJump(nrg, mul);   // the server charges the same
     if (net) net.send({ t: 'jump', mul });
   }
@@ -3224,7 +3226,7 @@
     if (h.air) {
       h.v -= GRAVITY * dt; h.y += h.v * dt;
       if (h.v > 0) { const ceil = leafCeiling(px, pz, h.y - h.v * dt); if (h.y + FROG_H > ceil) { h.y = Math.max(h.floor, ceil - FROG_H); h.v = 0; } }   // bonk: the leaves stop you
-      if (h.y <= h.floor) { h.y = h.floor; h.v = 0; h.air = false; h.land = .18; }
+      if (h.y <= h.floor) { h.y = h.floor; h.v = 0; h.air = false; h.land = .18; h.fwd = 0; }
     }
     else {
       if (h.y > h.floor + .02) { h.air = true; h.v = 0; }   // walked off the edge: drop
@@ -3392,12 +3394,14 @@
       const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
       wantSprint = free && l > .08 && (held('sprint') || runToggle);
       running = WG.stepEnergy(nrg, dt, wantSprint);
-      if (l > .08) {
+      const leaping = hop.air && hop.fwd > 0;
+      if (l > .08 || leaping) {
         const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
         const dx = rx * ix + fx * iz, dz = rz * ix + fz * iz;
         // a bit slower through the air, so you can land on the rock you jumped at instead of sailing past it
         const spd = (heightAt(px, pz) < .1 ? RULES.WADE_SPEED : RULES.WALK_SPEED) * WG.speedMult(running, nrg.exhausted) * Math.min(1, l) * (hop.air ? .6 : 1);
         let nx = px + dx * spd * dt, nz = pz + dz * spd * dt;
+        if (leaping) { nx += hop.fx * hop.fwd * dt; nz += hop.fz * hop.fwd * dt; }   // a charged jump carries you forward
         if (heightAt(nx, nz) > -1) {
           const push = o => {
             if (o.state.gone || o.type === 'dig') return;
@@ -3421,10 +3425,12 @@
           });
           px = nx; pz = nz;
         }
-        const tf = Math.atan2(dx, dz);
-        let df = tf - face; while (df > Math.PI) df -= Math.PI * 2; while (df < -Math.PI) df += Math.PI * 2;
-        face += df * Math.min(1, dt * 12);
-        moving = true;
+        if (l > .08) {
+          const tf = Math.atan2(dx, dz);
+          let df = tf - face; while (df > Math.PI) df -= Math.PI * 2; while (df < -Math.PI) df += Math.PI * 2;
+          face += df * Math.min(1, dt * 12);
+          moving = true;
+        }
       }
       const now = performance.now();
       const cam = Math.atan2(px - camera.position.x, pz - camera.position.z);   // which way you're looking

@@ -647,7 +647,7 @@ class Island {
         const now = Date.now();
         if (p.dead || p.exhausted || p.knockedUntil > now || now - (p.lastJumpAt || 0) < 400) return;
         p.lastJumpAt = now;
-        const mul = Math.min(2, Math.max(1, +msg.mul || 1));
+        const mul = Math.min(3, Math.max(1, +msg.mul || 1));
         WG.spendJump(p, mul);
         return this.broadcast({ t: 'jump', id: p.id, mul }, p);
       }
@@ -678,7 +678,8 @@ class Island {
     p.lastPosAt = now;
     p.wantSprint = !!sprint;
     // Allow sprint speed only while the server agrees you have energy.
-    const speed = RULES.WALK_SPEED * (p.wantSprint && !p.exhausted ? RULES.SPRINT_MULT : 1);
+    const speed = RULES.WALK_SPEED * (p.wantSprint && !p.exhausted ? RULES.SPRINT_MULT : 1)
+      + (now - (p.lastJumpAt || 0) < 1600 ? 4.5 : 0);   // a charged leap carries you forward faster than walking
     const maxStep = speed * 1.4 * Math.min(dt, 1) + 0.6;
     const d = Math.hypot(x - p.x, z - p.z);
     if (heightAt(x, z) <= -1) { this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }
