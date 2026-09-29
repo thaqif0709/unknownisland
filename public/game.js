@@ -1349,7 +1349,7 @@
   const $ = id => document.getElementById(id);
   const ui = { hud: $('hud'), inv: $('inv'), prompt: $('prompt'), toast: $('toast'), overlay: $('overlay'), online: $('online'),
     touch: $('touchUi'), banner: $('banner'), tags: $('tags'), gear: $('btnSettings'), book: $('book'), settings: $('settings'), journal: $('journal'),
-    board: $('boardPanel'), carvingPanel: $('carvingPanel'), chat: $('chat') };
+    board: $('boardPanel'), carvingPanel: $('carvingPanel'), chat: $('chat'), map: $('map') };
   let myPatches = [];
   const WEATHER_SAY = { clear: 'The sky clears.', rain: 'It starts to rain. Fires burn smaller in the wet.',
     storm: 'A storm rolls in. The sea will bring things up tomorrow.', fogstorm: 'The fog is coming in, in broad daylight.' };
@@ -1721,6 +1721,7 @@
   $('btnAct').addEventListener('click', act);
   $('btnBook').addEventListener('click', () => togglePanel('book'));
   $('btnJournal').addEventListener('click', () => togglePanel('journal'));
+  $('btnMap').addEventListener('click', () => togglePanel('map'));
   $('btnSettings').addEventListener('click', () => togglePanel('settings'));
   $('btnRun').addEventListener('click', () => { runToggle = !runToggle; $('btnRun').setAttribute('aria-pressed', String(runToggle)); });
 
@@ -1729,7 +1730,7 @@
   const ACTIONS = [
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
-    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['chat', 'Open chat', 'Enter'],
+    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'],
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -1749,7 +1750,7 @@
   const keys = {};
   const held = a => !!keys[prefs.binds[a]];
   let waitingBind = null;
-  const PANELS = ['book', 'settings', 'journal', 'board', 'carvingPanel'];
+  const PANELS = ['book', 'settings', 'journal', 'board', 'carvingPanel', 'map'];
   const panelOpen = () => PANELS.some(k => !ui[k].classList.contains('gone')) || Cut.on || chatOpen();
   window.addEventListener('keydown', e => {
     if (waitingBind) {
@@ -1769,7 +1770,8 @@
     if (Cut.on) { if (['Escape', 'Enter', 'Space'].includes(e.code)) { e.preventDefault(); endCutscene(true); } return; }
     if (e.code === 'Escape') { e.preventDefault(); if (panelOpen()) closePanels(); else if (state === 'play') togglePanel('settings'); return; }
     if (panelOpen()) {
-      if ((e.code === prefs.binds.book && !ui.book.classList.contains('gone')) || (e.code === prefs.binds.journal && !ui.journal.classList.contains('gone'))) closePanels();
+      if ((e.code === prefs.binds.book && !ui.book.classList.contains('gone')) || (e.code === prefs.binds.journal && !ui.journal.classList.contains('gone'))
+        || (e.code === prefs.binds.map && !ui.map.classList.contains('gone'))) closePanels();
       return;
     }
     if (state !== 'play') return;
@@ -1780,6 +1782,7 @@
     if (e.code === prefs.binds.build) build('campfire');
     if (e.code === prefs.binds.book) togglePanel('book');
     if (e.code === prefs.binds.journal) togglePanel('journal');
+    if (e.code === prefs.binds.map) togglePanel('map');
     if (e.code.startsWith('Arrow') || e.code === 'Space' || e.code === 'Tab') e.preventDefault();
   });
   window.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -2038,6 +2041,48 @@
     r.tag.innerHTML = (r.bubble ? `<span class="bubble">${esc(r.bubble)}</span>` : '') + esc(r.name);
   }
 
+  // ================= Map =================
+  // A top-down chart of the island, inked in flat biome colours once and cached;
+  // markers for springs, lanterns, carving stones, the board, fires and players
+  // are redrawn on top each time the panel is open.
+  const MAP_PX = 480, MAP_HALF = WG.ISL * 1.15;
+  const BIOME_COL = { sea: '#4A6F91', beach: '#D8C9A0', meadow: '#8FAE72', forest: '#5C7A4B', highland: '#9C8A6A', peak: '#D9D3C4', spring: '#7FC9D6' };
+  let mapBase = null, mapTimer = 0;
+  function buildMapBase() {
+    const c = document.createElement('canvas'); c.width = c.height = MAP_PX;
+    const g = c.getContext('2d'), STEP = 4, n = MAP_PX / STEP;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      const x = (i + .5) / n * MAP_HALF * 2 - MAP_HALF, z = (j + .5) / n * MAP_HALF * 2 - MAP_HALF;
+      const h = WG.heightAt(x, z);
+      g.fillStyle = BIOME_COL[WG.biomeAt(x, z, h)] || BIOME_COL.sea;
+      g.fillRect(i * STEP, j * STEP, STEP, STEP);
+    }
+    mapBase = c;
+  }
+  const mapX = x => (x + MAP_HALF) / (MAP_HALF * 2) * MAP_PX;
+  const mapZ = z => (z + MAP_HALF) / (MAP_HALF * 2) * MAP_PX;
+  function mapDot(g, x, z, r, fill) {
+    g.beginPath(); g.arc(mapX(x), mapZ(z), r, 0, Math.PI * 2);
+    g.fillStyle = fill; g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#2B211F'; g.stroke();
+  }
+  function renderMap() {
+    if (!mapBase) buildMapBase();
+    const g = $('mapCanvas').getContext('2d');
+    g.drawImage(mapBase, 0, 0);
+    WG.SPRINGS.forEach(s => mapDot(g, s.x, s.z, 4, '#2E6B7A'));
+    if (board) mapDot(g, board.x, board.z, 4, '#8A6A4A');
+    carvings.forEach(c => mapDot(g, c.x, c.z, 4.5, '#5B4A63'));
+    lanterns.forEach(l => mapDot(g, l.x, l.z, l.big ? 5.5 : 4, l.lit ? '#E0A33A' : '#8A8171'));
+    fires.forEach(f => mapDot(g, f.x, f.z, 3.5, f.fuel > 0 ? '#C9622F' : '#8A8171'));
+    remotes.forEach((r, id) => { if (!r.dead) { const s = r.remote.sample(); mapDot(g, s.x, s.z, 4, hex(colorFor(id))); } });
+    if (inGame()) {
+      g.save(); g.translate(mapX(px), mapZ(pz)); g.rotate(Math.PI - face);
+      g.beginPath(); g.moveTo(0, -7); g.lineTo(4.5, 5); g.lineTo(-4.5, 5); g.closePath();
+      g.fillStyle = hex(colorFor(me.id)); g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#2B211F'; g.stroke();
+      g.restore();
+    }
+  }
+
   // ================= Recipe book & settings =================
   function togglePanel(which) {
     const el = ui[which];
@@ -2046,7 +2091,7 @@
     if (!opening) return;
     releaseKeys();
     if (which === 'book') renderBook(); else if (which === 'journal') renderJournal(); else if (which === 'board') renderBoard();
-    else if (which === 'carvingPanel') renderCarving(); else renderSettings();
+    else if (which === 'carvingPanel') renderCarving(); else if (which === 'map') renderMap(); else renderSettings();
     el.classList.remove('gone');
     const first = el.querySelector('.x');
     if (first) first.focus({ preventScroll: true });
@@ -2621,6 +2666,7 @@
       remotes.forEach(r => { if (r.patches && r.patches.includes('firefly_jar') && !r.dead) { const q = r.remote.sample(); lights.push({ x: q.x, z: q.z, r: 3.5 }); } });
       updateFogMap(focusX, focusZ, t, lights);
     }
+    if (!ui.map.classList.contains('gone') && (mapTimer -= dt) <= 0) { mapTimer = .3; renderMap(); }
     if (window.__dbg && __dbg.forceDread != null) stats.dread = __dbg.forceDread;   // debug only
     dreadShown += ((inGame() ? stats.dread / 100 : 0) - dreadShown) * Math.min(1, dt * 1.5);
     inkMat.uniforms.dread.value = dreadShown;
