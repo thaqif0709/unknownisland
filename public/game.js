@@ -1723,8 +1723,8 @@
     remotes.set(p.id, { name: p.name, remote: new Net.Remote(p.x, p.z, p.face), av, tag, dead: p.dead, patches: p.patches || [] });
   }
   function renderOnline() {
-    const rows = [`<span><i style="background:${hex(colorFor(me.id))}"></i>${esc(me.name)} (you)</span>`];
-    remotes.forEach((r, id) => rows.push(`<span><i style="background:${hex(colorFor(id))}"></i>${esc(r.name)}</span>`));
+    const rows = [`<span><i style="background:${mapCol(me.id)}"></i>${esc(me.name)} (you)</span>`];   // same colours as on the map
+    remotes.forEach((r, id) => rows.push(`<span><i style="background:${mapCol(id)}"></i>${esc(r.name)}</span>`));
     ui.online.innerHTML = `<b>On the island (${remotes.size + 1})</b>` + rows.join('');
   }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -2474,46 +2474,85 @@
     mapBase = c;
   }
   const mapCoord = (v, size) => (v + MAP_HALF) / (MAP_HALF * 2) * size;
-  function drawMapMarkers(g, size, dotScale) {
-    const dot = (x, z, r, fill) => {
-      g.beginPath(); g.arc(mapCoord(x, size), mapCoord(z, size), r * dotScale, 0, Math.PI * 2);
-      g.fillStyle = fill; g.fill(); g.lineWidth = Math.max(1, 1.5 * dotScale); g.strokeStyle = '#2B211F'; g.stroke();
+  // Marker shapes, shared by the map and its legend so the two always match.
+  const MARK = {
+    spring: { name: 'Spring (fresh water)', col: '#4FA9C9' }, lanternLit: { name: 'Lantern, lit', col: '#F2B33D' },
+    lantern: { name: 'Lantern, cold', col: '#8A8171' }, carving: { name: 'Carving stone', col: '#7A5E8A' },
+    board: { name: 'Driftwood board', col: '#A07A4A' }, fire: { name: 'Fire, burning', col: '#E2742C' },
+    fireOut: { name: 'Fire, gone out', col: '#6E6862' }, sack: { name: 'Dropped sack', col: '#FFF6DC' },
+  };
+  function markerShape(g, kind, cx, cy, s, fill) {
+    g.save(); g.translate(cx, cy); g.scale(s, s);
+    g.beginPath();
+    if (kind === 'spring') { g.moveTo(0, -6); g.bezierCurveTo(4, -1, 5, 2, 0, 5); g.bezierCurveTo(-5, 2, -4, -1, 0, -6); }   // droplet
+    else if (kind === 'lantern' || kind === 'lanternLit') { g.moveTo(0, -5.5); g.lineTo(4.5, 0); g.lineTo(0, 5.5); g.lineTo(-4.5, 0); g.closePath(); }   // diamond
+    else if (kind === 'carving') { g.moveTo(-3.5, 5); g.lineTo(-3.5, -2); g.arc(0, -2, 3.5, Math.PI, 0); g.lineTo(3.5, 5); g.closePath(); }   // standing stone
+    else if (kind === 'board') g.rect(-4, -3.5, 8, 7);
+    else if (kind === 'fire' || kind === 'fireOut') { g.moveTo(0, -6); g.quadraticCurveTo(5, 0, 3.5, 4); g.lineTo(-3.5, 4); g.quadraticCurveTo(-5, 0, 0, -6); }   // flame
+    else if (kind === 'sack') { g.arc(0, 1, 3.6, 0, Math.PI * 2); g.moveTo(-1.8, -2.4); g.lineTo(0, -5); g.lineTo(1.8, -2.4); }
+    else g.arc(0, 0, 4, 0, Math.PI * 2);
+    g.fillStyle = fill || MARK[kind].col; g.fill(); g.lineWidth = 1.4; g.strokeStyle = '#2B211F'; g.lineJoin = 'round'; g.stroke();
+    g.restore();
+  }
+  // Players on the map use a brighter version of their cloak colour so they pop.
+  const mapCol = id => { const c = new THREE.Color(colorFor(id)), h = {}; c.getHSL(h); c.setHSL(h.h, Math.max(.6, h.s * 1.9), .56); return '#' + c.getHexString(); };
+  function drawMapMarkers(g, size, dotScale, full) {
+    const at = (x, z) => [mapCoord(x, size), mapCoord(z, size)];
+    const mark = (kind, x, z, k = 1) => { const [cx, cy] = at(x, z); markerShape(g, kind, cx, cy, dotScale * k); };
+    WG.SPRINGS.forEach(sp => mark('spring', sp.x, sp.z));
+    if (board) mark('board', board.x, board.z);
+    carvings.forEach(c => mark('carving', c.x, c.z));
+    lanterns.forEach(l => mark(l.lit ? 'lanternLit' : 'lantern', l.x, l.z, l.big ? 1.35 : 1));
+    fires.forEach(f => mark(f.fuel > 0 ? 'fire' : 'fireOut', f.x, f.z));
+    drops.forEach(d => mark('sack', d.x, d.z, .9));
+    // players: a white ring, their colour, and (on the big map) their name
+    const label = (text, cx, cy, col) => {
+      g.font = `600 ${Math.round(12 * Math.max(.8, dotScale))}px Fredoka, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
+      g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = '#FFFBF0'; g.strokeText(text, cx + 12 * dotScale, cy); g.fillStyle = '#2B211F'; g.fillText(text, cx + 12 * dotScale, cy);
     };
-    // Player markers get a bright halo behind them, in each player's own cloak colour,
-    // so they stand out clearly against any terrain colour underneath.
-    const haloDot = (cx, cy, r) => {
-      g.beginPath(); g.arc(cx, cy, r + 3 * dotScale, 0, Math.PI * 2);
-      g.fillStyle = 'rgba(255,251,240,.95)'; g.fill();
-      g.lineWidth = Math.max(1, 1.5 * dotScale); g.strokeStyle = '#2B211F'; g.stroke();
-    };
-    WG.SPRINGS.forEach(s => dot(s.x, s.z, 4, '#2E6B7A'));
-    if (board) dot(board.x, board.z, 4, '#8A6A4A');
-    carvings.forEach(c => dot(c.x, c.z, 4.5, '#5B4A63'));
-    lanterns.forEach(l => dot(l.x, l.z, l.big ? 5.5 : 4, l.lit ? '#E0A33A' : '#8A8171'));
-    fires.forEach(f => dot(f.x, f.z, 3.5, f.fuel > 0 ? '#C9622F' : '#8A8171'));
     remotes.forEach((r, id) => {
       if (r.dead) return;
-      const s = r.remote.sample(), cx = mapCoord(s.x, size), cy = mapCoord(s.z, size), rr = 5.5 * dotScale;
-      haloDot(cx, cy, rr);
-      dot(s.x, s.z, 5.5, hex(colorFor(id)));
+      const s2 = r.remote.sample(), [cx, cy] = at(s2.x, s2.z), col = mapCol(id);
+      g.beginPath(); g.arc(cx, cy, 8 * dotScale, 0, Math.PI * 2); g.fillStyle = '#FFFBF0'; g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#2B211F'; g.stroke();
+      g.beginPath(); g.arc(cx, cy, 5.2 * dotScale, 0, Math.PI * 2); g.fillStyle = col; g.fill(); g.lineWidth = 1.2; g.stroke();
+      if (full) label(r.name, cx, cy, col);
     });
     if (inGame()) {
-      const cx = mapCoord(px, size), cy = mapCoord(pz, size);
-      haloDot(cx, cy, 6 * dotScale);
+      const [cx, cy] = at(px, pz), col = mapCol(me.id);
+      g.beginPath(); g.arc(cx, cy, 10.5 * dotScale, 0, Math.PI * 2); g.fillStyle = '#FFFBF0'; g.fill(); g.lineWidth = 1.8; g.strokeStyle = '#2B211F'; g.stroke();
       g.save(); g.translate(cx, cy); g.rotate(Math.PI - face); g.scale(dotScale, dotScale);
-      g.beginPath(); g.moveTo(0, -8); g.lineTo(5.5, 6); g.lineTo(-5.5, 6); g.closePath();
-      g.fillStyle = hex(colorFor(me.id)); g.fill(); g.lineWidth = 1.8; g.strokeStyle = '#2B211F'; g.stroke();
+      g.beginPath(); g.moveTo(0, -9); g.lineTo(6.5, 7); g.lineTo(0, 3.5); g.lineTo(-6.5, 7); g.closePath();
+      g.fillStyle = col; g.fill(); g.lineWidth = 1.8; g.strokeStyle = '#2B211F'; g.stroke();
       g.restore();
+      if (full) label('You', cx + 2, cy, col);
     }
+  }
+  // Legend icons are drawn with the same code as the map.
+  function iconFor(kind, fill) {
+    const c = document.createElement('canvas'); c.width = c.height = 26;
+    const g = c.getContext('2d');
+    if (kind === 'you') { g.translate(13, 13); g.beginPath(); g.moveTo(0, -10); g.lineTo(7, 8); g.lineTo(0, 4); g.lineTo(-7, 8); g.closePath(); g.fillStyle = fill; g.fill(); g.lineWidth = 2; g.stroke(); }
+    else if (kind === 'player') { g.beginPath(); g.arc(13, 13, 10, 0, 7); g.fillStyle = '#FFFBF0'; g.fill(); g.lineWidth = 1.5; g.stroke(); g.beginPath(); g.arc(13, 13, 6.5, 0, 7); g.fillStyle = fill; g.fill(); g.stroke(); }
+    else if (kind === 'land') { g.fillStyle = fill; g.fillRect(3, 3, 20, 20); g.lineWidth = 1.5; g.strokeRect(3, 3, 20, 20); }
+    else markerShape(g, kind, 13, 13, 1.9);
+    return c.toDataURL();
+  }
+  function renderMapLegend() {
+    const li = (src, text) => `<li><img src="${src}" alt="">${esc(text)}</li>`;
+    const people = [li(iconFor('you', mapCol(me.id)), 'You')].concat([...remotes].map(([id, r]) => li(iconFor('player', mapCol(id)), r.name)));
+    const places = Object.keys(MARK).map(k => li(iconFor(k), MARK[k].name));
+    const land = [['beach', 'Beach'], ['meadow', 'Meadow'], ['forest', 'Forest'], ['highland', 'Hills'], ['peak', 'Peak'], ['spring', 'Spring pool'], ['sea', 'Sea']]
+      .map(([k, n]) => li(iconFor('land', BIOME_COL[k]), n));
+    $('mapLegend').innerHTML = `<h4>On the island now</h4><ul>${people.join('')}</ul><h4>Places</h4><ul>${places.join('')}</ul><h4>Land</h4><ul>${land.join('')}</ul>`;
   }
   function drawMap(canvas, size, dotScale) {
     if (!mapBase) buildMapBase();
     const g = canvas.getContext('2d');
     g.clearRect(0, 0, size, size);
     g.drawImage(mapBase, 0, 0, MAP_PX, MAP_PX, 0, 0, size, size);
-    drawMapMarkers(g, size, dotScale);
+    drawMapMarkers(g, size, dotScale, size === MAP_PX);
   }
-  const renderMap = () => drawMap($('mapCanvas'), MAP_PX, 1);
+  const renderMap = () => { drawMap($('mapCanvas'), MAP_PX, 1); renderMapLegend(); };
   const renderMinimap = () => drawMap($('minimapCanvas'), MINI_PX, MINI_DOT);
   $('minimap').addEventListener('click', () => togglePanel('map'));
 

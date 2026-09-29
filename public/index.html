@@ -169,17 +169,10 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 #boardForm{display:flex;gap:8px;align-items:flex-end;margin-top:12px}
 .map-sheet{width:min(520px,100%)}
 #mapCanvas{display:block;width:100%;height:auto;aspect-ratio:1;border:3px solid var(--ink);border-radius:14px;background:#4A6F91;touch-action:none}
-.map-legend{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px 12px;margin:12px 0 0;padding:0;font-size:13px}
-.map-legend li{display:flex;align-items:center;gap:7px}
-.map-legend i{width:13px;height:13px;border:2px solid var(--ink);display:inline-block;flex:0 0 auto;border-radius:50%}
-.map-legend .m-you{background:var(--rose);border-radius:3px}
-.map-legend .m-other{background:var(--blue)}
-.map-legend .m-spring{background:#7FC9D6}
-.map-legend .m-lantern{background:#8A8171}
-.map-legend .m-lantern.lit{background:var(--ochre)}
-.map-legend .m-carving{background:#5B4A63;border-radius:3px}
-.map-legend .m-board{background:#8A6A4A;border-radius:3px}
-.map-legend .m-fire{background:#C9622F}
+.map-legend h4{margin:10px 0 4px;font-size:14px;color:var(--soft)}
+.map-legend ul{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 12px;margin:0;padding:0;font-size:13px}
+.map-legend li{display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.map-legend img{width:20px;height:20px;flex:0 0 auto}
 #boardForm textarea{flex:1;font-family:var(--hand);font-size:16px;border:2px solid var(--ink);border-radius:10px;padding:6px 8px;resize:vertical;min-height:52px;background:#FBF4E3;color:var(--ink);-webkit-user-select:text;user-select:text}
 .carve-sheet{background:#B9B2A6;color:var(--ink);text-align:center}
 .carve-sheet h2{color:var(--ink)}
@@ -362,16 +355,7 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
   <div class="sheet map-sheet">
     <header><h2 id="mapTitle">Map</h2><button type="button" class="x" data-close aria-label="Close">&times;</button></header>
     <canvas id="mapCanvas" width="480" height="480"></canvas>
-    <ul class="map-legend">
-      <li><i class="m-you"></i>You</li>
-      <li><i class="m-other"></i>Others</li>
-      <li><i class="m-spring"></i>Spring</li>
-      <li><i class="m-lantern lit"></i>Lit lantern</li>
-      <li><i class="m-lantern"></i>Unlit lantern</li>
-      <li><i class="m-carving"></i>Carving stone</li>
-      <li><i class="m-board"></i>Driftwood board</li>
-      <li><i class="m-fire"></i>Campfire</li>
-    </ul>
+    <div class="map-legend" id="mapLegend"></div>
   </div>
 </div>
 
