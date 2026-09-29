@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Unknown Island Wiki</title>
+<title>Hidden Pages</title>
 <meta name="description" content="How everything on Unknown Island works: survival, crafting, the fog, the Stilled, lanterns, tides, the journal and more.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
   KEEP THIS PAGE CURRENT. Whenever a feature is added or changed in the game,
   update the matching section here and add a line to the Changelog at the
   bottom. Numbers marked data-r / filled by the script come live from
-  /shared/world-gen.js and /api/wiki, so they update on their own.
+  /shared/world-gen.js and /api/hiddenpages, so they update on their own.
 -->
 <style>
 :root{
@@ -75,7 +75,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
 <body>
 <div class="wrap">
   <header class="top">
-    <div><h1>Unknown Island Wiki</h1><p>How everything on the island works, kept up to date with the game. <span class="muted" id="liveNote"></span></p>
+    <div><h1>Hidden Pages</h1><p>How everything on the island works, kept up to date with the game. <span class="muted" id="liveNote"></span></p>
       <p class="muted">Spoilers are hidden. <button type="button" class="spoilall" id="spoilAll">Show all spoilers</button></p></div>
     <a class="play" href="/">Play &rsaquo;</a>
   </header>
@@ -349,8 +349,9 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
-        <li>Wiki: spoilers (rare finds, strange tides, what the stones and the Stilled do) are hidden until you click to show them.</li>
-        <li><b>Wiki:</b> this page, built into the game at <code>/wiki</code> and kept up to date.</li>
+        <li>Hidden Pages: spoilers (rare finds, strange tides, what the stones and the Stilled do) are hidden until you click to show them.</li>
+        <li>This page is now called the <b>Hidden Pages</b> (<code>/hiddenpages</code>; the old <code>/wiki</code> link still works).</li>
+        <li><b>Wiki:</b> this page, built into the game and kept up to date.</li>
         <li><b>Sitting</b> (<kbd>V</kbd>): slouched on the ground with knees up; frogs now have knees. Resting by a fire calms dread faster.</li>
         <li><b>Jumping</b> shows to friends while you charge. Charged jumps leap three times as high and forward.</li>
         <li><b>Fog</b> is a soft haze; ink dots only appear at high dread.</li>
@@ -403,7 +404,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
   $('patches').insertAdjacentHTML('beforeend', W.PATCHES.map(p => `<tr><td><b>${esc(p.name)}</b></td><td data-need="${esc(p.needs)}">${esc(p.needs.replace(/_/g, ' '))}</td><td>${esc(p.perk)}</td><td>${esc(p.cost)}</td></tr>`).join(''));
   const rar = { common: '&#9670; Common', uncommon: '&#9670;&#9670; Uncommon', rare: '&#9670;&#9670;&#9670; Rare' };
   const cats = { bugs: 'Bugs', moon: 'Full moon', shells: 'Shells', glass: 'Sea glass', tide: 'From the tide', strange: 'Strange tides', relics: 'Left by the stones' };
-  fetch('/api/wiki').then(r => r.json()).then(d => {
+  fetch('/api/hiddenpages').then(r => r.json()).then(d => {
     const names = Object.fromEntries(d.journal.map(e => [e.key, e.name]));
     document.querySelectorAll('[data-need]').forEach(td => { if (names[td.dataset.need]) td.textContent = 'a ' + names[td.dataset.need].toLowerCase(); });
     let last = '';

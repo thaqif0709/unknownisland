@@ -69,7 +69,7 @@ function serveStatic(req, res) {
   let base = PUBLIC;
   if (urlPath.startsWith('/shared/')) { base = SHARED; urlPath = urlPath.slice('/shared'.length); }
   if (urlPath === '/') urlPath = '/index.html';
-  if (urlPath === '/wiki' || urlPath === '/wiki/') urlPath = '/wiki.html';
+  if (urlPath === '/hiddenpages' || urlPath === '/hiddenpages/') urlPath = '/hiddenpages.html';
   const file = path.normalize(path.join(base, urlPath));
   if (!file.startsWith(base + path.sep)) { res.writeHead(403); return res.end(); }
   sendFile(res, file, 'no-cache');
@@ -88,7 +88,8 @@ const server = http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url, 'http://x');
     if (pathname === '/healthz') return sendJson(res, 200, { ok: true });
     if (pathname === '/api/world') return sendWorld(req, res);
-    if (pathname === '/api/wiki') return sendWiki(res);
+    if (pathname === '/wiki' || pathname === '/wiki/') { res.writeHead(301, { Location: '/hiddenpages' }); return res.end(); }   // the old name
+    if (pathname === '/api/hiddenpages') return sendHiddenPages(res);
     if (pathname.startsWith('/api/')) {
       if (req.method === 'GET' && pathname === '/api/me') {
         const player = await auth.playerForToken(bearer(req));
@@ -112,10 +113,10 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-// Live facts for the wiki page (/wiki): the journal with rarities and where to look,
-// and how many carving-stone requests exist. Numbers the wiki shows come from
+// Live facts for the Hidden Pages (/hiddenpages, the game's wiki): the journal with rarities and where to look,
+// and how many carving-stone requests exist. Numbers the page shows come from
 // /shared/world-gen.js directly, so the page never goes out of date.
-async function sendWiki(res) {
+async function sendHiddenPages(res) {
   try {
     const island = await getIsland(DEFAULT_ISLAND);
     const c = island.content;
