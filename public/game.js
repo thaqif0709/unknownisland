@@ -1078,11 +1078,16 @@
     const innerM = softShared(new THREE.Color(cloak).multiplyScalar(.7).getHex());
 
     // bare green legs and webbed feet under the robe
+    // legs: a thigh from the hip and a shin hanging from the knee, so knees can bend
     function leg(x) {
       const p = new THREE.Group(); p.position.set(x, .6, 0); body.add(p);
-      add(cyl(.06, .055, .56, frogM), 0, -.3, 0, p);
-      add(ball(.09, frogM, 12, 8), 0, -.57, .05, p).scale.set(1, .35, 1.5);
-      for (const dx of [-.05, 0, .05]) add(ball(.035, webM, 8, 6), dx, -.585, .17, p).scale.set(1, .5, 1.3);
+      add(cyl(.062, .058, .3, frogM), 0, -.14, 0, p);
+      const knee = new THREE.Group(); knee.position.y = -.28; p.add(knee);
+      add(ball(.06, frogM, 10, 8), 0, 0, 0, knee);
+      add(cyl(.058, .055, .3, frogM), 0, -.14, 0, knee);
+      add(ball(.09, frogM, 12, 8), 0, -.29, .05, knee).scale.set(1, .35, 1.5);
+      for (const dx of [-.05, 0, .05]) add(ball(.035, webM, 8, 6), dx, -.305, .17, knee).scale.set(1, .5, 1.3);
+      p.userData.knee = knee;
       return p;
     }
     const legL = leg(-.11), legR = leg(.11);
@@ -1173,20 +1178,24 @@
     av.body.position.y = moving ? Math.abs(Math.cos(av.walk)) * .08 : Math.sin(elapsed * 2.2) * .015;
     const sq = moving ? 1 + Math.abs(Math.sin(av.walk)) * .04 : 1 + Math.sin(elapsed * 2.2) * .01;
     av.body.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
-    // sitting: down on the ground, legs straight out in front, leaning back
-    // on both hands planted behind, head tipped up a little, relaxed.
+    // sitting: down on the ground, back slouched forward, knees bent up in front
+    // with the feet flat, arms resting toward the knees, head hanging a little.
     // av.sit eases 0..1 so sitting down and getting up are smooth.
     av.sit += ((av.sitting && !moving ? 1 : 0) - av.sit) * Math.min(1, dt * 7);
-    const k = av.sit, lean = -.32 * k;   // negative: the back tips backward
-    av.legL.rotation.z = av.legR.rotation.z = 0; av.head.rotation.x = 0; av.body.rotation.x = 0;
+    const k = av.sit, slouch = .38 * k;
+    const kL = av.legL.userData.knee, kR = av.legR.userData.knee;
+    av.legL.rotation.z = av.legR.rotation.z = 0; av.head.rotation.x = 0; av.body.rotation.x = 0; kL.rotation.x = kR.rotation.x = 0;
+    av.legL.position.z = av.legR.position.z = .17 * k;   // hips forward a touch so the knees clear the robe
     if (k > .01) {
       av.body.position.y = -.5 * k;
-      av.body.rotation.x = lean;
-      av.legL.rotation.x = av.legR.rotation.x = -1.5 * k - lean;   // flat out along the ground
-      av.legL.rotation.z = -.1 * k; av.legR.rotation.z = .1 * k;
-      if (!(av.swingT > 0)) { av.armL.rotation.x = .82 * k; if (!av.held) av.armR.rotation.x = .82 * k; }   // reaching back to the ground
-      av.armL.rotation.z = -.18 - .25 * k; av.armR.rotation.z = .18 + .25 * k;   // hands a little wide
-      av.head.rotation.x = -.12 * k;
+      av.body.rotation.x = slouch;   // lean forward from the hips
+      av.legL.rotation.x = av.legR.rotation.x = -2.15 * k - slouch;   // thighs forward and up
+      kL.rotation.x = kR.rotation.x = 2.05 * k;                       // shins folded back down: knees up
+      av.legL.rotation.z = -.22 * k; av.legR.rotation.z = .22 * k;
+      av.legL.rotation.z = -.12 * k; av.legR.rotation.z = .12 * k;
+      if (!(av.swingT > 0)) { av.armL.rotation.x = -1.05 * k; if (!av.held) av.armR.rotation.x = -1.05 * k; }
+      av.armL.rotation.z = -.18 + .06 * k; av.armR.rotation.z = .18 - .06 * k;
+      av.head.rotation.x = .25 * k;
     }
   }
 
