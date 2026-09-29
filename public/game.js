@@ -295,7 +295,7 @@
       const turns = 2.6 + r() * 1.2, dirn = r() < .5 ? 1 : -1;
       g.beginPath();
       for (let a = 0; a < Math.PI * turns; a += .1) { const rr = rad * .55 * (1 - a / (Math.PI * (turns + .4))); g.lineTo(x + Math.cos(dirn * a + 2) * rr, y + Math.sin(dirn * a + 2) * rr); }
-      g.lineWidth = 4; g.lineCap = 'round'; g.strokeStyle = 'rgba(43,33,31,.75)'; g.stroke();
+      g.lineWidth = 2.5; g.lineCap = 'round'; g.strokeStyle = 'rgba(110,130,158,.45)'; g.stroke();   // a faint blue-grey swirl
     });
     const t = new THREE.CanvasTexture(c);
     t.userData = { kind };
