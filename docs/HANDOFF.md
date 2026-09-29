@@ -105,6 +105,22 @@ automatically from `main`. Env vars are set in Render.
   `three@0.128.0`) rather than cdnjs.
 - Starting a second fire within 1.4 units of another is refused.
 
+## The big island (island 2)
+
+The island was enlarged from radius 36 to about 170 (roughly 300 units across).
+It is a new island row (id 2, seed 11, created by `store.migrate()`); island 1's
+data is kept but unused. `heightAt` in world-gen has a coastline with coves and
+headlands, rolling land, seven hills (the big hill in the north) and four spring
+basins (`SPRINGS`; the main one is south of the big hill). `biomeAt` gives sea,
+beach, meadow, forest, highland, peak or spring, and placement/species/decor use it.
+About 2,000 objects; `generateObjects` uses a spatial hash and is cached.
+
+The client streams the world in 32x32 chunks around you: terrain within 4
+chunks, props within 3, flowers within 2. Each object's meshes are merged per
+material (`bake`) to keep draw calls down. The layout comes once from
+`/api/world` (gzipped, ~28 KB); the welcome message only carries non-default
+object states. The sea, clouds and fireflies follow the camera.
+
 ## Content model (added after v1)
 
 - **Object list:** the original 84 objects (ids 0-83) are unchanged. Ore rocks

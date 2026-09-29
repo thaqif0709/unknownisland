@@ -94,45 +94,92 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
 
-  const ISL = 36;
-  const SPRING = { x: -7, z: 3 };
-  const HILL = { x: 9, z: -7 };
+  // ================= The island =================
+  // A big island: a mountain in the north, several hills, forests and meadows in
+  // the lowlands, highlands with pines, and a few springs in sheltered basins.
+  // East is +x, north is -z.
+  const ISL = 170;
+  const HILLS = [
+    { x: 30, z: -62, h: 24, r: 34 },    // the big hill
+    { x: -72, z: -24, h: 11, r: 24 },
+    { x: 84, z: 26, h: 9, r: 22 },
+    { x: -34, z: 74, h: 7, r: 20 },
+    { x: 8, z: -122, h: 12, r: 22 },
+    { x: -112, z: 52, h: 8, r: 18 },
+    { x: 118, z: -58, h: 10, r: 20 },
+  ];
+  // The main spring is south of the big hill ("past the rocks, south of the big hill").
+  const SPRINGS = [{ x: 24, z: -14 }, { x: -60, z: 22 }, { x: 70, z: -100 }, { x: -20, z: 120 }];
+  const SPRING = SPRINGS[0];
+  const nearestSpring = (x, z) => SPRINGS.reduce((b, s) => Math.hypot(x - s.x, z - s.z) < Math.hypot(x - b.x, z - b.z) ? s : b);
+
   function heightAt(x, z) {
-    const d = Math.hypot(x, z) + (fbm(x * .045 + 10, z * .045) - .47) * 16;
+    // coves and headlands: big slow wobble plus a medium one, and a few carved bays
+    const ang = Math.atan2(z, x);
+    const warp = (fbm(x * .008 + 10, z * .008) - .47) * 110 + (fbm(x * .028 + 3, z * .028) - .47) * 30
+      + Math.max(0, Math.sin(ang * 3 + 1.2)) ** 6 * 38 + Math.max(0, Math.sin(ang * 5 - .4)) ** 10 * 26;
+    const d = Math.hypot(x, z) + warp;
     const island = 1 - d / ISL;
-    let h = island > 0 ? island * 3.2 + fbm(x * .09, z * .09) * 2.2 * island + .35 : .35 + island * 7;
-    const hd = (x - HILL.x) ** 2 + (z - HILL.z) ** 2;
-    h += 5.5 * Math.exp(-hd / 70) * clamp(island * 3, 0, 1);
-    const sd = Math.hypot(x - SPRING.x, z - SPRING.z);
-    const k = smooth(6.5, 3.5, sd); h = h * (1 - k) + 1.9 * k;
-    const k2 = smooth(2.6, 1.2, sd); h = h * (1 - k2) + 1.35 * k2;
-    return Math.max(h, -5);
+    let h;
+    if (island > 0) {
+      const inland = smooth(0, .2, island);                         // steep beaches, then rolling land
+      h = .35 + island * 5 * inland + island * 2 + (fbm(x * .03, z * .03) - .35) * 5 * inland + (fbm(x * .1, z * .1) - .5) * 1.2 * inland;
+      for (const hl of HILLS) h += hl.h * Math.exp(-((x - hl.x) ** 2 + (z - hl.z) ** 2) / (hl.r * hl.r)) * inland;
+    } else h = .35 + island * 16;
+    for (const s of SPRINGS) {                                        // sheltered basins with a pool
+      const sd = Math.hypot(x - s.x, z - s.z);
+      const k = smooth(9, 4.5, sd); h = h * (1 - k) + 2.2 * k;
+      const k2 = smooth(2.6, 1.2, sd); h = h * (1 - k2) + 1.65 * k2;
+    }
+    return Math.max(h, -6);
+  }
+
+  // Biomes: what grows where.
+  const forestMask = (x, z) => fbm(x * .022 + 3, z * .022 - 7);
+  function biomeAt(x, z, h = heightAt(x, z)) {
+    if (h < .05) return 'sea';
+    if (h < .95) return 'beach';
+    if (Math.hypot(x - nearestSpring(x, z).x, z - nearestSpring(x, z).z) < 9) return 'spring';
+    if (h > 17) return 'peak';
+    if (h > 10) return 'highland';
+    return forestMask(x, z) > .5 ? 'forest' : 'meadow';
   }
 
   function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
   // Spawn on the south beach.
   function findSpawn() {
-    for (let r = ISL + 6; r > 0; r -= .3) { const x = 3, z = r; if (heightAt(x, z) > .55) return { x, z: z - 1 }; }
+    for (let r = ISL + 60; r > 0; r -= .3) { const x = 3, z = r; if (heightAt(x, z) > .55) return { x, z: z - 1 }; }
     return { x: 0, z: 0 };
   }
   const SPAWN = findSpawn();
 
   // Deterministic prop placement. The index in the returned array is the
   // object's id (world_objects.obj_id), so this order must never change for
-  // an existing island. Visual details (leaf angles, etc.) are not drawn from
-  // this RNG; the client derives them from the object's id instead.
+  // an existing island. Visual details are not drawn from this RNG; the client
+  // derives them from the object's id instead.
+  const genCache = new Map();
   function generateObjects(seed) {
-    let rng = mulberry32(seed);
+    if (genCache.has(seed)) return genCache.get(seed).map(o => ({ ...o }));
+    const rng = mulberry32(seed);
     const objects = [];
-    const blocked = (x, z, pad) => Math.hypot(x - SPRING.x, z - SPRING.z) < 4.2 + pad || Math.hypot(x - SPAWN.x, z - SPAWN.z) < 3 + pad
-      || objects.some(o => Math.hypot(o.x - x, o.z - z) < o.r + pad + .6);
-    function place(type, count, test, extra) {
+    const CELL = 8, grid = new Map();                                 // spatial hash for spacing checks
+    const cellKey = (x, z) => Math.floor(x / CELL) + ',' + Math.floor(z / CELL);
+    function blocked(x, z, pad) {
+      if (SPRINGS.some(s => Math.hypot(x - s.x, z - s.z) < 4.2 + pad) || Math.hypot(x - SPAWN.x, z - SPAWN.z) < 4 + pad) return true;
+      const cx = Math.floor(x / CELL), cz = Math.floor(z / CELL);
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+        const list = grid.get((cx + i) + ',' + (cz + j));
+        if (list && list.some(o => Math.hypot(o.x - x, o.z - z) < o.r + pad + .6)) return true;
+      }
+      return false;
+    }
+    function place(type, count, test, extra, pad = .8) {
       let tries = 0;
-      while (count > 0 && tries++ < 4000) {
-        const x = (rng() - .5) * ISL * 2.2, z = (rng() - .5) * ISL * 2.2, h = heightAt(x, z);
-        if (!test(h) || blocked(x, z, .8)) continue;
-        const o = { id: objects.length, type, x: +x.toFixed(3), z: +z.toFixed(3), r: .5 };
+      while (count > 0 && tries++ < count * 400) {
+        const x = (rng() - .5) * ISL * 2.3, z = (rng() - .5) * ISL * 2.3, h = heightAt(x, z);
+        if (!test(h, biomeAt(x, z, h), x, z) || blocked(x, z, pad)) continue;
+        const o = { id: objects.length, type, x: +x.toFixed(2), z: +z.toFixed(2), r: .5 };
         if (type === 'palm') o.r = .35;
         else if (type === 'bush') o.r = .6;
         else if (type === 'rock') { o.s = +(.8 + rng() * .9).toFixed(3); o.r = +(.55 * o.s).toFixed(3); }
@@ -140,34 +187,34 @@
         else if (type === 'dig') o.r = .45;
         Object.assign(o, extra);
         objects.push(o); count--;
+        const k = cellKey(o.x, o.z); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(o);
       }
     }
-    place('palm', 26, h => h > .45 && h < 1.7);
-    place('tree', 22, h => h > 1.8 && h < 6.2);
-    place('bush', 16, h => h > 1.1 && h < 5.5);
-    place('rock', 20, h => h > .4 && h < 7.5);
-    // Added later: ore rocks and dig patches. They use their own RNG stream and
-    // come after the original 84 objects, so none of those moved or changed id.
-    rng = mulberry32((seed ^ 0x51ED270B) >>> 0);
-    place('ore', 8, h => h > 3.6 && h < 6.4, { ore: 'copper' });
-    place('ore', 5, h => h > 5.4, { ore: 'iron' });
-    place('dig', 18, h => h > .6 && h < 4.5);
-    // Full-grown sizes and species come from a hash of the id, not from `rng`,
-    // so adding them didn't move any object either.
+    place('palm', 330, (h, b) => b === 'beach' ? h > .45 : b === 'meadow' && h < 2.6);
+    place('tree', 560, (h, b) => b === 'forest', null, .5);
+    place('tree', 90, (h, b) => b === 'meadow');
+    place('tree', 200, (h, b) => b === 'highland');
+    place('bush', 280, (h, b) => b === 'meadow' || b === 'forest' || b === 'spring');
+    place('rock', 320, (h, b) => b !== 'sea' && h > .4);
+    place('ore', 70, (h, b) => b === 'highland' && h < 15, { ore: 'copper' });
+    place('ore', 40, (h, b) => (b === 'highland' || b === 'peak') && h > 13, { ore: 'iron' });
+    place('dig', 170, (h, b) => b === 'meadow' || b === 'beach' || b === 'spring');
+    // Full-grown sizes and species come from a hash of the id, not from `rng`.
     for (const o of objects) {
       if (RULES.FLORA[o.type]) o.maxScale = maxScaleFor(seed, o);
       o.species = speciesOf(seed, o);
     }
-    return objects;
+    genCache.set(seed, objects);
+    return objects.map(o => ({ ...o }));
   }
 
   function hashOf(seed, id, salt) { return mulberry32((seed * 73856093) ^ (id * 19349663) ^ salt)(); }
 
   // Species depend on where things grow.
   function speciesOf(seed, o) {
-    const h = heightAt(o.x, o.z), r = hashOf(seed, o.id, 0x2c1b3c6d);
-    if (o.type === 'tree') return h > 3.1 ? 'pine' : r < .2 ? 'blossom' : 'oak';
-    if (o.type === 'rock') return h < 1 ? 'pebble' : Math.hypot(o.x - SPRING.x, o.z - SPRING.z) < 12 || r < .25 ? 'mossy' : 'granite';
+    const h = heightAt(o.x, o.z), b = biomeAt(o.x, o.z, h), r = hashOf(seed, o.id, 0x2c1b3c6d);
+    if (o.type === 'tree') return b === 'highland' || b === 'peak' ? 'pine' : r < (b === 'meadow' ? .45 : .15) ? 'blossom' : 'oak';
+    if (o.type === 'rock') return b === 'beach' ? 'pebble' : b === 'forest' || b === 'spring' || r < .15 ? 'mossy' : 'granite';
     if (o.type === 'bush') return r < .3 ? 'blueberry' : 'berry';
     if (o.type === 'ore') return o.ore;
     return o.type;
@@ -227,7 +274,7 @@
   const recipeById = id => RECIPES.find(r => r.id === id);
 
   const WorldGen = {
-    RULES, ITEMS, RECIPES, FIRES, ISL, SPRING, HILL, SPAWN, recipeById,
+    RULES, ITEMS, RECIPES, FIRES, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
     generateObjects, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, speedMult,
   };

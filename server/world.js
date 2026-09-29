@@ -37,6 +37,14 @@ class Island {
     this.saving = Promise.resolve();
   }
 
+  // The island layout for /api/world (no states), built once.
+  layoutJson() {
+    if (!this._layout) this._layout = JSON.stringify(this.objects.map(o => {
+      const { state, ...rest } = o; return rest;
+    }));
+    return this._layout;
+  }
+
   static async load(store, id) {
     const data = await store.loadIsland(id);
     if (!data) throw new Error(`Island ${id} not found in the database`);
@@ -123,8 +131,8 @@ class Island {
       t: 'welcome',
       you: this.selfView(p),
       island: { id: this.id, name: this.name, day: this.day, time: this.time },
-      objects: this.objects.map(o => ({ id: o.id, type: o.type, x: o.x, z: o.z, r: o.r, s: o.s, maxScale: o.maxScale,
-        species: o.species, ore: o.ore, state: o.state })),
+      // the layout comes from /api/world; here only what differs from default
+      states: this.objects.filter(o => !WG.isDefaultState(o.type, o.state)).map(o => [o.id, o.state]),
       fires: this.fires.map(f => this.fireView(f)),
       players: [...this.players.values()].filter(q => q !== p).map(q => this.publicView(q)),
       rules: RULES,
@@ -259,7 +267,8 @@ class Island {
     const has = tool => p.tools.includes(tool);
 
     if (target === 'spring') {
-      if (Math.hypot(p.x - SPRING.x, p.z - SPRING.z) > RULES.SPRING_REACH + REACH_SLACK) return;
+      const sn = WG.nearestSpring(p.x, p.z);
+      if (Math.hypot(p.x - sn.x, p.z - sn.z) > RULES.SPRING_REACH + REACH_SLACK) return;
       p.thirst = Math.min(100, p.thirst + RULES.SPRING_WATER);
       return say('Cold, clean water.');
     }

@@ -3,6 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const { WebSocketServer } = require('ws');
 const { createStore } = require('./store');
 const { createAuth } = require('./auth');
@@ -12,7 +13,7 @@ const PORT = +process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, '..', 'public');
 const SHARED = path.join(__dirname, 'shared');
 const THREE_JS = require.resolve('three/build/three.min.js');
-const DEFAULT_ISLAND = 1;
+const DEFAULT_ISLAND = 2;   // the big island
 
 const store = createStore();
 let inviteCode = process.env.INVITE_CODE;
@@ -85,6 +86,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const { pathname } = new URL(req.url, 'http://x');
     if (pathname === '/healthz') return sendJson(res, 200, { ok: true });
+    if (pathname === '/api/world') return sendWorld(req, res);
     if (pathname.startsWith('/api/')) {
       if (req.method === 'GET' && pathname === '/api/me') {
         const player = await auth.playerForToken(bearer(req));
@@ -107,6 +109,19 @@ const server = http.createServer(async (req, res) => {
     if (!res.headersSent) sendJson(res, 500, { error: 'Something went wrong on the server.' });
   }
 });
+
+// The island layout (every tree and rock), sent once per visit and compressed.
+let worldCache = null;
+async function sendWorld(req, res) {
+  if (!worldCache) {
+    const island = await getIsland(DEFAULT_ISLAND);
+    const body = Buffer.from(island.layoutJson());
+    worldCache = { body, gz: zlib.gzipSync(body) };
+  }
+  const gz = /\bgzip\b/.test(req.headers['accept-encoding'] || '');
+  res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', ...(gz ? { 'Content-Encoding': 'gzip' } : {}) });
+  res.end(gz ? worldCache.gz : worldCache.body);
+}
 
 // ================= WebSocket =================
 // The browser connects to /ws, then its first message is {t:'hello', token}.

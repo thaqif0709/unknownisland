@@ -19,6 +19,9 @@ function createPgStore(url) {
     async migrate() {
       await q(`ALTER TABLE island_members ADD COLUMN IF NOT EXISTS inventory JSONB NOT NULL DEFAULT '{}'`);
       await q(`ALTER TABLE fires ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'campfire'`);
+      // Island 2: the big island (island 1 was the small original; its data is kept).
+      await q(`INSERT INTO islands (id, name, seed) VALUES (2, 'Unknown Island', 11) ON CONFLICT (id) DO NOTHING`);
+      await q(`SELECT setval(pg_get_serial_sequence('islands', 'id'), GREATEST((SELECT MAX(id) FROM islands), 1))`);
     },
     async findPlayerByName(name) {
       const r = await q('SELECT id, username, pass_hash FROM players WHERE lower(username) = lower($1)', [name]);
@@ -99,7 +102,10 @@ function createPgStore(url) {
 function createMemoryStore() {
   let nextPlayer = 1, nextFire = 1;
   const players = new Map(), sessions = new Map(), members = new Map();
-  const islands = new Map([[1, { id: 1, name: 'Unknown Island', seed: 7, day: 1, time: 0.26, lastTickAt: Date.now(), objects: new Map(), fires: [] }]]);
+  const islands = new Map([
+    [1, { id: 1, name: 'Unknown Island', seed: 7, day: 1, time: 0.26, lastTickAt: Date.now(), objects: new Map(), fires: [] }],
+    [2, { id: 2, name: 'Unknown Island', seed: 11, day: 1, time: 0.26, lastTickAt: Date.now(), objects: new Map(), fires: [] }],
+  ]);
   const clone = v => JSON.parse(JSON.stringify(v));
 
   return {
