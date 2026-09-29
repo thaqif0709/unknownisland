@@ -58,7 +58,8 @@ Environment*). Existing players aren't affected.
 
 - **Computer:** WASD or arrow keys to walk, hold **Shift** to sprint, drag the mouse
   to look around, scroll to zoom, **E** to use whatever you're next to, **B** for the
-  recipe book, **J** for the journal, **F** to quickly build a campfire, **Esc** for settings.
+  recipe book, **J** for the journal, **M** for the map, **F** to quickly build a
+  campfire, **Esc** for settings.
 - **Chat:** press **Enter** (or **/**) to type, Enter to send, Esc to close. Plain
   text goes to everyone. `/w name message` whispers to one person (their number
   from `/who` works too), `/r message` replies to your last whisper, `/who` lists

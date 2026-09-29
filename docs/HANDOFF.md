@@ -223,6 +223,14 @@ planned separately by Thaqif):
   Gifts left at a stone survive the tide. The carved text re-inks itself on the
   stone when it changes; reading a stone at night plays breathing; Drowning
   nights bring small tremors.
+- **Map (done).** A top-down chart (M, or the phone Map button), a panel like the
+  journal/book. The base terrain is inked once into an offscreen canvas from
+  `WG.heightAt`/`biomeAt` (flat colour per biome, no gameplay data) and cached;
+  markers for the springs, lanterns (lit/unlit, bigger for great lanterns),
+  carving stones, the driftwood board, fires (lit/unlit) and players (each
+  their own cloak colour; you get an arrow showing facing) are redrawn on top
+  while the panel is open, refreshed every 0.3 s from `tick()` so others'
+  positions keep moving. Client-only; nothing new from the server.
 - **Intro cutscene (done).** In-engine, about 73 s, skippable (button, Esc,
   Enter, Space): the chart inks itself, a storm with the reed boat and
   lightning, something vast passes under the boat, the grey beach, PELL in the
