@@ -13,6 +13,11 @@ const REACH_SLACK = 0.9;      // tolerance for latency when checking distances
 const r2 = v => Math.round(v * 100) / 100;
 const num = v => typeof v === 'number' && Number.isFinite(v);
 const hasCost = (p, cost) => Object.entries(cost).every(([k, n]) => (p.inv[k] || 0) >= n);
+// Buckets saved in the inventory JSON: keep only well-formed ones.
+const cleanBuckets = list => (Array.isArray(list) ? list : []).filter(b => b && RULES.BUCKET[b.mat]).slice(0, 8)
+  .map(b => ({ id: b.id | 0 || Math.floor(Math.random() * 1e9), mat: b.mat, uses: Math.max(0, b.uses | 0),
+    water: ['none', 'sea', 'clean'].includes(b.water) ? b.water : 'none', drinks: Math.max(0, b.drinks | 0) }));
+const newBucketId = () => Math.floor(Math.random() * 1e9);
 const costText = cost => Object.entries(cost).map(([k, n]) => `${n} ${ITEMS[k].toLowerCase()}`).join(', ');
 
 class Island {
@@ -29,7 +34,7 @@ class Island {
       const o = this.objects[saved.id];
       if (o) o.state = Object.assign(WG.defaultState(o.type), saved.state);
     }
-    this.fires = data.fires.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: FIRES[f.kind] ? f.kind : 'campfire' }));
+    this.fires = data.fires.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: FIRES[f.kind] ? f.kind : 'campfire', pot: f.pot || null }));
     this.drops = (data.drops || []).map(d => ({ id: d.id, x: d.x, z: d.z, items: d.items }));
     // Stone lanterns: fixed places from the seed, state from the database.
     // reclaim: 0 = fully clear, 1 = the fog has it all back (never-lit lanterns start at 1)
@@ -278,7 +283,11 @@ class Island {
     const noons = Math.floor(after - 0.5) - Math.floor(before - 0.5);
     if (noons > 0 && !sunrises) { this.rollWeather(); this.updateEnv(); }
     this.time = after - Math.floor(after);
-    for (const f of this.fires) if (f.fuel > 0) f.fuel = Math.max(0, f.fuel - sec * FIRES[f.kind].burn);
+    for (const f of this.fires) if (f.fuel > 0) {
+      // a bucket on the fire boils only while the fire is actually burning (also during catch-up)
+      if (f.pot && f.pot.left > 0) f.pot.left = Math.max(0, f.pot.left - Math.min(sec, f.fuel / FIRES[f.kind].burn));
+      f.fuel = Math.max(0, f.fuel - sec * FIRES[f.kind].burn);
+    }
     for (const l of this.lanterns || []) this.burnLantern(l, sec);
     if (sunrises > 0) {
       this.day += sunrises;
@@ -481,6 +490,7 @@ class Island {
       x: m.x ?? SPAWN.x, z: m.z ?? SPAWN.z, face: m.face,
       health: m.health, hunger: m.hunger, thirst: m.thirst, inv,
       tools: (Array.isArray(saved.tools) ? saved.tools : []).filter(t => WG.recipeById(t)),
+      buckets: cleanBuckets(saved.buckets),
       dead: m.health <= 0, cause: '', moving: false, warm: false,
       energy: 100, exhausted: false, rest: 0, wantSprint: false, running: false,
       dread: m.dread || 0, fog: 0, knockedUntil: 0, camYaw: null, lastKnockAt: 0, patches, hoodDown: !!saved.hoodDown,
@@ -522,10 +532,11 @@ class Island {
 
   selfView(p) {
     return { id: p.id, name: p.name, x: p.x, z: p.z, face: p.face, health: p.health, hunger: p.hunger,
-      thirst: p.thirst, inv: p.inv, tools: p.tools, energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches, hoodDown: p.hoodDown };
+      thirst: p.thirst, inv: p.inv, tools: p.tools, buckets: p.buckets, energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches, hoodDown: p.hoodDown };
   }
   publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown, hold: p.hold || null }; }
-  fireView(f) { return { id: f.id, x: f.x, z: f.z, fuel: r2(f.fuel), kind: f.kind }; }
+  fireView(f) { return { id: f.id, x: f.x, z: f.z, fuel: r2(f.fuel), kind: f.kind, pot: this.potView(f) }; }
+  potView(f) { return f.pot ? { mat: f.pot.mat, left: r2(f.pot.left) } : null; }
 
   // ================= Loop =================
   start() {
@@ -607,7 +618,7 @@ class Island {
 
     if (this.tickN % ME_EVERY === 0) for (const p of this.players.values()) this.sendMe(p);
     if (this.tickN % FIRES_EVERY === 0 && this.fires.length) {
-      this.broadcast({ t: 'fires', list: this.fires.map(f => [f.id, r2(f.fuel)]) });
+      this.broadcast({ t: 'fires', list: this.fires.map(f => [f.id, r2(f.fuel), f.pot ? r2(f.pot.left) : null]) });
     }
     if (this.tickN % (FIRES_EVERY * 5) === 0) {
       const lit = this.lanterns.filter(l => l.lit || l.offerings.length);
@@ -617,7 +628,7 @@ class Island {
   }
 
   sendMe(p) {
-    this.send(p, { t: 'me', health: r2(p.health), hunger: r2(p.hunger), thirst: r2(p.thirst), inv: p.inv, tools: p.tools,
+    this.send(p, { t: 'me', health: r2(p.health), hunger: r2(p.hunger), thirst: r2(p.thirst), inv: p.inv, tools: p.tools, buckets: p.buckets,
       energy: r2(p.energy), exhausted: p.exhausted, warm: p.warm, dead: p.dead, dread: r2(p.dread), fog: r2(p.fog),
       down: p.knockedUntil > Date.now() });
   }
@@ -641,9 +652,10 @@ class Island {
         return this.broadcast({ t: 'jump', id: p.id, mul }, p);
       }
       case 'hold':   // which item is in your hand (just for show; everyone sees it)
-        p.hold = typeof msg.key === 'string' && ITEMS[msg.key] ? msg.key : null;
+        p.hold = typeof msg.key === 'string' && (ITEMS[msg.key] || /^bucket:(wood|iron):(none|sea|clean)$/.test(msg.key)) ? msg.key : null;
         return this.broadcast({ t: 'hold', id: p.id, key: p.hold }, p);
       case 'dropitem': return this.onDropItem(p, msg);
+      case 'bucket': return this.onBucket(p, msg);
       case 'hood':   // hood up or down; everyone sees it, and it's remembered
         p.hoodDown = !!msg.down;
         return this.broadcast({ t: 'hood', id: p.id, down: p.hoodDown });
@@ -708,6 +720,8 @@ class Island {
     if (m[1] === 'f') {
       const f = this.fires.find(f => f.id === +m[2]);
       if (!f || Math.hypot(f.x - p.x, f.z - p.z) - 0.6 > RULES.REACH + REACH_SLACK) return;
+      // a bucket on it: take it when it's ready (or when there's no wood to keep it going)
+      if (f.pot && (f.pot.left <= 0 || p.inv.wood <= 0)) return this.takePot(p, f);
       if (p.inv.wood <= 0) return say('You need wood for the fire.');
       const k = FIRES[f.kind];
       p.inv.wood--;
@@ -799,6 +813,14 @@ class Island {
     if (r.needs && !p.tools.includes(r.needs)) return say(`You need a ${WG.recipeById(r.needs).name.toLowerCase()} first.`);
     if (!hasCost(p, r.cost)) return say(`A ${r.name.toLowerCase()} needs ${costText(r.cost)}.`);
 
+    if (r.kind === 'bucket') {
+      if (p.buckets.length >= RULES.BUCKET.MAX) return say(`You can only carry ${RULES.BUCKET.MAX} buckets.`);
+      for (const [k, n] of Object.entries(r.cost)) p.inv[k] -= n;
+      p.buckets.push({ id: newBucketId(), mat: r.mat, uses: RULES.BUCKET[r.mat].uses, water: 'none', drinks: 0 });
+      this.fx(p, 'swing');
+      this.sendMe(p);
+      return say(`You made a ${r.name.toLowerCase()}. Hold it (1-8), then fill it in the sea with E.`);
+    }
     if (r.kind === 'item') {
       for (const [k, n] of Object.entries(r.cost)) p.inv[k] -= n;
       for (const [k, n] of Object.entries(r.gives)) p.inv[k] += n;
@@ -981,6 +1003,7 @@ class Island {
     if (changed.length && this.players.size) this.broadcast({ t: 'objs', list: changed.map(o => [o.id, o.state]) });
     for (const f of this.fires.filter(f => Math.hypot(f.x - l.x, f.z - l.z) < R)) {
       this.fires = this.fires.filter(x => x !== f);
+      if (f.pot) this.sackAt(f.x, f.z, { buckets: [this.potToBucket(f.pot)] });
       this.store.deleteFire(f.id).catch(e => console.error('[island] could not delete fire', e.message));
       if (this.players.size) this.broadcast({ t: 'unfire', id: f.id });
     }
@@ -1047,32 +1070,99 @@ class Island {
     } catch (e) { console.error('[island] could not save drop', e.message); }
   }
 
+  // ================= Buckets =================
+  // fill: stand in the sea with an empty bucket. place: set a seawater bucket on a
+  // fire to boil. drink: a sip from a bucket of clean water.
+  onBucket(p, { id, action, fire }) {
+    const b = (p.buckets || []).find(b => b.id === id), say = msg => this.send(p, { t: 'toast', msg }), B = RULES.BUCKET;
+    if (!b || p.dead || p.knockedUntil > Date.now()) return;
+    const name = b.mat === 'iron' ? 'iron bucket' : 'wooden bucket';
+    if (action === 'fill') {
+      if (heightAt(p.x, p.z) > 0.25 + 0.4) return say('Wade into the sea to fill it.');
+      if (b.water !== 'none') return say('The bucket is already full.');
+      b.water = 'sea'; b.drinks = 0;
+      say('Seawater. Set it on a fire to boil it clean.');
+    } else if (action === 'place') {
+      const f = this.fires.find(f => f.id === fire);
+      if (!f || Math.hypot(f.x - p.x, f.z - p.z) - 0.6 > RULES.REACH + REACH_SLACK) return;
+      if (b.water !== 'sea') return say(b.water === 'clean' ? 'This water is already clean.' : 'Fill it with seawater first.');
+      if (f.pot) return say('There\u2019s already a bucket on this fire.');
+      p.buckets = p.buckets.filter(x => x !== b);
+      f.pot = { ...b, left: B[b.mat].boil };
+      this.broadcast({ t: 'pot', id: f.id, pot: this.potView(f) });
+      say(f.fuel > 0 ? `You set the ${name} on the fire. It will be ready in about ${B[b.mat].boil} seconds.` : 'You set the bucket on the fire. The fire is out; add wood to boil it.');
+    } else if (action === 'drink') {
+      if (b.water === 'sea') return say('Seawater. Boil it on a fire first.');
+      if (b.water !== 'clean' || b.drinks <= 0) return say('The bucket is empty.');
+      b.drinks--;
+      p.thirst = Math.min(100, p.thirst + B.DRINK);
+      if (b.drinks <= 0) {
+        b.water = 'none';
+        if (b.uses <= 0) { p.buckets = p.buckets.filter(x => x !== b); say(`Cool, clean water. Your ${name} cracks and falls apart.`); }
+        else say('Cool, clean water. The bucket is empty.');
+      } else say(`Cool, clean water. (${b.drinks} left)`);
+    } else return;
+    this.fx(p, 'swing');
+    this.sendMe(p);
+  }
+  potToBucket(pot) {
+    const done = pot.left <= 0;
+    return { id: pot.id || newBucketId(), mat: pot.mat, uses: done ? Math.max(0, pot.uses - 1) : pot.uses,
+      water: done ? 'clean' : 'sea', drinks: done ? RULES.BUCKET.DRINKS : 0 };
+  }
+  takePot(p, f) {
+    const say = msg => this.send(p, { t: 'toast', msg });
+    const done = f.pot.left <= 0, b = this.potToBucket(f.pot);
+    p.buckets.push(b); f.pot = null;
+    this.broadcast({ t: 'pot', id: f.id, pot: null });
+    say(done ? `You lift the bucket off the fire. Clean water: ${RULES.BUCKET.DRINKS} good drinks.${b.uses <= 0 ? ' The bucket is worn out; it will break once it\u2019s empty.' : ''}`
+      : 'You take the bucket back. It hasn\u2019t boiled yet.');
+    this.fx(p, 'swing');
+    this.sendMe(p);
+  }
+  // A sack on the ground (used when a fire with a bucket on it is swallowed by fog).
+  async sackAt(x, z, items) {
+    try { const id = await this.store.insertDrop(this.id, r2(x), r2(z), items); this.drops.push({ id, x: r2(x), z: r2(z), items }); if (this.players.size) this.broadcast({ t: 'drop', drop: { id, x: r2(x), z: r2(z), items } }); }
+    catch (e) { console.error('[island] could not save sack', e.message); }
+  }
+
   // Drop some of what you carry at your feet, in a sack anyone can pick up
   // (that's how you give things to a friend). Drops next to a sack go into it.
-  async onDropItem(p, { key, count }) {
+  async onDropItem(p, { key, count, bucket }) {
     const now = Date.now();
-    if (p.dead || p.knockedUntil > now || typeof key !== 'string' || !(key in ITEMS)) return;
+    if (p.dead || p.knockedUntil > now) return;
     if (now - (p.lastDropAt || 0) < 150) return;
+    let items, n = 0;
+    if (bucket != null) {   // a whole bucket, water and all
+      const b = (p.buckets || []).find(b => b.id === bucket);
+      if (!b) return;
+      p.buckets = p.buckets.filter(x => x !== b);
+      items = { buckets: [b] };
+    } else {
+      if (typeof key !== 'string' || !(key in ITEMS)) return;
+      n = Math.min(Math.max(1, count | 0), p.inv[key] || 0);
+      if (n <= 0) return;
+      p.inv[key] -= n;
+      items = { [key]: n };
+    }
     p.lastDropAt = now;
-    const n = Math.min(Math.max(1, count | 0), p.inv[key] || 0);
-    if (n <= 0) return;
-    p.inv[key] -= n;
     this.sendMe(p);
     const x = r2(p.x + Math.sin(p.face) * .9), z = r2(p.z + Math.cos(p.face) * .9);
     const near = this.drops.find(d => Math.hypot(d.x - x, d.z - z) < 1.5);
     if (near) {
-      near.items[key] = (near.items[key] || 0) + n;
+      if (items.buckets) near.items.buckets = [...(near.items.buckets || []), ...items.buckets];
+      else near.items[key] = (near.items[key] || 0) + n;
       this.broadcast({ t: 'dropitems', id: near.id, items: near.items });
       this.store.updateDrop(near.id, near.items).catch(e => console.error('[island] could not update drop', e.message));
       return;
     }
-    const items = { [key]: n };
     try {
       const id = await this.store.insertDrop(this.id, x, z, items);
       this.drops.push({ id, x, z, items });
       this.broadcast({ t: 'drop', drop: { id, x, z, items } });
     } catch (e) {
-      p.inv[key] += n; this.sendMe(p);   // give it back if it couldn't be saved
+      if (items.buckets) p.buckets.push(...items.buckets); else p.inv[key] += n;   // give it back if it couldn't be saved
+      this.sendMe(p);
       console.error('[island] could not save drop', e.message);
     }
   }
@@ -1083,6 +1173,8 @@ class Island {
     this.drops = this.drops.filter(x => x !== d);
     const got = [];
     for (const [k, n] of Object.entries(d.items)) if (k in p.inv && n > 0) { p.inv[k] += n; got.push(`${n} ${ITEMS[k].toLowerCase()}`); }
+    const bs = cleanBuckets(d.items.buckets);
+    if (bs.length) { p.buckets.push(...bs); got.push(bs.length > 1 ? `${bs.length} buckets` : 'a bucket'); }
     this.broadcast({ t: 'undrop', id });
     this.send(p, { t: 'toast', msg: got.length ? `You pick up the sack: ${got.join(', ')}.` : 'An empty sack.' });
     this.sendMe(p);
@@ -1105,7 +1197,7 @@ class Island {
       const { wood, stone, ...rest } = p.inv;
       return {
         playerId: p.id, x: r2(p.x), z: r2(p.z), face: r2(p.face), health: r2(p.health), hunger: r2(p.hunger),
-        thirst: r2(p.thirst), wood, stone, inventory: { ...rest, tools: [...p.tools], hoodDown: !!p.hoodDown }, dread: r2(p.dread),
+        thirst: r2(p.thirst), wood, stone, inventory: { ...rest, tools: [...p.tools], hoodDown: !!p.hoodDown, buckets: p.buckets || [] }, dread: r2(p.dread),
       };
     });
     const objects = [...this.dirty].map(id => {
@@ -1117,7 +1209,7 @@ class Island {
     this.lanternsDirty = new Set();
     const snap = {
       id: this.id, day: this.day, time: this.time, lastTickAt: this.lastTickAt, moonDay: WG.moonPhase(this.day), weather: this.weather,
-      objects, fires: this.fires.map(f => ({ id: f.id, fuel: r2(f.fuel) })), members,
+      objects, fires: this.fires.map(f => ({ id: f.id, fuel: r2(f.fuel), pot: f.pot ? { ...f.pot } : null })), members,
       lanterns,
     };
     this.saving = this.saving.then(() => this.store.saveIsland(snap)).catch(e => {

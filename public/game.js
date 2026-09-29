@@ -972,8 +972,23 @@
     hoodTip.computeVertexNormals();
     return hoodTip;
   }
+  // A bucket: tapered tub with two hoops and a handle, water on top if full.
+  const bucketMats = { wood: soft(0xA57A55), iron: soft(0x8E96A0) }, hoopM = soft(0x4A3A34),
+    seaWaterM = new THREE.MeshBasicMaterial({ color: 0x5E8FA8 }), cleanWaterM = new THREE.MeshBasicMaterial({ color: 0x9FD3E6 });
+  function bucketModel(mat, water, k = 1) {
+    const g = new THREE.Group(), add = (geo, m, y) => { const mesh = new THREE.Mesh(geo, m); mesh.position.y = y * k; mesh.scale.setScalar(k); g.add(mesh); return mesh; };
+    add(new THREE.CylinderGeometry(.17, .13, .26, 14, 1, true), bucketMats[mat] || bucketMats.wood, .13).material.side = THREE.DoubleSide;
+    add(new THREE.CircleGeometry(.13, 14), bucketMats[mat] || bucketMats.wood, .005).rotation.x = -Math.PI / 2;
+    for (const y of [.06, .2]) add(new THREE.TorusGeometry(.14 + y * .12, .012, 5, 18), hoopM, y).rotation.x = Math.PI / 2;
+    const h = add(new THREE.TorusGeometry(.16, .01, 5, 16, Math.PI), hoopM, .26);
+    if (water && water !== 'none') add(new THREE.CircleGeometry(.162, 14), water === 'sea' ? seaWaterM : cleanWaterM, .22).rotation.x = -Math.PI / 2;
+    shadows(g);
+    return g;
+  }
+
   // The item in your right hand: a small model of whatever is selected.
   function heldModel(key) {
+    if (key.startsWith('bucket:')) { const [, mat, water] = key.split(':'), b = bucketModel(mat, water, .8); b.position.y = -.22; const g0 = new THREE.Group(); g0.add(b); return g0; }
     const g = new THREE.Group(), add = (geo, m, x, y, z) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); g.add(mesh); return mesh; };
     switch (key) {
       case 'wood': add(new THREE.CylinderGeometry(.06, .06, .34, 8), logM, 0, 0, 0).rotation.z = Math.PI / 2; break;
@@ -1185,9 +1200,41 @@
     g.position.set(src.x, groundAt(src.x, src.z), src.z);
     scene.add(g);
     const f = { id: src.id, type: 'fire', kind, x: src.x, z: src.z, r: kind === 'hearth' ? .8 : .6, mesh: g, flameGroup: fg, flames, fuel: src.fuel, state: {} };
+    setPot(f, src.pot);
     fires.set(f.id, f);
     return f;
   }
+  // A bucket boiling on a fire: sits on two sticks above the flames, with a
+  // countdown tag over it (and steam once it's ready).
+  function setPot(f, pot) {
+    if (f.potMesh) { f.mesh.remove(f.potMesh); f.potMesh = null; }
+    if (f.potTag) { f.potTag.remove(); f.potTag = null; }
+    f.pot = pot ? { mat: pot.mat, left: pot.left } : null;
+    if (!pot) return;
+    const g = new THREE.Group(), b = bucketModel(pot.mat, pot.left > 0 ? 'sea' : 'clean', 1.3); b.position.y = .62; g.add(b);
+    for (const sx of [-1, 1]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, 1.2, 6), logM); st.position.set(sx * .28, .5, 0); st.rotation.z = sx * .35; g.add(st); }
+    f.mesh.add(g); f.potMesh = g;
+    f.potTag = document.createElement('div'); f.potTag.className = 'pottag'; ui.tags.appendChild(f.potTag);
+  }
+  function updatePots(dt) {
+    fires.forEach(f => {
+      if (!f.pot) return;
+      if (f.pot.left > 0 && f.fuel > 0) {
+        f.pot.left = Math.max(0, f.pot.left - dt);
+        if (f.pot.left === 0) { const p2 = f.pot; setPot(f, p2); }   // swap to clean water
+      }
+      tagV.set(f.x, groundAt(f.x, f.z) + 1.35, f.z).project(camera);
+      const d = Math.hypot(f.x - camera.position.x, f.z - camera.position.z);
+      if (tagV.z > 1 || d > 35 || !inGame()) { f.potTag.style.display = 'none'; return; }
+      f.potTag.style.display = '';
+      const l = Math.ceil(f.pot.left);
+      f.potTag.textContent = f.pot.left <= 0 ? 'Clean water ready' : f.fuel > 0 ? `Boiling ${Math.floor(l / 60)}:${String(l % 60).padStart(2, '0')}` : 'Fire\u2019s out: add wood';
+      f.potTag.className = 'pottag' + (f.pot.left <= 0 ? ' ready' : f.fuel > 0 ? '' : ' cold');
+      f.potTag.style.transform = `translate(${(tagV.x * .5 + .5) * innerWidth}px,${(-tagV.y * .5 + .5) * innerHeight}px) translate(-50%,-100%)`;
+      if (f.pot.left <= 0 && Math.random() < dt * 3 && d < 40) emitPuff({ ...f, kind: 'campfire', steam: true });
+    });
+  }
+
   // ================= Stone lanterns =================
   // Old stone lanterns: a stepped base, a pillar, a lamp box and a wide roof.
   // Lit, the lamp box glows and a light from the pool is lent to it.
@@ -1465,7 +1512,7 @@
   }
   function removeDrop(id) { const d = drops.get(id); if (d) { scene.remove(d.mesh); drops.delete(id); } }
   function clearDrops() { drops.forEach(d => scene.remove(d.mesh)); drops = new Map(); }
-  function clearFires() { fires.forEach(f => scene.remove(f.mesh)); fires = new Map(); }
+  function clearFires() { fires.forEach(f => { setPot(f, null); scene.remove(f.mesh); }); fires = new Map(); }
 
   // ================= State =================
   let state = 'title';              // title | connecting | play | dead
@@ -1679,7 +1726,7 @@
         }
         break;
       case 'me':
-        Object.assign(stats, { health: m.health, hunger: m.hunger, thirst: m.thirst, inv: m.inv, tools: m.tools, warm: m.warm,
+        Object.assign(stats, { health: m.health, hunger: m.hunger, thirst: m.thirst, inv: m.inv, tools: m.tools, buckets: m.buckets || [], warm: m.warm,
           dread: m.dread, fog: m.fog, down: m.down });
         // Energy runs locally for a snappy feel; follow the server if we drift.
         if (Math.abs(nrg.energy - m.energy) > 12 || nrg.exhausted !== m.exhausted) { nrg.energy = m.energy; nrg.exhausted = m.exhausted; }
@@ -1696,7 +1743,9 @@
         for (const [id, s] of m.list) { const o = objects[id]; if (o) { o.state = s; applyState(o); } }
         break;
       case 'fire': if (!fires.has(m.fire.id)) addFire(m.fire); break;
-      case 'fires': for (const [id, fuel] of m.list) { const f = fires.get(id); if (f) f.fuel = fuel; } break;
+      case 'fires': for (const [id, fuel, left] of m.list) { const f = fires.get(id); if (!f) continue; f.fuel = fuel;
+        if (left == null && f.pot) setPot(f, null); else if (left != null && f.pot) f.pot.left = left; } break;
+      case 'pot': { const f = fires.get(m.id); if (f) setPot(f, m.pot); break; }
       case 'fx': {
         if (m.o != null && objects[m.o] && objects[m.o].mesh) objects[m.o].mesh.rotation.z = .06;
         if (me && m.id !== me.id) { const r = remotes.get(m.id); if (r) r.av.swingT = .35; }
@@ -1745,7 +1794,7 @@
         if (me && m.id === me.id) { myPatches = m.list; setPatches(hero, m.list); if (!ui.journal.classList.contains('gone')) renderJournal(); }
         else { const r = remotes.get(m.id); if (r) { r.patches = m.list; setPatches(r.av, m.list); } }
         break;
-      case 'unfire': { const f = fires.get(m.id); if (f) { scene.remove(f.mesh); fires.delete(m.id); } break; }
+      case 'unfire': { const f = fires.get(m.id); if (f) { setPot(f, null); scene.remove(f.mesh); fires.delete(m.id); } break; }
       case 'movedrop': { const d = drops.get(m.id); if (d) { d.x = m.x; d.z = m.z; d.mesh.position.set(m.x, groundAt(m.x, m.z), m.z); } break; }
       case 'undrop': removeDrop(m.id); break;
       case 'dropitems': { const d = drops.get(m.id); if (d) d.items = m.items; break; }
@@ -1777,7 +1826,7 @@
 
   function applySelf(you) {
     px = you.x; pz = you.z; face = you.face;
-    Object.assign(stats, { health: you.health, hunger: you.hunger, thirst: you.thirst, inv: you.inv, tools: you.tools, dread: you.dread || 0 });
+    Object.assign(stats, { health: you.health, hunger: you.hunger, thirst: you.thirst, inv: you.inv, tools: you.tools, buckets: you.buckets || [], dread: you.dread || 0 });
     Object.assign(nrg, { energy: you.energy, exhausted: you.exhausted, rest: 0 });
   }
 
@@ -1828,7 +1877,8 @@
       case 'ore': return has('pickaxe') ? `Mine ${o.ore === 'iron' ? 'iron' : 'copper'} ore` : `${o.ore === 'iron' ? 'Iron' : 'Copper'} ore (needs a pickaxe)`;
       case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
       case 'drop': {
-        const list = o.items ? Object.entries(o.items).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${(WG.ITEMS[k] || k).toLowerCase()}`) : [];
+        const list = o.items ? Object.entries(o.items).filter(([k, n]) => k !== 'buckets' && n > 0).map(([k, n]) => `${n} ${(WG.ITEMS[k] || k).toLowerCase()}`) : [];
+        if (o.items && o.items.buckets && o.items.buckets.length) list.unshift(o.items.buckets.length > 1 ? `${o.items.buckets.length} buckets` : 'a bucket');
         return list.length ? `Pick up the sack (${list.slice(0, 3).join(', ')}${list.length > 3 ? ', ...' : ''})` : 'Pick up the sack';
       }
       case 'carving': return o.offer && o.tally ? `Read the ${o.key} stone (it wants ${WG.ITEMS[o.offer].toLowerCase()})` : `Read the ${o.key} stone`;
@@ -1843,6 +1893,7 @@
         return o.big ? `Offer lamp oil (${o.have}/${o.need} frogs)` : 'Light it with lamp oil';
       }
       case 'fire': { const n = o.kind === 'hearth' ? 'hearth' : 'fire';
+        if (o.pot) return o.pot.left <= 0 ? 'Take the bucket of clean water' : (stats.inv.wood || 0) > 0 ? `Add wood (the bucket is boiling)` : 'Take the bucket back (not boiled yet)';
         return (stats.inv.wood || 0) > 0 ? (o.fuel > 0 ? `Add wood to the ${n}` : 'Relight with wood') : `${n[0].toUpperCase() + n.slice(1)} (needs wood)`; }
     }
   }
@@ -1851,7 +1902,31 @@
     if (o.type === 'spring' || o.type === 'sea') return o.type;
     return ({ fire: 'f', drop: 'd', lantern: 'l', wash: 'w', bug: 'b' }[o.type] || 'o') + o.id;
   }
+  // What E does with the bucket in your hand here, or null to act normally.
+  function bucketAction() {
+    const b = heldBucket();
+    if (!b) return null;
+    // with a bucket in hand, a fire in reach (and the sea you're standing in) win over trees and rocks
+    let fire = null, fd = 1e9;
+    fires.forEach(f => { const d = Math.hypot(f.x - px, f.z - pz) - f.r; if (d < RULES.REACH && d < fd) { fd = d; fire = f; } });
+    if (b.water === 'clean') return { action: 'drink', label: `Drink clean water (${b.drinks} left)` };   // a full clean bucket: E always drinks
+    if (fire && fire.pot) return { fireAct: fire, label: label(fire) };   // take it / feed it
+    if (b.water === 'none' && heightAt(px, pz) < .25) return { action: 'fill', label: `Fill the ${bucketName(b).toLowerCase()} with seawater` };
+    if (b.water === 'sea' && fire) return { action: 'place', fire: fire.id, label: `Set the bucket on the fire to boil (${RULES.BUCKET[b.mat].boil} s)` };
+    if (b.water === 'clean') return { action: 'drink', label: `Drink clean water (${b.drinks} left)` };
+    if (!target) return { hint: b.water === 'sea' ? 'Seawater: take it to a fire and press E to boil it.' : 'Wade into the sea to fill the bucket.' };
+    return null;
+  }
   function act() {
+    const ba = state === 'play' && cooldown <= 0 && net && knockT <= 0 ? bucketAction() : null;
+    if (ba) {
+      cooldown = .45;
+      if (ba.hint) { toast(ba.hint); return; }
+      hero.swingT = .35;
+      if (ba.fireAct) { net.send({ t: 'act', target: 'f' + ba.fireAct.id }); return; }
+      net.send({ t: 'bucket', id: heldBucket().id, action: ba.action, fire: ba.fire });
+      return;
+    }
     if (state !== 'play' || cooldown > 0 || !target || !net || knockT > 0) return;
     cooldown = .45;
     if (target.type === 'board') { togglePanel('board'); return; }
@@ -1864,7 +1939,7 @@
     if (state !== 'play' || !net) return;
     const r = WG.recipeById(id);
     if (!r) return;
-    if (r.kind === 'tool') { net.send({ t: 'build', recipe: id }); return; }
+    if (r.kind !== 'fire') { net.send({ t: 'build', recipe: id }); return; }   // made in your hands, not placed
     const fx = px + Math.sin(face) * 1.6, fz = pz + Math.cos(face) * 1.6;
     if (heightAt(fx, fz) < .35) { toast('Too wet here. Build it on dry ground.'); return; }
     net.send({ t: 'build', recipe: id, x: fx, z: fz });
@@ -1957,13 +2032,20 @@
   // Hotbar: slotKeys[i] is the item in slot i+1. selSlot is the one in your hand (-1: empty hands).
   const slotKeys = Array(8).fill(null);
   let selSlot = -1, sentHold = null;
+  // each bucket has its own slot, keyed "b<id>"
+  const bucketOf = k => k && k[0] === 'b' && k !== 'bucket' ? (stats.buckets || []).find(b => 'b' + b.id === k) : null;
+  const haveKey = k => bucketOf(k) || (stats.inv[k] || 0) > 0;
   function syncSlots() {
-    for (let i = 0; i < 8; i++) if (slotKeys[i] && !((stats.inv[slotKeys[i]] || 0) > 0)) slotKeys[i] = null;
-    for (const k of Object.keys(WG.ITEMS)) if ((stats.inv[k] || 0) > 0 && !slotKeys.includes(k)) { const e = slotKeys.indexOf(null); if (e >= 0) slotKeys[e] = k; }
+    for (let i = 0; i < 8; i++) if (slotKeys[i] && !haveKey(slotKeys[i])) slotKeys[i] = null;
+    const want = [...Object.keys(WG.ITEMS).filter(k => (stats.inv[k] || 0) > 0), ...(stats.buckets || []).map(b => 'b' + b.id)];
+    for (const k of want) if (!slotKeys.includes(k)) { const e = slotKeys.indexOf(null); if (e >= 0) slotKeys[e] = k; }
   }
+  const heldBucket = () => bucketOf(heldKey());
+  const bucketName = b => b.mat === 'iron' ? 'Iron bucket' : 'Wooden bucket';
+  const bucketLook = b => `bucket:${b.mat}:${b.water}`;   // what others see in your hand
   const heldKey = () => (selSlot >= 0 && slotKeys[selSlot]) || null;
   function updateHeld() {
-    const k = heldKey();
+    const hb = heldBucket(), k = hb ? bucketLook(hb) : heldKey();
     setHeld(hero, k);
     if (k !== sentHold && net && state === 'play') { sentHold = k; net.send({ t: 'hold', key: k }); }
   }
@@ -1971,8 +2053,9 @@
     if (state !== 'play') return;
     selSlot = selSlot === i ? -1 : i;   // same number again: put it away
     lastInv = ''; renderInventory();
-    const k = heldKey();
-    if (k) toast(`${WG.ITEMS[k]} in hand. ${keyLabel(prefs.binds.drop)} drops one, Shift+${keyLabel(prefs.binds.drop)} drops them all.`);
+    const k = heldKey(), hb = heldBucket();
+    if (hb) toast(`${bucketName(hb)} in hand. ${hb.water === 'none' ? 'Wade into the sea and press E to fill it.' : hb.water === 'sea' ? 'Seawater: press E at a fire to boil it.' : 'Clean water: press E to drink.'}`);
+    else if (k) toast(`${WG.ITEMS[k]} in hand. ${keyLabel(prefs.binds.drop)} drops one, Shift+${keyLabel(prefs.binds.drop)} drops them all.`);
   }
   // Q: the next slot that has something in it (wrapping round); Shift+Q goes back.
   function cycleSlot(dir) {
@@ -1988,7 +2071,9 @@
     const k = heldKey();
     if (state !== 'play' || !net) return;
     if (!k) { toast('Pick something to hold first (keys 1-8).'); return; }
-    net.send({ t: 'dropitem', key: k, count: all ? stats.inv[k] : 1 });
+    const hb = bucketOf(k);
+    if (hb) net.send({ t: 'dropitem', bucket: hb.id });
+    else net.send({ t: 'dropitem', key: k, count: all ? stats.inv[k] : 1 });
     if (hero) hero.swingT = .25;
   }
   $('invList').addEventListener('click', e => { const sl = e.target.closest('[data-slot]'); if (sl) selectSlot(+sl.dataset.slot); });
@@ -2019,23 +2104,43 @@
       case 'oil':   // a little stoppered flask
         fill('#E0A33A', () => { g.moveTo(24, 22); g.lineTo(40, 22); g.lineTo(40, 28); g.quadraticCurveTo(52, 34, 50, 46); g.quadraticCurveTo(48, 56, 32, 56); g.quadraticCurveTo(16, 56, 14, 46); g.quadraticCurveTo(12, 34, 24, 28); g.closePath(); });
         fill('#8A6A52', () => g.rect(26, 12, 12, 10)); g.fillStyle = 'rgba(255,245,210,.6)'; g.beginPath(); g.ellipse(24, 42, 3, 6, .3, 0, 7); g.fill(); break;
+      default:
+        if (key.startsWith('bucket:')) {
+          const [, mat, water] = key.split(':'), body = mat === 'iron' ? '#8E96A0' : '#A57A55';
+          g.lineWidth = 3;
+          if (water !== 'none') fill(water === 'sea' ? '#5E8FA8' : '#9FD3E6', () => g.ellipse(32, 22, 17, 5, 0, 0, 7));
+          fill(body, () => { g.moveTo(14, 22); g.lineTo(50, 22); g.lineTo(45, 54); g.lineTo(19, 54); g.closePath(); });
+          if (water !== 'none') fill(water === 'sea' ? '#5E8FA8' : '#9FD3E6', () => g.ellipse(32, 22, 17, 5, 0, 0, 7));
+          else { g.beginPath(); g.ellipse(32, 22, 17, 5, 0, 0, 7); g.stroke(); }
+          g.lineWidth = 2; g.beginPath(); g.moveTo(16, 34); g.lineTo(48, 34); g.moveTo(18, 46); g.lineTo(46, 46); g.stroke();   // hoops or planks
+          g.lineWidth = 2.5; g.beginPath(); g.arc(32, 22, 18, Math.PI * 1.05, Math.PI * 1.95); g.stroke();   // handle
+          if (water === 'clean') { g.fillStyle = '#fff'; g.beginPath(); g.ellipse(26, 21, 4, 1.4, 0, 0, 7); g.fill(); }
+          break;
+        }
+        fill('#D9C9A6', () => g.arc(32, 32, 18, 0, 7)); break;
       case 'shovel': handle(); fill('#B3AC9F', () => { g.moveTo(10, 50); g.quadraticCurveTo(6, 40, 14, 36); g.lineTo(26, 46); g.quadraticCurveTo(22, 56, 10, 50); }); break;
       case 'pickaxe': case 'ironpick': handle();
         fill(key === 'ironpick' ? '#9AA4B0' : '#A9A193', () => { g.moveTo(24, 10); g.quadraticCurveTo(44, 12, 56, 32); g.quadraticCurveTo(44, 22, 34, 22); g.lineTo(30, 18); g.closePath(); }); break;
       case 'axe': handle(); fill('#D9803A', () => { g.moveTo(36, 12); g.quadraticCurveTo(56, 12, 56, 30); g.lineTo(42, 30); g.lineTo(36, 22); g.closePath(); }); break;
-      default: fill('#D9C9A6', () => g.arc(32, 32, 18, 0, 7));
     }
     const url = c.toDataURL(); itemIcons.set(key, url); return url;
   }
   function renderInventory() {
     syncSlots();
-    const key = JSON.stringify([stats.inv, stats.tools, prefs.binds.book, slotKeys, selSlot]);
+    const key = JSON.stringify([stats.inv, stats.tools, stats.buckets, prefs.binds.book, slotKeys, selSlot]);
     if (key === lastInv) return;
     lastInv = key;
     // eight slots, numbered 1-8. Each thing keeps its slot until you run out of it.
     $('invList').innerHTML = slotKeys.map((k, i) => {
       const sel = i === selSlot ? ' sel' : '', num = `<i>${i + 1}</i>`;
       if (!k) return `<div class="slot empty${sel}" data-slot="${i}">${num}</div>`;
+      const bk = bucketOf(k);
+      if (bk) {
+        const max = RULES.BUCKET[bk.mat].uses, wear = Math.max(0, bk.uses) / max;
+        const what = bk.water === 'clean' ? `clean water, ${bk.drinks} drink${bk.drinks === 1 ? '' : 's'}` : bk.water === 'sea' ? 'seawater (boil it on a fire)' : 'empty';
+        return `<div class="slot bucket${sel}" data-slot="${i}" title="${esc(bucketName(bk))}: ${esc(what)}. ${bk.uses} of ${max} boils left.">${num}<img src="${itemIcon(bucketLook(bk))}" alt="${esc(bucketName(bk))}">`
+          + (bk.water === 'clean' ? `<b>${bk.drinks}</b>` : '') + `<u style="--w:${Math.round(wear * 100)}%" class="${wear < .25 ? 'low' : ''}"></u></div>`;
+      }
       const n = stats.inv[k], fresh = (lastCounts[k] || 0) < n ? ' new' : '';
       return `<div class="slot${fresh}${sel}" data-slot="${i}" title="${esc(WG.ITEMS[k])}: ${n}">${num}<img src="${itemIcon(k)}" alt="${esc(WG.ITEMS[k])}"><b>${n}</b></div>`;
     }).join('');
@@ -2390,8 +2495,8 @@
         const have = stats.inv[k] || 0;
         return `<span class="${have >= n ? 'ok' : 'no'}">${esc(WG.ITEMS[k])} ${Math.min(have, n)}/${n}</span>`;
       }).join('');
-      const btn = owned ? 'You have one' : r.kind === 'tool' ? 'Make' : 'Build';
-      return `<div class="recipe${ok ? ' can' : ''}"><div class="r-top"><b>${esc(r.name)}</b><span class="kind">${r.kind === 'tool' ? 'Tool' : 'Fire'}</span></div>
+      const btn = owned ? 'You have one' : r.kind === 'fire' ? 'Build' : 'Make';
+      return `<div class="recipe${ok ? ' can' : ''}"><div class="r-top"><b>${esc(r.name)}</b><span class="kind">${{ tool: 'Tool', fire: 'Fire', bucket: 'Bucket', item: 'Item' }[r.kind] || ''}</span></div>
         <p>${esc(r.desc)}</p><div class="r-bot"><div class="cost">${cost}</div>
         <button type="button" class="main" data-build="${r.id}"${ok ? '' : ' disabled'}>${btn}</button></div></div>`;
     }).join('');
@@ -3109,6 +3214,7 @@
     if (hero) { poseCastaway(hero, px, pz, face, moving ? (running ? 2 : 1) : 0, state === 'dead' || knockT > 0, dt, elapsed); applyHop(hero, hop.y, hop.air, hop.land, hop.charge >= 0 ? hop.charge / CHARGE_FULL : 0); }
 
     animateBugs(elapsed);
+    updatePots(dt);
     animateCarvings(dt);
     if (state === 'play' && env.drowning && isNight(t) && (nextTremor -= dt) <= 0) { nextTremor = 25 + Math.random() * 35; tremor = 1.6; Sound.rumble(); }
     washups.forEach(w => { if (w.mesh.userData.bell) w.mesh.userData.bell.rotation.z = Math.sin(elapsed * 3 + w.id) * .25; });
@@ -3144,7 +3250,8 @@
         else toast([...fires.values()].some(f => f.fuel > 0) ? 'Night is coming. Keep a fire fed.' : 'It’s getting dark and cold. A fire would help.');
       }
       target = Cut.on ? null : findTarget();
-      const lab = label(target);
+      const ba = bucketAction();
+      const lab = ba && ba.label ? ba.label : label(target);
       if (lab) { ui.prompt.innerHTML = `<kbd>${esc(keyLabel(prefs.binds.act))}</kbd>${esc(lab)}`; ui.prompt.classList.remove('hidden'); $('btnAct').textContent = lab.split(' ').slice(0, 2).join(' '); }
       else { ui.prompt.classList.add('hidden'); $('btnAct').textContent = 'Act'; }
 

@@ -85,6 +85,9 @@
       STORM_TIDE: 1.6,                      // more wash-ups the morning after a storm
     },
     PATCH_SLOTS: 3,
+    // Buckets: carry seawater, boil it clean on a fire, drink it. uses = boils
+    // before it wears out; boil = seconds on a burning fire.
+    BUCKET: { wood: { uses: 5, boil: 75 }, iron: { uses: 20, boil: 45 }, DRINKS: 3, DRINK: 30, MAX: 4 },
     // The Sleeper: requests carved on the stones. Days to answer, and what its moods do.
     SLEEPER: { DAYS: 3, CALM_TOP: 1.5, PRESS_TOP: 4, PRESS_BURN: 1.5, FOG_WALK: .7, GATHER_RADIUS: 6, REACH: 2.2 },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
@@ -119,6 +122,10 @@
       desc: 'Two wood from every chop.' },
     { id: 'ironpick', kind: 'tool', name: 'Iron pickaxe', cost: { wood: 2, iron: 3 }, needs: 'pickaxe',
       desc: 'Twice the ore from every swing. Needs a stone pickaxe to make.' },
+    { id: 'bucket_wood', kind: 'bucket', mat: 'wood', name: 'Wooden bucket', cost: { wood: 6 },
+      desc: 'Fill it in the sea, set it on a fire, and the water boils clean to drink. Lasts 5 boils; boils in about 75 seconds.' },
+    { id: 'bucket_iron', kind: 'bucket', mat: 'iron', name: 'Iron bucket', cost: { wood: 2, iron: 4 },
+      desc: 'Like the wooden one, but lasts 20 boils and heats faster (about 45 seconds).' },
     { id: 'oil', kind: 'item', name: 'Lamp oil', cost: { seeds: 3 }, gives: { oil: 1 },
       desc: 'Pressed from seeds. An offering for the old stone lanterns: one lights a lantern for about two days.' },
   ];

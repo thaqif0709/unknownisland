@@ -19,6 +19,7 @@ function createPgStore(url) {
     async migrate() {
       await q(`ALTER TABLE island_members ADD COLUMN IF NOT EXISTS inventory JSONB NOT NULL DEFAULT '{}'`);
       await q(`ALTER TABLE fires ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'campfire'`);
+      await q(`ALTER TABLE fires ADD COLUMN IF NOT EXISTS pot JSONB`);   // a bucket boiling on it
       // Island 2: the big island (island 1 was the small original; its data is kept).
       await q(`INSERT INTO islands (id, name, seed) VALUES (2, 'Unknown Island', 11) ON CONFLICT (id) DO NOTHING`);
       await q(`ALTER TABLE island_members ADD COLUMN IF NOT EXISTS dread REAL NOT NULL DEFAULT 0`);
@@ -112,14 +113,14 @@ function createPgStore(url) {
       const row = r.rows[0];
       if (!row) return null;
       const objs = await q('SELECT obj_id, state FROM world_objects WHERE island_id = $1', [id]);
-      const fires = await q('SELECT id, x, z, fuel, kind, built_by FROM fires WHERE island_id = $1 ORDER BY id', [id]);
+      const fires = await q('SELECT id, x, z, fuel, kind, built_by, pot FROM fires WHERE island_id = $1 ORDER BY id', [id]);
       const drops = await q('SELECT id, x, z, items FROM drops WHERE island_id = $1 ORDER BY id', [id]);
       const lanterns = await q('SELECT lantern_id, lit, fuel, offerings, cleared_since, reclaim_progress FROM lanterns WHERE island_id = $1', [id]);
       return {
         id: row.id, name: row.name, seed: row.seed, day: row.day, time: row.time_of_day, weather: row.weather,
         lastTickAt: new Date(row.last_tick_at).getTime(),
         objects: objs.rows.map(o => ({ id: o.obj_id, state: o.state })),
-        fires: fires.rows.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: f.kind, builtBy: f.built_by })),
+        fires: fires.rows.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: f.kind, builtBy: f.built_by, pot: f.pot || null })),
         drops: drops.rows.map(d => ({ id: d.id, x: d.x, z: d.z, items: d.items })),
         lanterns: lanterns.rows.map(l => ({ id: l.lantern_id, lit: l.lit, fuel: l.fuel, offerings: l.offerings,
           clearedSince: l.cleared_since ? new Date(l.cleared_since).getTime() : null, reclaim: l.reclaim_progress })),
@@ -146,7 +147,7 @@ function createPgStore(url) {
             await c.query('DELETE FROM world_objects WHERE island_id = $1 AND obj_id = $2', [snap.id, o.id]);
           }
         }
-        for (const f of snap.fires) await c.query('UPDATE fires SET fuel = $2 WHERE id = $1', [f.id, f.fuel]);
+        for (const f of snap.fires) await c.query('UPDATE fires SET fuel = $2, pot = $3 WHERE id = $1', [f.id, f.fuel, f.pot ? JSON.stringify(f.pot) : null]);
         for (const l of snap.lanterns || []) {
           await c.query(`INSERT INTO lanterns (island_id, lantern_id, lit, fuel, offerings, lit_by, lit_at, cleared_since, reclaim_progress)
                          VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $3 THEN now() END, $7, $8)
@@ -304,7 +305,7 @@ function createMemoryStore() {
       const i = islands.get(snap.id);
       Object.assign(i, { day: snap.day, time: snap.time, lastTickAt: snap.lastTickAt, weather: snap.weather });
       for (const o of snap.objects) o.state ? i.objects.set(o.id, clone(o.state)) : i.objects.delete(o.id);
-      for (const f of snap.fires) { const x = i.fires.find(y => y.id === f.id); if (x) x.fuel = f.fuel; }
+      for (const f of snap.fires) { const x = i.fires.find(y => y.id === f.id); if (x) { x.fuel = f.fuel; x.pot = f.pot ? clone(f.pot) : null; } }
       for (const l of snap.lanterns || []) i.lanterns.set(l.id, clone({ id: l.id, lit: l.lit, fuel: l.fuel, offerings: l.offerings,
         clearedSince: l.clearedSince, reclaim: l.reclaim }));
       for (const m of snap.members) {

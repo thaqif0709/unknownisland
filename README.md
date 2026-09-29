@@ -69,6 +69,12 @@ Environment*). Existing players aren't affected.
 - **Settings (Esc):** change any key, camera sensitivity and invert. Settings are
   saved in your browser.
 
+**Clean water from the sea:** make a bucket (wooden: 6 wood, lasts 5 boils;
+iron: 2 wood + 4 iron ore, lasts 20 and boils faster). Hold it (1-8), wade into
+the sea and press E to fill it, then press E at a lit fire to set it on to boil.
+A countdown shows over the fire; when it says ready, press E at the fire to take
+it back, then press E while holding it to drink (3 drinks per bucket).
+
 Survival basics: hunger and thirst only go down while you're moving (standing still
 costs nothing, but the night cold still hurts). Drink at the spring inland (seawater makes it worse), eat coconuts
 and berries, and build a fire to stay warm at night. Sprinting uses energy and makes
