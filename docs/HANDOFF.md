@@ -230,7 +230,15 @@ planned separately by Thaqif):
   carving stones, the driftwood board, fires (lit/unlit) and players (each
   their own cloak colour; you get an arrow showing facing) are redrawn on top
   while the panel is open, refreshed every 0.3 s from `tick()` so others'
-  positions keep moving. Client-only; nothing new from the server.
+  positions keep moving. A round always-on minimap (190px) sits in the
+  top-right HUD corner next to the online list, drawing the same cached
+  chart scaled down (`drawMap`/`drawMapMarkers` are shared, size- and
+  dot-scale-parameterised); clicking it opens the full panel. Unlike the
+  other panels, the map doesn't freeze movement or block key handling
+  (`blocksInput()` excludes it from the set that does) and its panel
+  backdrop is nearly transparent and pushed toward the top of the screen,
+  so you can keep walking and see your surroundings while it's open.
+  Client-only; nothing new from the server.
 - **Intro cutscene (done).** In-engine, about 73 s, skippable (button, Esc,
   Enter, Space): the chart inks itself, a storm with the reed boat and
   lightning, something vast passes under the boat, the grey beach, PELL in the

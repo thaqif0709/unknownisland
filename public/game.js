@@ -1833,6 +1833,9 @@
   let waitingBind = null;
   const PANELS = ['book', 'settings', 'journal', 'board', 'carvingPanel', 'map'];
   const panelOpen = () => PANELS.some(k => !ui[k].classList.contains('gone')) || Cut.on || chatOpen();
+  // The map is a glance-at-while-walking overlay, not a modal: unlike the other panels
+  // it doesn't freeze movement or block key handling.
+  const blocksInput = () => PANELS.some(k => k !== 'map' && !ui[k].classList.contains('gone')) || Cut.on || chatOpen();
   window.addEventListener('keydown', e => {
     if (waitingBind) {
       e.preventDefault();
@@ -1850,9 +1853,8 @@
     if (state !== 'play' && state !== 'dead') return;
     if (Cut.on) { if (['Escape', 'Enter', 'Space'].includes(e.code)) { e.preventDefault(); endCutscene(true); } return; }
     if (e.code === 'Escape') { e.preventDefault(); if (panelOpen()) closePanels(); else if (state === 'play') togglePanel('settings'); return; }
-    if (panelOpen()) {
-      if ((e.code === prefs.binds.book && !ui.book.classList.contains('gone')) || (e.code === prefs.binds.journal && !ui.journal.classList.contains('gone'))
-        || (e.code === prefs.binds.map && !ui.map.classList.contains('gone'))) closePanels();
+    if (blocksInput()) {
+      if ((e.code === prefs.binds.book && !ui.book.classList.contains('gone')) || (e.code === prefs.binds.journal && !ui.journal.classList.contains('gone'))) closePanels();
       return;
     }
     if (state !== 'play') return;
@@ -2171,7 +2173,7 @@
   // markers for springs, lanterns, carving stones, the board, fires and players
   // are redrawn on top of a scaled copy of that cache for both the full panel
   // (opened with M) and the always-on minimap in the top-right corner.
-  const MAP_PX = 480, MINI_PX = 150, MINI_DOT = .55, MAP_HALF = WG.ISL * 1.15;
+  const MAP_PX = 480, MINI_PX = 190, MINI_DOT = .68, MAP_HALF = WG.ISL * 1.15;
   const BIOME_COL = { sea: '#4A6F91', beach: '#D8C9A0', meadow: '#8FAE72', forest: '#5C7A4B', highland: '#9C8A6A', peak: '#D9D3C4', spring: '#7FC9D6' };
   let mapBase = null, mapTimer = 0;
   function buildMapBase() {
@@ -2868,7 +2870,7 @@
     // Your own castaway: moved locally, reported to the server.
     let moving = false, wantSprint = false;
     if (state === 'play') {
-      const free = !panelOpen() && knockT <= 0 && !stats.down;
+      const free = !blocksInput() && knockT <= 0 && !stats.down;
       let ix = free ? (held('right') || keys.ArrowRight ? 1 : 0) - (held('left') || keys.ArrowLeft ? 1 : 0) + joy.x : 0;
       let iz = free ? (held('forward') || keys.ArrowUp ? 1 : 0) - (held('back') || keys.ArrowDown ? 1 : 0) - joy.y : 0;
       const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
