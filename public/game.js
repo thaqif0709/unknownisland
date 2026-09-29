@@ -1349,7 +1349,7 @@
   const $ = id => document.getElementById(id);
   const ui = { hud: $('hud'), inv: $('inv'), prompt: $('prompt'), toast: $('toast'), overlay: $('overlay'), online: $('online'),
     touch: $('touchUi'), banner: $('banner'), tags: $('tags'), gear: $('btnSettings'), book: $('book'), settings: $('settings'), journal: $('journal'),
-    board: $('boardPanel'), carvingPanel: $('carvingPanel') };
+    board: $('boardPanel'), carvingPanel: $('carvingPanel'), chat: $('chat') };
   let myPatches = [];
   const WEATHER_SAY = { clear: 'The sky clears.', rain: 'It starts to rain. Fires burn smaller in the wet.',
     storm: 'A storm rolls in. The sea will bring things up tomorrow.', fogstorm: 'The fog is coming in, in broad daylight.' };
@@ -1357,8 +1357,8 @@
   function toast(msg) { if (Cut.on) return; ui.toast.textContent = msg; ui.toast.classList.add('on'); toastTimer = 2.6; }
 
   function showHud(on) {
-    [ui.hud, ui.inv, ui.online, ui.touch, ui.gear].forEach(el => el.classList.toggle('hidden', !on));
-    if (!on) { ui.prompt.classList.add('hidden'); closePanels(); }
+    [ui.hud, ui.inv, ui.online, ui.touch, ui.gear, ui.chat].forEach(el => el.classList.toggle('hidden', !on));
+    if (!on) { ui.prompt.classList.add('hidden'); closePanels(); closeChat(); }
   }
 
   // ================= Screens (login, ready, messages) =================
@@ -1509,6 +1509,7 @@
         setEnv(m.env);
         notes = m.notes || []; setBoard(m.board);
         clearCarvings(); setCarvings(m.carvings || []);
+        $('chatLog').innerHTML = ''; (m.chat || []).forEach(c => addChat(c, true));
         resetRemotes(); m.players.forEach(addRemote);
         if (hero) removeCastaway(hero);
         hero = makeCastaway(colorFor(me.id));
@@ -1587,6 +1588,7 @@
         break;
       }
       case 'carvings': setCarvings(m.list, m.changed, m.why); break;
+      case 'chat': addChat(m); break;
       case 'note':
         notes.push(m.note); if (notes.length > 40) notes.shift(); renderScraps();
         if (!ui.board.classList.contains('gone')) renderBoard();
@@ -1727,7 +1729,7 @@
   const ACTIONS = [
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
-    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'],
+    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['chat', 'Open chat', 'Enter'],
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -1748,7 +1750,7 @@
   const held = a => !!keys[prefs.binds[a]];
   let waitingBind = null;
   const PANELS = ['book', 'settings', 'journal', 'board', 'carvingPanel'];
-  const panelOpen = () => PANELS.some(k => !ui[k].classList.contains('gone')) || Cut.on;
+  const panelOpen = () => PANELS.some(k => !ui[k].classList.contains('gone')) || Cut.on || chatOpen();
   window.addEventListener('keydown', e => {
     if (waitingBind) {
       e.preventDefault();
@@ -1772,6 +1774,7 @@
     }
     if (state !== 'play') return;
     if (e.repeat) { if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault(); return; }
+    if (e.code === prefs.binds.chat || e.code === 'NumpadEnter' || e.code === 'Slash') { e.preventDefault(); openChat(e.code === 'Slash' ? '/' : ''); return; }
     keys[e.code] = true;
     if (e.code === prefs.binds.act) act();
     if (e.code === prefs.binds.build) build('campfire');
@@ -1981,6 +1984,60 @@
   let stampT = null;
   function stamp(msg) { const el = $('stamp'); el.textContent = msg; el.classList.add('on'); clearTimeout(stampT); stampT = setTimeout(() => el.classList.remove('on'), 3200); }
 
+  // ================= Chat =================
+  // Enter (or /) opens the box; Enter sends, Esc closes. The server handles the
+  // commands (/w, /r, /who, /help). Lines fade after a while unless the box is open.
+  const chatLog = $('chatLog'), chatForm = $('chatForm'), chatInput = $('chatInput');
+  let lastWhisperTo = null;
+  function addChat(m, old) {
+    const el = document.createElement('p'), who = (name, id) => `<b style="color:${id ? hex(new THREE.Color(colorFor(id)).multiplyScalar(.75).getHex()) : 'inherit'}">${esc(name)}</b>`;
+    el.className = m.kind || 'all';
+    if (m.kind === 'whisper') el.innerHTML = m.to ? `To ${who(m.to, m.toId)}: ${esc(m.text)}` : `${who(m.from, m.id)} whispers: ${esc(m.text)}`;
+    else if (m.kind === 'system') el.textContent = m.text;
+    else el.innerHTML = `${who(m.from, m.id)}: ${esc(m.text)}`;
+    if (m.kind === 'whisper' && m.to) lastWhisperTo = m.to;
+    chatLog.appendChild(el);
+    while (chatLog.children.length > 60) chatLog.firstChild.remove();
+    chatLog.scrollTop = chatLog.scrollHeight;
+    if (old) el.classList.add('old'); else setTimeout(() => el.classList.add('old'), 14000);
+    // a speech bubble over their head (not for whispers)
+    if (!old && m.kind === 'all' && me && m.id !== me.id) { const r = remotes.get(m.id); if (r) { r.bubble = m.text; r.bubbleT = Math.min(9, 3 + m.text.length / 12); renderTag(r); } }
+  }
+  const chatOpen = () => !chatForm.hidden;
+  function openChat(prefill) {
+    if (state !== 'play' || Cut.on) return;
+    releaseKeys();
+    ui.chat.classList.add('open'); chatForm.hidden = false;
+    chatInput.value = prefill || '';
+    chatInput.focus({ preventScroll: true });
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+  function closeChat() { ui.chat.classList.remove('open'); chatForm.hidden = true; chatInput.blur(); }
+  chatForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (text && net) net.send({ t: 'chat', text });
+    closeChat();
+  });
+  chatInput.addEventListener('keydown', e => {
+    e.stopPropagation();   // typing never moves your frog
+    if (e.code === 'Escape') { e.preventDefault(); closeChat(); }
+    // Tab after "/w " cycles through the names of people on the island
+    if (e.code === 'Tab') {
+      e.preventDefault();
+      const mm = /^\/(w|whisper|tell|msg)\s+(\S*)$/i.exec(chatInput.value);
+      if (!mm) { if (!chatInput.value && lastWhisperTo) chatInput.value = `/w ${lastWhisperTo} `; return; }
+      const names = [...remotes.values()].map(r => r.name), start = mm[2].toLowerCase();
+      const hit = names.find(n => n.toLowerCase().startsWith(start) && n.toLowerCase() !== start) || names[0];
+      if (hit) chatInput.value = `/${mm[1]} ${hit} `;
+    }
+  });
+  chatInput.addEventListener('blur', () => { if (!chatInput.value) setTimeout(() => { if (document.activeElement !== chatInput) closeChat(); }, 150); });
+  $('btnChat').addEventListener('click', () => chatOpen() ? closeChat() : openChat(''));
+  function renderTag(r) {
+    r.tag.innerHTML = (r.bubble ? `<span class="bubble">${esc(r.bubble)}</span>` : '') + esc(r.name);
+  }
+
   // ================= Recipe book & settings =================
   function togglePanel(which) {
     const el = ui[which];
@@ -1997,6 +2054,7 @@
   function closePanels() {
     waitingBind = null;
     PANELS.forEach(k => ui[k].classList.add('gone'));
+    if (chatOpen()) closeChat();
   }
   document.querySelectorAll('.panel').forEach(p => p.addEventListener('click', e => {
     if (e.target === p || e.target.closest('[data-close]')) closePanels();
@@ -2031,6 +2089,7 @@
   }
   function renderSettings() {
     renderBinds();
+    $('chatKeyLbl').textContent = keyLabel(prefs.binds.chat);
     $('sens').value = prefs.sens;
     $('invertY').checked = prefs.invertY;
     $('quality').value = prefs.quality;
@@ -2668,6 +2727,7 @@
     remotes.forEach(r => {
       const s = r.remote.sample();
       if (r.knockT > 0) r.knockT -= dt;
+      if (r.bubble && (r.bubbleT -= dt) <= 0) { r.bubble = null; renderTag(r); }
       poseCastaway(r.av, s.x, s.z, s.face, s.moving, !!s.dead || r.knockT > 0, dt, elapsed);
       tagV.set(s.x, Math.max(groundAt(s.x, s.z), -.75) + 2.05, s.z).project(camera);
       const dist = Math.hypot(s.x - camera.position.x, s.z - camera.position.z);

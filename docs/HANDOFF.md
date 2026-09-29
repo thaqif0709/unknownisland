@@ -280,7 +280,10 @@ Client → server: `hello {token}` (first message), `pos {x,z,face,moving,sprint
 (≈15 Hz while moving, 1 Hz idle), `act {target}` where target is `o<id>`, `f<id>`
 (fire), `d<id>` (sack), `l<id>` (lantern), `w<id>` (wash-up), `b<id>` (bug),
 `c<id>` (carving stone offering), `spring` or `sea`, `build {recipe,x,z}`,
-`respawn`, `pin {text}`, `patch {key,on}`, `intro` / `intro-seen`.
+`respawn`, `pin {text}`, `patch {key,on}`, `intro` / `intro-seen`, `chat {text}`
+(the server parses `/w`, `/whisper`, `/tell`, `/msg`, `/r`, `/who`, `/help`; plain
+text is global; max 240 characters, 6 messages per 8 s; the last 30 global
+messages are kept in memory and sent in `welcome.chat`; nothing is saved).
 
 Server → client: `welcome` (you, island, objects, fires, players, rules), `snap`
 (time, day, `[id,x,z,face,moving,dead]` per player), `me` (own stats ≈4 Hz),
@@ -288,7 +291,8 @@ Server → client: `welcome` (you, island, objects, fires, players, rules), `sna
 (fuel sync ≈1 Hz), `fx` (swing animation), `toast`, `dawn`, `died`,
 `respawned`, `correct`, `kicked`, `auth-failed`, plus `knocked`, `drop`/`undrop`/
 `movedrop`, `unfire`, `lanterns`, `wash`/`unwash`, `bugs`, `journal`,
-`discovery`, `env` (moon, weather, Sleeper moods), `note`, `patches`, `carvings`.
+`discovery`, `env` (moon, weather, Sleeper moods), `note`, `patches`, `carvings`,
+`chat {kind: all|whisper|system, from, id, to, toId, text, at}`.
 
 ## Testing locally
 
