@@ -152,6 +152,22 @@ planned separately by Thaqif):
   their spot clears. Being within 15 units raises dread. Client draws them with a
   shader that writes alpha 0 into the colour target; the ink pass sees that and
   leaves them as flat pale negative space with only a little fog stipple.
+- **Phase 3, stone lanterns (done; light only, no map gating).** 26 lanterns from
+  `generateLanterns(seed)` (one near the spawn beach, one by the main spring; the
+  4 highest others are great lanterns needing lamp oil from 3 different frogs).
+  Lamp oil = 3 seeds (seeds from berries, coconuts, sometimes digging). One oil
+  = 480 s of fuel (max 1920). A lit lantern clears fog in a radius (14, great 24),
+  warms within 60% of it, and borrows a light from the fire-light pool. State in
+  the `lanterns` table.
+- **The fog fights back (done).** A lantern that runs dry goes cold (offerings
+  reset). Its clearing then shrinks in 4 steps over 2 in-game days
+  (`reclaim_progress` 0..1, `clearRadius()`); relighting stops it. When fully
+  reclaimed (`reclaimed()`): 35% of objects in the radius are swallowed (gone,
+  regrow on the usual schedule), fires there are removed, sacks are dragged
+  4-10 units deeper. Burn rate rises +25% per day held clear (`cleared_since`,
+  max 2.5x) and doubles on Drowning nights (`env.drowning`, set in Phase 5).
+  All of it runs during offline catch-up; inventories and journals are never
+  touched.
 
 ## Content model (added after v1)
 

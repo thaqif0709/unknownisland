@@ -1001,6 +1001,43 @@
     fires.set(f.id, f);
     return f;
   }
+  // ================= Stone lanterns =================
+  // Old stone lanterns: a stepped base, a pillar, a lamp box and a wide roof.
+  // Lit, the lamp box glows and a light from the pool is lent to it.
+  let lanterns = new Map();
+  const lanternStoneM = soft(0xA59E92), lanternDarkM = soft(0x7E776D);
+  const glowOnM = new THREE.MeshBasicMaterial({ color: 0xF3C35A }), glowOffM = new THREE.MeshBasicMaterial({ color: 0x3A3230 });
+  function makeLantern(big) {
+    const g = new THREE.Group(), k = big ? 1.8 : 1;
+    const add = (geo, m, y) => { const mesh = new THREE.Mesh(geo, m); mesh.position.y = y * k; mesh.scale.setScalar(k); g.add(mesh); return mesh; };
+    add(new THREE.CylinderGeometry(.55, .62, .18, 6), lanternDarkM, .09);
+    add(new THREE.CylinderGeometry(.42, .48, .14, 6), lanternStoneM, .25);
+    add(new THREE.CylinderGeometry(.16, .2, .9, 8), lanternStoneM, .77);
+    add(new THREE.CylinderGeometry(.38, .3, .12, 6), lanternStoneM, 1.28);
+    add(new THREE.BoxGeometry(.5, .42, .5), lanternStoneM, 1.55);
+    const glow = add(new THREE.BoxGeometry(.52, .24, .3), glowOffM, 1.56);
+    const glow2 = add(new THREE.BoxGeometry(.3, .24, .52), glowOffM, 1.56);
+    add(new THREE.ConeGeometry(.62, .42, 6), lanternDarkM, 1.97);
+    add(new THREE.SphereGeometry(.09, 8, 6), lanternStoneM, 2.24);
+    bake(g, [glow, glow2]);
+    shadows(g);
+    return { g, glows: [glow, glow2] };
+  }
+  function setLantern(src) {
+    let l = lanterns.get(src.id);
+    if (!l) {
+      const { g, glows } = makeLantern(src.big);
+      g.position.set(src.x, groundAt(src.x, src.z), src.z); g.rotation.y = src.id * 1.3;
+      scene.add(g);
+      l = { id: src.id, type: 'lantern', x: src.x, z: src.z, big: src.big, r: src.big ? .9 : .55, mesh: g, glows, state: {} };
+      lanterns.set(src.id, l);
+    }
+    Object.assign(l, { lit: src.lit, fuel: src.fuel, have: src.have, need: src.need, clear: src.clear || 0, reclaim: src.reclaim ?? 1 });
+    l.glows.forEach(m => { m.material = l.lit ? glowOnM : glowOffM; });
+  }
+  function clearLanterns() { lanterns.forEach(l => scene.remove(l.mesh)); lanterns = new Map(); }
+  const lanternRadius = l => l.big ? RULES.LANTERN.BIG_RADIUS : RULES.LANTERN.RADIUS;
+
   // Sacks of things dropped when someone was knocked down.
   let drops = new Map();
   const sackM = soft(0xB59A72), tieM = soft(0x7A5A45);
@@ -1183,6 +1220,7 @@
         clearFires(); m.fires.forEach(addFire);
         clearDrops(); (m.drops || []).forEach(addDrop);
         clearStilled();
+        clearLanterns(); (m.lanterns || []).forEach(setLantern);
         resetRemotes(); m.players.forEach(addRemote);
         if (hero) removeCastaway(hero);
         hero = makeCastaway(colorFor(me.id));
@@ -1236,6 +1274,9 @@
         else { const r = remotes.get(m.id); if (r) r.knockT = 3; }
         break;
       case 'drop': addDrop(m.drop); break;
+      case 'lanterns': for (const l of m.list) setLantern(l); break;
+      case 'unfire': { const f = fires.get(m.id); if (f) { scene.remove(f.mesh); fires.delete(m.id); } break; }
+      case 'movedrop': { const d = drops.get(m.id); if (d) { d.x = m.x; d.z = m.z; d.mesh.position.set(m.x, groundAt(m.x, m.z), m.z); } break; }
       case 'undrop': removeDrop(m.id); break;
       case 'dawn':
         if (state === 'play') toast(`Morning of day ${m.day}. You made it through the night.`);
@@ -1291,7 +1332,7 @@
       const d = Math.hypot(o.x - px, o.z - pz) - radius(o);
       if (d < RULES.REACH && d < bd) { bd = d; bestO = o; }
     };
-    nearbyObjects(px, pz, check); fires.forEach(check); drops.forEach(check);
+    nearbyObjects(px, pz, check); fires.forEach(check); drops.forEach(check); lanterns.forEach(check);
     if (bestO) return bestO;
     const sn = WG.nearestSpring(px, pz);
     if (Math.hypot(px - sn.x, pz - sn.z) < RULES.SPRING_REACH) return { type: 'spring' };
@@ -1310,6 +1351,13 @@
       case 'ore': return has('pickaxe') ? `Mine ${o.ore === 'iron' ? 'iron' : 'copper'} ore` : `${o.ore === 'iron' ? 'Iron' : 'Copper'} ore (needs a pickaxe)`;
       case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
       case 'drop': return 'Pick up the scattered things';
+      case 'lantern': {
+        const oil = (stats.inv.oil || 0) > 0;
+        if (o.lit) return oil ? `Add lamp oil (burns ${Math.ceil(o.fuel / RULES.DAY_LEN * 24)} more hours)` : 'A lit stone lantern';
+        if (!oil && o.reclaim < 1) return `Gone cold. The fog is creeping back (${Math.round(o.reclaim * 100)}%)`;
+        if (!oil) return o.big ? `Great stone lantern (needs lamp oil from ${o.need} frogs)` : 'Old stone lantern (needs lamp oil)';
+        return o.big ? `Offer lamp oil (${o.have}/${o.need} frogs)` : 'Light it with lamp oil';
+      }
       case 'fire': { const n = o.kind === 'hearth' ? 'hearth' : 'fire';
         return (stats.inv.wood || 0) > 0 ? (o.fuel > 0 ? `Add wood to the ${n}` : 'Relight with wood') : `${n[0].toUpperCase() + n.slice(1)} (needs wood)`; }
     }
@@ -1317,12 +1365,12 @@
   const has = tool => stats.tools.includes(tool);
   function targetKey(o) {
     if (o.type === 'spring' || o.type === 'sea') return o.type;
-    return (o.type === 'fire' ? 'f' : o.type === 'drop' ? 'd' : 'o') + o.id;
+    return (o.type === 'fire' ? 'f' : o.type === 'drop' ? 'd' : o.type === 'lantern' ? 'l' : 'o') + o.id;
   }
   function act() {
     if (state !== 'play' || cooldown > 0 || !target || !net || knockT > 0) return;
     cooldown = .45;
-    if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig'].includes(target.type)) hero.swingT = .35;
+    if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig', 'lantern'].includes(target.type)) hero.swingT = .35;
     net.send({ t: 'act', target: targetKey(target) });
   }
   // Build a recipe: tools are made on the spot, fires are placed in front of you.
@@ -1538,8 +1586,9 @@
     resize();
   }
   applyQuality();
-  if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, chunks, objects: () => objects, stats, stilled,
-    pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); } }; }
+  if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, camera, chunks, objects: () => objects, stats, stilled,
+    pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); },
+    lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); } }; }
 
   // ================= Sky =================
   const skyKeys = [
@@ -1676,6 +1725,7 @@
       fogTimer = .25;
       const lights = [];
       fires.forEach(f => { if (f.fuel > 0) lights.push({ x: f.x, z: f.z, r: WG.FIRES[f.kind].warm * 1.4 }); });
+      lanterns.forEach(l => { if (l.clear > 0) lights.push({ x: l.x, z: l.z, r: l.clear }); });   // shrinks as the fog reclaims it
       updateFogMap(focusX, focusZ, t, lights);
     }
     if (window.__dbg && __dbg.forceDread != null) stats.dread = __dbg.forceDread;   // debug only
@@ -1716,12 +1766,18 @@
       puffNext = lowGfx ? .9 : .5;
       for (const e of lit) if (Math.hypot(e.f.x - camera.position.x, e.f.z - camera.position.z) < 50) emitPuff(e.f);
     }
+    lanterns.forEach(l => {
+      if (l.lit && inGame()) { l.fuel = Math.max(0, l.fuel - dt); }
+      if (l.lit) lit.push({ f: l, s: 1, d: Math.hypot(l.x - px, l.z - pz), lantern: true });
+    });
     lit.sort((a, b) => a.d - b.d);
     fireLights.forEach((l, i) => {
       const e = lit[i];
       if (!e) { l.intensity = 0; return; }
-      l.position.set(e.f.x, heightAt(e.f.x, e.f.z) + 1.1, e.f.z);
-      l.intensity = (1.5 + Math.sin(elapsed * 11 + i) * .25) * e.s;
+      const h = e.lantern ? (e.f.big ? 2.8 : 1.6) : 1.1;
+      l.position.set(e.f.x, groundAt(e.f.x, e.f.z) + h, e.f.z);
+      l.distance = e.lantern ? (e.f.big ? 30 : 18) : 14;
+      l.intensity = e.lantern ? 1.4 + Math.sin(elapsed * 3 + i) * .1 : (1.5 + Math.sin(elapsed * 11 + i) * .25) * e.s;
     });
 
     // Your own castaway: moved locally, reported to the server.
@@ -1744,7 +1800,7 @@
             const ox = nx - o.x, oz = nz - o.z, d = Math.hypot(ox, oz), min = radius(o) + .3;
             if (d < min && d > 0) { nx = o.x + ox / d * min; nz = o.z + oz / d * min; }
           };
-          nearbyObjects(nx, nz, push); fires.forEach(push);
+          nearbyObjects(nx, nz, push); fires.forEach(push); lanterns.forEach(push);
           px = nx; pz = nz;
         }
         const tf = Math.atan2(dx, dz);
@@ -1835,6 +1891,7 @@
       camera.lookAt(px, py + 1.3, pz);
     }
 
+    if (window.__dbg && __dbg.camOverride) { const c = __dbg.camOverride; camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); camera.updateMatrixWorld(); }   // debug only
     renderer.setRenderTarget(colorRT); renderer.render(scene, camera);
     if (lowGfx) { renderer.setRenderTarget(null); renderer.render(inkScene, inkCam); requestAnimationFrame(tick); return; }
     const bg = scene.background, fog = scene.fog;

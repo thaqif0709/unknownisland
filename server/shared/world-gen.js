@@ -60,6 +60,19 @@
       FRIEND_RADIUS: 12,
     },
     KNOCK: { HEALTH: 20, DREAD: 25, DROP: .5, DOWN_MS: 3000 },
+    // Old stone lanterns. Oil keeps them lit; lit, they clear the fog around them.
+    LANTERN: {
+      FUEL_PER_OIL: 480, MAX_FUEL: 1920,   // seconds (a day is 240)
+      RADIUS: 14, BIG_RADIUS: 24,          // fog cleared around a lit lantern
+      BIG_OFFERINGS: 3,                    // different frogs needed to light a great lantern
+      // The fog fights back: a cold lantern's clearing shrinks in steps over
+      // RECLAIM_DAYS; long-held clearings burn more oil; the Drowning Moon drains all.
+      RECLAIM_DAYS: 2, RECLAIM_STEPS: 4,
+      HELD_PER_DAY: .25, HELD_MAX: 1.5,    // +25% burn per day held clear, up to +150%
+      DROWNING_MULT: 2,
+      SWALLOW_CHANCE: .35,                 // chance each thing in a reclaimed clearing is taken
+    },
+    SEED_CHANCE_DIG: .35,
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {
       PER_PLAYER: 2, ALONE_EXTRA: 1, DREAD_EXTRA: 1, MAX: 12,
@@ -75,7 +88,7 @@
   };
 
   // Things you can carry (inventory keys and their names).
-  const ITEMS = { wood: 'Wood', stone: 'Stone', clay: 'Clay', copper: 'Copper ore', iron: 'Iron ore' };
+  const ITEMS = { wood: 'Wood', stone: 'Stone', clay: 'Clay', copper: 'Copper ore', iron: 'Iron ore', seeds: 'Seeds', oil: 'Lamp oil' };
 
   // Things you can build. Add new entries here; the recipe book lists them all.
   // kind 'fire' places a fire of that type in front of you; kind 'tool' is kept forever.
@@ -92,6 +105,8 @@
       desc: 'Two wood from every chop.' },
     { id: 'ironpick', kind: 'tool', name: 'Iron pickaxe', cost: { wood: 2, iron: 3 }, needs: 'pickaxe',
       desc: 'Twice the ore from every swing. Needs a stone pickaxe to make.' },
+    { id: 'oil', kind: 'item', name: 'Lamp oil', cost: { seeds: 3 }, gives: { oil: 1 },
+      desc: 'Pressed from seeds. An offering for the old stone lanterns: one lights a lantern for about two days.' },
   ];
 
   // Fire types: warmth radius, how fast they burn (1 = one fuel per second), fuel.
@@ -183,6 +198,33 @@
     let f = Math.max(smoothstep(-1.5, -4.5, h), smoothstep(front + 2.5, front - 1.5, h));
     for (const L of lights) f *= smoothstep(L.r * .8, L.r * 1.5, Math.hypot(x - L.x, z - L.z));
     return Math.max(0, Math.min(1, f));
+  }
+
+  // Old stone lanterns, spread across the land. The great ones stand on high
+  // ground and need several frogs to light. Ids are the index in this list.
+  const lanternCache = new Map();
+  function generateLanterns(seed) {
+    if (lanternCache.has(seed)) return lanternCache.get(seed);
+    const rng = mulberry32((seed ^ 0x1A7E2B) >>> 0), out = [];
+    const ok = (x, z) => {
+      const h = heightAt(x, z), b = biomeAt(x, z, h);
+      return h > 1.3 && b !== 'spring' && b !== 'beach' && out.every(l => Math.hypot(l.x - x, l.z - z) > 30);
+    };
+    // one by the south beach where everyone arrives, one at the main spring
+    const fixed = [[SPAWN.x + 6, SPAWN.z - 22], [SPRING.x + 8, SPRING.z + 5]];
+    for (const [x0, z0] of fixed) {
+      for (let r = 0; r < 12; r += 1) { const x = x0 + (rng() - .5) * r, z = z0 + (rng() - .5) * r; if (ok(x, z)) { out.push({ x, z }); break; } }
+    }
+    for (let tries = 0; tries < 6000 && out.length < 26; tries++) {
+      const x = (rng() - .5) * ISL * 2.2, z = (rng() - .5) * ISL * 2.2;
+      if (ok(x, z)) out.push({ x, z });
+    }
+    // the highest few become great lanterns
+    const byHeight = out.map((l, i) => [heightAt(l.x, l.z), i]).filter(x => x[1] >= fixed.length).sort((a, b) => b[0] - a[0]);   // the first two stay small
+    const big = new Set(byHeight.slice(0, 4).map(x => x[1]));
+    const list = out.map((l, i) => ({ id: i, x: +l.x.toFixed(2), z: +l.z.toFixed(2), big: big.has(i) }));
+    lanternCache.set(seed, list);
+    return list;
   }
 
   // Biomes: what grows where.
@@ -327,7 +369,7 @@
   const WorldGen = {
     RULES, ITEMS, RECIPES, FIRES, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
-    generateObjects, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, speedMult,
+    generateObjects, generateLanterns, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, speedMult,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;
   else root.WorldGen = WorldGen;

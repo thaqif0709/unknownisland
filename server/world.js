@@ -30,6 +30,15 @@ class Island {
     }
     this.fires = data.fires.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: FIRES[f.kind] ? f.kind : 'campfire' }));
     this.drops = (data.drops || []).map(d => ({ id: d.id, x: d.x, z: d.z, items: d.items }));
+    // Stone lanterns: fixed places from the seed, state from the database.
+    // reclaim: 0 = fully clear, 1 = the fog has it all back (never-lit lanterns start at 1)
+    this.lanterns = WG.generateLanterns(this.seed).map(l => ({ ...l, lit: false, fuel: 0, offerings: [], clearedSince: null, reclaim: 1 }));
+    for (const saved of data.lanterns || []) {
+      const l = this.lanterns[saved.id];
+      if (l) Object.assign(l, { lit: saved.lit, fuel: saved.fuel, offerings: saved.offerings || [],
+        clearedSince: saved.clearedSince ?? null, reclaim: saved.reclaim ?? (saved.lit ? 0 : 1) });
+    }
+    this.lanternsDirty = new Set();
     this.env = {};   // weather and moon flags for the fog (later phases)
     this.stilled = []; this.nextStilled = 1; this.stilledTimer = 0;
     this.players = new Map();   // playerId -> live player
@@ -64,6 +73,7 @@ class Island {
     const sunrises = Math.floor(after - 0.25) - Math.floor(before - 0.25);
     this.time = after - Math.floor(after);
     for (const f of this.fires) if (f.fuel > 0) f.fuel = Math.max(0, f.fuel - sec * FIRES[f.kind].burn);
+    for (const l of this.lanterns || []) this.burnLantern(l, sec);
     if (sunrises > 0) {
       this.day += sunrises;
       return this.dawn();
@@ -83,6 +93,7 @@ class Island {
         if (o.type === 'palm') s.coconuts = 0;
       }
       if (o.type === 'rock' && s.gone && this.day - s.goneDay >= RULES.ROCK_REGROW_DAYS) s = o.state = WG.defaultState(o.type);
+      if (o.type === 'bush' && s.gone && this.day - s.goneDay >= RULES.TREE_REGROW_DAYS) s = o.state = WG.defaultState(o.type);
       if (o.type === 'ore' && s.gone && this.day - s.goneDay >= RULES.ORE_REGROW_DAYS) s = o.state = WG.defaultState(o.type);
       if (o.type === 'dig' && s.dug) s = o.state = WG.defaultState(o.type);
       const g = WG.growth(o.type, s, this.day, 0.25);
@@ -139,6 +150,7 @@ class Island {
       states: this.objects.filter(o => !WG.isDefaultState(o.type, o.state)).map(o => [o.id, o.state]),
       fires: this.fires.map(f => this.fireView(f)),
       drops: this.drops.map(d => ({ id: d.id, x: d.x, z: d.z })),
+      lanterns: this.lanterns.map(l => this.lanternView(l)),
       players: [...this.players.values()].filter(q => q !== p).map(q => this.publicView(q)),
       rules: RULES,
     });
@@ -196,7 +208,8 @@ class Island {
     this.updateStilled(dt, lights);
     for (const p of this.players.values()) {
       if (p.dead) continue;
-      p.warm = this.fires.some(f => f.fuel > 0 && Math.hypot(f.x - p.x, f.z - p.z) < FIRES[f.kind].warm);
+      p.warm = this.fires.some(f => f.fuel > 0 && Math.hypot(f.x - p.x, f.z - p.z) < FIRES[f.kind].warm)
+        || this.lanterns.some(l => l.lit && Math.hypot(l.x - p.x, l.z - p.z) < this.lanternRadius(l) * .6);
       // Dread: fog, darkness and being alone push it up; light, day and friends bring it down.
       p.fog = WG.fogAt(p.x, p.z, heightAt(p.x, p.z), this.time, lights, this.env);
       let alone = true;
@@ -238,6 +251,10 @@ class Island {
     if (this.tickN % ME_EVERY === 0) for (const p of this.players.values()) this.sendMe(p);
     if (this.tickN % FIRES_EVERY === 0 && this.fires.length) {
       this.broadcast({ t: 'fires', list: this.fires.map(f => [f.id, r2(f.fuel)]) });
+    }
+    if (this.tickN % (FIRES_EVERY * 5) === 0) {
+      const lit = this.lanterns.filter(l => l.lit || l.offerings.length);
+      if (lit.length) this.broadcast({ t: 'lanterns', list: lit.map(l => this.lanternView(l)) });
     }
     if (now - this.lastSave > SAVE_MS) this.save();
   }
@@ -302,9 +319,10 @@ class Island {
       return say('Salty. That only made it worse.');
     }
 
-    const m = /^([ofd])(\d+)$/.exec(target);
+    const m = /^([ofdl])(\d+)$/.exec(target);
     if (!m) return;
     if (m[1] === 'd') return this.pickUp(p, +m[2]);
+    if (m[1] === 'l') return this.tendLantern(p, +m[2]);
     if (m[1] === 'f') {
       const f = this.fires.find(f => f.id === +m[2]);
       if (!f || Math.hypot(f.x - p.x, f.z - p.z) - 0.6 > RULES.REACH + REACH_SLACK) return;
@@ -339,8 +357,9 @@ class Island {
           p.hunger = Math.min(100, p.hunger + RULES.COCONUT_FOOD);
           p.thirst = Math.min(100, p.thirst + RULES.COCONUT_WATER);
           p.dread = Math.max(0, p.dread + RULES.DREAD.EAT);
+          p.inv.seeds += 1;
           this.fx(p, 'swing');
-          say('A coconut. Food and a bit of water.');
+          say('A coconut. Food and a bit of water. (+1 seeds)');
           changed();
         } else chop();
         break;
@@ -350,7 +369,8 @@ class Island {
           s.berries = false;
           p.hunger = Math.min(100, p.hunger + RULES.BERRY_FOOD);
           p.dread = Math.max(0, p.dread + RULES.DREAD.EAT);
-          say(o.species === 'blueberry' ? 'Blueberries. Sweet!' : 'Berries. Tart, but filling.');
+          p.inv.seeds += 1;
+          say(o.species === 'blueberry' ? 'Blueberries. Sweet! (+1 seeds)' : 'Berries. Tart, but filling. (+1 seeds)');
           changed();
         } else say('Nothing left. It’ll grow back by morning.');
         break;
@@ -378,7 +398,8 @@ class Island {
         if (!has('shovel')) return say('The soil is soft here. With a shovel you could dig.');
         s.dug = true; p.inv.clay += RULES.DIG_CLAY;
         this.fx(p, 'swing', o.id);
-        say(`+${RULES.DIG_CLAY} clay`);
+        if (Math.random() < RULES.SEED_CHANCE_DIG) { p.inv.seeds += 1; say(`+${RULES.DIG_CLAY} clay, and some buried seeds`); }
+        else say(`+${RULES.DIG_CLAY} clay`);
         changed();
         break;
     }
@@ -393,6 +414,13 @@ class Island {
     if (r.needs && !p.tools.includes(r.needs)) return say(`You need a ${WG.recipeById(r.needs).name.toLowerCase()} first.`);
     if (!hasCost(p, r.cost)) return say(`A ${r.name.toLowerCase()} needs ${costText(r.cost)}.`);
 
+    if (r.kind === 'item') {
+      for (const [k, n] of Object.entries(r.cost)) p.inv[k] -= n;
+      for (const [k, n] of Object.entries(r.gives)) p.inv[k] += n;
+      this.fx(p, 'swing');
+      this.sendMe(p);
+      return say(`You made ${r.name.toLowerCase()}.`);
+    }
     if (r.kind === 'tool') {
       for (const [k, n] of Object.entries(r.cost)) p.inv[k] -= n;
       p.tools.push(r.id);
@@ -506,7 +534,100 @@ class Island {
 
   // Light sources that clear fog: lit fires (lanterns join them later).
   lights() {
-    return this.fires.filter(f => f.fuel > 0).map(f => ({ x: f.x, z: f.z, r: FIRES[f.kind].warm * 1.4 }));
+    return this.fires.filter(f => f.fuel > 0).map(f => ({ x: f.x, z: f.z, r: FIRES[f.kind].warm * 1.4 }))
+      .concat(this.lanterns.filter(l => this.clearRadius(l) > 0).map(l => ({ x: l.x, z: l.z, r: this.clearRadius(l) })));
+  }
+
+  // ================= Stone lanterns =================
+  lanternRadius(l) { return l.big ? RULES.LANTERN.BIG_RADIUS : RULES.LANTERN.RADIUS; }
+  // How far the clearing reaches: full while lit; once cold it shrinks in steps
+  // as the fog reclaims it.
+  clearRadius(l) {
+    if (l.lit) return this.lanternRadius(l);
+    const steps = RULES.LANTERN.RECLAIM_STEPS;
+    return this.lanternRadius(l) * Math.ceil((1 - l.reclaim) * steps - 1e-9) / steps;
+  }
+  // The fog fights back. Burn oil (faster the longer the clearing has been held,
+  // and on Drowning nights); once cold, the fog reclaims the clearing over
+  // RECLAIM_DAYS. Works for one tick or a long offline catch-up.
+  burnLantern(l, sec) {
+    const L = RULES.LANTERN;
+    if (l.lit) {
+      const heldDays = l.clearedSince ? Math.max(0, (this.lastTickAt - l.clearedSince) / 1000 / RULES.DAY_LEN) : 0;
+      const rate = (1 + Math.min(L.HELD_MAX, heldDays * L.HELD_PER_DAY)) * (this.env.drowning ? L.DROWNING_MULT : 1);
+      const lasts = l.fuel / rate;
+      this.lanternsDirty.add(l.id);
+      if (sec < lasts) { l.fuel -= sec * rate; return; }
+      sec -= lasts;
+      l.fuel = 0; l.lit = false; l.offerings = [];
+      this.lanternChanged(l);
+    }
+    if (l.reclaim < 1) {
+      const before = this.clearRadius(l);
+      l.reclaim = Math.min(1, l.reclaim + sec / (L.RECLAIM_DAYS * RULES.DAY_LEN));
+      this.lanternsDirty.add(l.id);
+      if (this.clearRadius(l) !== before) this.lanternChanged(l);
+      if (l.reclaim >= 1) { l.clearedSince = null; this.reclaimed(l); }
+    }
+  }
+  lanternChanged(l) { if (this.players && this.players.size) this.broadcast({ t: 'lanterns', list: [this.lanternView(l)] }); }
+  // A clearing the fog has fully taken back: some of what stood there is
+  // swallowed (it regrows later), fires are put out and taken, and dropped
+  // sacks are dragged deeper into the fog. Inventories are never touched.
+  reclaimed(l) {
+    const R = this.lanternRadius(l), chance = RULES.LANTERN.SWALLOW_CHANCE, changed = [];
+    for (const o of this.objects) {
+      if (Math.hypot(o.x - l.x, o.z - l.z) > R || Math.random() > chance) continue;
+      const s = o.state;
+      if (s.gone || s.dug) continue;
+      if (o.type === 'dig') s.dug = true;
+      else { s.gone = true; s.swallowed = true; s.felledDay = s.goneDay = this.day; }
+      this.dirty.add(o.id); changed.push(o);
+    }
+    if (changed.length && this.players.size) this.broadcast({ t: 'objs', list: changed.map(o => [o.id, o.state]) });
+    for (const f of this.fires.filter(f => Math.hypot(f.x - l.x, f.z - l.z) < R)) {
+      this.fires = this.fires.filter(x => x !== f);
+      this.store.deleteFire(f.id).catch(e => console.error('[island] could not delete fire', e.message));
+      if (this.players.size) this.broadcast({ t: 'unfire', id: f.id });
+    }
+    for (const d of this.drops.filter(d => Math.hypot(d.x - l.x, d.z - l.z) < R)) {
+      const a = Math.atan2(d.z - l.z, d.x - l.x) + (Math.random() - .5), push = 4 + Math.random() * 6;
+      d.x = r2(d.x + Math.cos(a) * push); d.z = r2(d.z + Math.sin(a) * push);
+      this.store.moveDrop(d.id, d.x, d.z).catch(e => console.error('[island] could not move drop', e.message));
+      if (this.players.size) this.broadcast({ t: 'movedrop', id: d.id, x: d.x, z: d.z });
+    }
+    console.log(`[island ${this.id}] the fog reclaimed lantern ${l.id}: ${changed.length} things swallowed`);
+  }
+  lanternView(l) {
+    return { id: l.id, x: l.x, z: l.z, big: l.big, lit: l.lit, fuel: r2(l.fuel), have: l.offerings.length,
+      need: l.big ? RULES.LANTERN.BIG_OFFERINGS : 1, clear: r2(this.clearRadius(l)), reclaim: r2(l.reclaim) };
+  }
+  // Offer lamp oil: lights a cold lantern (great ones need offerings from
+  // several different frogs first) or tops up a lit one.
+  tendLantern(p, id) {
+    const l = this.lanterns[id], L = RULES.LANTERN;
+    if (!l || Math.hypot(l.x - p.x, l.z - p.z) > (l.big ? 2.2 : 1.6) + RULES.REACH + REACH_SLACK) return;
+    const say = msg => this.send(p, { t: 'toast', msg });
+    if (p.inv.oil <= 0) return say(l.lit ? 'It burns on. Lamp oil would keep it going.' : 'Cold stone. It wants an offering of lamp oil.');
+    if (l.lit) {
+      if (l.fuel >= L.MAX_FUEL - 1) return say('The lantern is full.');
+      p.inv.oil--; l.fuel = Math.min(L.MAX_FUEL, l.fuel + L.FUEL_PER_OIL);
+      say('The flame steadies.');
+    } else if (l.big) {
+      if (l.offerings.includes(p.id)) return say('You have made your offering. It needs other frogs\u2019 too.');
+      p.inv.oil--; l.offerings.push(p.id);
+      if (l.offerings.length >= L.BIG_OFFERINGS) {
+        l.lit = true; l.fuel = L.FUEL_PER_OIL * L.BIG_OFFERINGS; l.litBy = p.id; l.reclaim = 0; l.clearedSince = l.clearedSince || Date.now();
+        this.broadcast({ t: 'toast', msg: 'A great lantern flares to life. The fog pulls back from the hill.' });
+      } else say(`Your offering is taken. It needs ${L.BIG_OFFERINGS - l.offerings.length} more frog${L.BIG_OFFERINGS - l.offerings.length > 1 ? 's' : ''}.`);
+    } else {
+      p.inv.oil--; l.lit = true; l.fuel = L.FUEL_PER_OIL; l.litBy = p.id; l.reclaim = 0; l.clearedSince = l.clearedSince || Date.now();
+      say('The old lantern catches. The fog draws back.');
+    }
+    this.lanternsDirty.add(l.id);
+    this.fx(p, 'swing');
+    this.broadcast({ t: 'lanterns', list: [this.lanternView(l)] });
+    this.sendMe(p);
   }
 
   // Knocked down (by the Stilled): hurt, frightened, and half of what you carry
@@ -567,13 +688,17 @@ class Island {
       return { id, state: WG.isDefaultState(o.type, o.state) ? null : { ...o.state } };
     });
     this.dirty.clear();
+    const lanterns = [...this.lanternsDirty].map(id => { const l = this.lanterns[id]; return { id, lit: l.lit, fuel: r2(l.fuel), offerings: [...l.offerings], litBy: l.litBy, clearedSince: l.clearedSince, reclaim: r2(l.reclaim) }; });
+    this.lanternsDirty = new Set();
     const snap = {
       id: this.id, day: this.day, time: this.time, lastTickAt: this.lastTickAt,
       objects, fires: this.fires.map(f => ({ id: f.id, fuel: r2(f.fuel) })), members,
+      lanterns,
     };
     this.saving = this.saving.then(() => this.store.saveIsland(snap)).catch(e => {
       console.error(`[island ${this.id}] save failed:`, e.message);
       for (const o of objects) this.dirty.add(o.id);   // try again next time
+      for (const l of lanterns) this.lanternsDirty.add(l.id);
     });
     return this.saving;
   }

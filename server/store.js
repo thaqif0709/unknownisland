@@ -22,6 +22,17 @@ function createPgStore(url) {
       // Island 2: the big island (island 1 was the small original; its data is kept).
       await q(`INSERT INTO islands (id, name, seed) VALUES (2, 'Unknown Island', 11) ON CONFLICT (id) DO NOTHING`);
       await q(`ALTER TABLE island_members ADD COLUMN IF NOT EXISTS dread REAL NOT NULL DEFAULT 0`);
+      await q(`CREATE TABLE IF NOT EXISTS lanterns (
+        island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
+        lantern_id INT NOT NULL,
+        lit BOOLEAN NOT NULL DEFAULT false,
+        fuel REAL NOT NULL DEFAULT 0,
+        offerings JSONB NOT NULL DEFAULT '[]',
+        lit_by INT REFERENCES players(id) ON DELETE SET NULL,
+        lit_at TIMESTAMPTZ,
+        PRIMARY KEY (island_id, lantern_id))`);
+      await q(`ALTER TABLE lanterns ADD COLUMN IF NOT EXISTS cleared_since TIMESTAMPTZ`);
+      await q(`ALTER TABLE lanterns ADD COLUMN IF NOT EXISTS reclaim_progress REAL NOT NULL DEFAULT 1`);
       await q(`CREATE TABLE IF NOT EXISTS drops (
         id SERIAL PRIMARY KEY,
         island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
@@ -56,12 +67,15 @@ function createPgStore(url) {
       const objs = await q('SELECT obj_id, state FROM world_objects WHERE island_id = $1', [id]);
       const fires = await q('SELECT id, x, z, fuel, kind, built_by FROM fires WHERE island_id = $1 ORDER BY id', [id]);
       const drops = await q('SELECT id, x, z, items FROM drops WHERE island_id = $1 ORDER BY id', [id]);
+      const lanterns = await q('SELECT lantern_id, lit, fuel, offerings, cleared_since, reclaim_progress FROM lanterns WHERE island_id = $1', [id]);
       return {
         id: row.id, name: row.name, seed: row.seed, day: row.day, time: row.time_of_day,
         lastTickAt: new Date(row.last_tick_at).getTime(),
         objects: objs.rows.map(o => ({ id: o.obj_id, state: o.state })),
         fires: fires.rows.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: f.kind, builtBy: f.built_by })),
         drops: drops.rows.map(d => ({ id: d.id, x: d.x, z: d.z, items: d.items })),
+        lanterns: lanterns.rows.map(l => ({ id: l.lantern_id, lit: l.lit, fuel: l.fuel, offerings: l.offerings,
+          clearedSince: l.cleared_since ? new Date(l.cleared_since).getTime() : null, reclaim: l.reclaim_progress })),
       };
     },
     async getMember(islandId, playerId) {
@@ -86,6 +100,15 @@ function createPgStore(url) {
           }
         }
         for (const f of snap.fires) await c.query('UPDATE fires SET fuel = $2 WHERE id = $1', [f.id, f.fuel]);
+        for (const l of snap.lanterns || []) {
+          await c.query(`INSERT INTO lanterns (island_id, lantern_id, lit, fuel, offerings, lit_by, lit_at, cleared_since, reclaim_progress)
+                         VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $3 THEN now() END, $7, $8)
+                         ON CONFLICT (island_id, lantern_id) DO UPDATE SET lit = EXCLUDED.lit, fuel = EXCLUDED.fuel, offerings = EXCLUDED.offerings,
+                         lit_by = COALESCE(EXCLUDED.lit_by, lanterns.lit_by), lit_at = COALESCE(lanterns.lit_at, EXCLUDED.lit_at),
+                         cleared_since = EXCLUDED.cleared_since, reclaim_progress = EXCLUDED.reclaim_progress`,
+            [snap.id, l.id, l.lit, l.fuel, JSON.stringify(l.offerings), l.litBy || null,
+             l.clearedSince ? new Date(l.clearedSince) : null, l.reclaim]);
+        }
         for (const m of snap.members) {
           await c.query(`UPDATE island_members SET x = $3, z = $4, face = $5, health = $6, hunger = $7, thirst = $8,
                            wood = $9, stone = $10, inventory = $11, dread = $12, last_seen = now() WHERE island_id = $1 AND player_id = $2`,
@@ -104,6 +127,8 @@ function createPgStore(url) {
       return r.rows[0].id;
     },
     async deleteDrop(id) { await q('DELETE FROM drops WHERE id = $1', [id]); },
+    async moveDrop(id, x, z) { await q('UPDATE drops SET x = $2, z = $3 WHERE id = $1', [id, x, z]); },
+    async deleteFire(id) { await q('DELETE FROM fires WHERE id = $1', [id]); },
     async insertFire(islandId, x, z, fuel, builtBy, kind) {
       const r = await q('INSERT INTO fires (island_id, x, z, fuel, built_by, kind) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
         [islandId, x, z, fuel, builtBy, kind]);
@@ -117,8 +142,8 @@ function createMemoryStore() {
   let nextPlayer = 1, nextFire = 1, nextDrop = 1;
   const players = new Map(), sessions = new Map(), members = new Map();
   const islands = new Map([
-    [1, { id: 1, name: 'Unknown Island', seed: 7, day: 1, time: 0.26, lastTickAt: Date.now(), objects: new Map(), fires: [], drops: [] }],
-    [2, { id: 2, name: 'Unknown Island', seed: 11, day: 1, time: 0.26, lastTickAt: Date.now(), objects: new Map(), fires: [], drops: [] }],
+    [1, { id: 1, name: 'Unknown Island', seed: 7, day: 1, time: 0.26, lastTickAt: Date.now(), objects: new Map(), fires: [], drops: [], lanterns: new Map() }],
+    [2, { id: 2, name: 'Unknown Island', seed: 11, day: 1, time: 0.26, lastTickAt: Date.now(), objects: new Map(), fires: [], drops: [], lanterns: new Map() }],
   ]);
   const clone = v => JSON.parse(JSON.stringify(v));
 
@@ -153,6 +178,7 @@ function createMemoryStore() {
         objects: [...i.objects].map(([oid, state]) => ({ id: oid, state: clone(state) })),
         fires: clone(i.fires),
         drops: clone(i.drops),
+        lanterns: [...i.lanterns.values()].map(clone),
       };
     },
     async getMember(islandId, playerId) {
@@ -165,6 +191,8 @@ function createMemoryStore() {
       Object.assign(i, { day: snap.day, time: snap.time, lastTickAt: snap.lastTickAt });
       for (const o of snap.objects) o.state ? i.objects.set(o.id, clone(o.state)) : i.objects.delete(o.id);
       for (const f of snap.fires) { const x = i.fires.find(y => y.id === f.id); if (x) x.fuel = f.fuel; }
+      for (const l of snap.lanterns || []) i.lanterns.set(l.id, clone({ id: l.id, lit: l.lit, fuel: l.fuel, offerings: l.offerings,
+        clearedSince: l.clearedSince, reclaim: l.reclaim }));
       for (const m of snap.members) {
         const { playerId, ...rest } = m;
         members.set(snap.id + ':' + playerId, clone(rest));
@@ -176,6 +204,8 @@ function createMemoryStore() {
       return id;
     },
     async deleteDrop(id) { for (const i of islands.values()) i.drops = i.drops.filter(d => d.id !== id); },
+    async moveDrop(id, x, z) { for (const i of islands.values()) for (const d of i.drops) if (d.id === id) Object.assign(d, { x, z }); },
+    async deleteFire(id) { for (const i of islands.values()) i.fires = i.fires.filter(f => f.id !== id); },
     async insertFire(islandId, x, z, fuel, builtBy, kind) {
       const id = nextFire++;
       islands.get(islandId).fires.push({ id, x, z, fuel, builtBy, kind });
