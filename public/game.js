@@ -1785,9 +1785,9 @@
       case 'snap':
         t = m.time; day = m.day;
         syncStilled(m.s);
-        for (const [id, x, z, f, moving, dead] of m.p) {
+        for (const [id, x, z, f, moving, dead, stand] of m.p) {
           const r = remotes.get(id);
-          if (r) { r.remote.push(x, z, f, moving, dead); r.dead = !!dead; }
+          if (r) { r.remote.push(x, z, f, moving, dead); r.dead = !!dead; r.stand = stand || 0; }
         }
         break;
       case 'me':
@@ -2704,7 +2704,7 @@
   if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, camera, chunks, objects: () => objects, stats, stilled,
     pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); },
     washups: () => washups, bugs: () => bugs, previewJournal: keys => { keys.forEach(k => { journal.mine[k] = 1 + (k.length % 3); journal.firsts[k] = journal.firsts[k] || 'aiman'; }); },
-    setEnv: e => setEnv(e), setHealth: v => { stats.health = v; }, drops: () => drops, hop: () => hop, why: () => ({ state, air: hop.air, knockT, down: stats.down, ex: nrg.exhausted, panel: panelOpen(), h: heightAt(px, pz) }), addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
+    setEnv: e => setEnv(e), teleport: (x, z) => { px = x; pz = z; }, floorAt: (x, z, y) => floorAt(x, z, y), setHealth: v => { stats.health = v; }, drops: () => drops, hop: () => hop, why: () => ({ state, air: hop.air, knockT, down: stats.down, ex: nrg.exhausted, panel: panelOpen(), h: heightAt(px, pz) }), addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
     recarve: (id, text, st) => { const c = carvings.get(id); setCarvings([{ id, key: c.key, x: c.x, z: c.z, face: c.mesh.rotation.y, text, state: st || 'active', tally: [2, 5] }], id, 'new'); }, face: () => face, gy: () => groundAt(px, pz), board: () => board, openPanel: w => togglePanel(w), patches: l => { myPatches = l; setPatches(hero, l); },
     lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); } }; }
 
@@ -3108,7 +3108,14 @@
   // Roughly how tall each kind of obstacle is (from how its model is built), so a
   // jump that's higher than the top passes over it. Trees, palms, lanterns, the
   // board and the carving stones are always too tall.
+  const _box = new THREE.Box3();
   function topOf(o) {
+    // measured from the model when it's built (cached until it grows or changes)
+    if (o.mesh && (o.type === 'rock' || o.type === 'ore' || o.type === 'bush')) {
+      const key = o.mesh.uuid + ':' + o.mesh.scale.y.toFixed(3);
+      if (o._topKey !== key) { o.mesh.updateMatrixWorld(true); _box.setFromObject(o.mesh); o._top = Math.max(.2, _box.max.y - o.mesh.position.y); o._topKey = key; }
+      return o._top;
+    }
     switch (o.type) {
       case 'rock': return (o.species === 'pebble' ? .45 : .85) * (o.s || 1);
       case 'ore': return 1.1 * (o.s || 1);
@@ -3122,7 +3129,7 @@
   const JUMP_V = 5.4, GRAVITY = 17, AIR = 2 * JUMP_V / GRAVITY;
   // Hold to charge: a tap is a normal hop, a full charge (CHARGE_FULL s) goes twice as high.
   const CHARGE_FULL = .55;
-  let jumpBtnHeld = false;
+  let jumpBtnHeld = false; let camLift = 0;
   const hop = { y: 0, v: 0, air: false, land: 0, charge: -1 };
   const canJump = () => !(state !== 'play' || hop.air || knockT > 0 || stats.down || nrg.exhausted || panelOpen() || heightAt(px, pz) < .1);   // not while wading
   function startCharge() { if (canJump() && hop.charge < 0) hop.charge = 0; }
@@ -3137,11 +3144,28 @@
   }
   function jump() { startCharge(); releaseJump(); }
   window.addEventListener('blur', () => { hop.charge = -1; });
+  // What you can stand on: rocks, ore and bushes whose top you've reached. Returns
+  // the height of the highest one under your feet that isn't above y.
+  const STANDABLE = { rock: 1, ore: 1, bush: 1 };
+  function floorAt(x, z, y) {
+    let f = 0;
+    nearbyObjects(x, z, o => {
+      if (!STANDABLE[o.type] || o.state.gone) return;
+      const top = topOf(o);
+      if (top <= y + .08 && top > f && Math.hypot(o.x - x, o.z - z) < radius(o) * .85 + .15) f = top;
+    });
+    return f;
+  }
   function stepHop(h, dt) {   // own frog: simple physics
     if (h.charge >= 0) { h.charge += dt; if (!canJump()) h.charge = -1; }
     else if ((keys[prefs.binds.jump] || jumpBtnHeld) && canJump()) h.charge = 0;   // pressed just before landing: start charging now
-    if (h.air) { h.v -= GRAVITY * dt; h.y += h.v * dt; if (h.y <= 0) { h.y = 0; h.v = 0; h.air = false; h.land = .18; } }
-    else if (h.land > 0) h.land -= dt;
+    h.floor = floorAt(px, pz, h.y);
+    if (h.air) { h.v -= GRAVITY * dt; h.y += h.v * dt; if (h.y <= h.floor) { h.y = h.floor; h.v = 0; h.air = false; h.land = .18; } }
+    else {
+      if (h.y > h.floor + .02) { h.air = true; h.v = 0; }   // walked off the edge: drop
+      else h.y = h.floor;
+      if (h.land > 0) h.land -= dt;
+    }
   }
   const hopHeight = (tt, mul = 1) => Math.max(0, JUMP_V * Math.sqrt(mul) * tt - GRAVITY * tt * tt / 2);   // friends: replay the same arc
   const airTime = mul => 2 * JUMP_V * Math.sqrt(mul) / GRAVITY;
@@ -3306,16 +3330,23 @@
       if (l > .08) {
         const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
         const dx = rx * ix + fx * iz, dz = rz * ix + fz * iz;
-        const spd = (heightAt(px, pz) < .1 ? RULES.WADE_SPEED : RULES.WALK_SPEED) * WG.speedMult(running, nrg.exhausted) * Math.min(1, l);
+        // a bit slower through the air, so you can land on the rock you jumped at instead of sailing past it
+        const spd = (heightAt(px, pz) < .1 ? RULES.WADE_SPEED : RULES.WALK_SPEED) * WG.speedMult(running, nrg.exhausted) * Math.min(1, l) * (hop.air ? .6 : 1);
         let nx = px + dx * spd * dt, nz = pz + dz * spd * dt;
         if (heightAt(nx, nz) > -1) {
           const push = o => {
             if (o.state.gone || o.type === 'dig') return;
-            if (hop.y > 0 && hop.y > topOf(o)) return;   // high enough in the air: sail over it
+            if (hop.y > 0 && hop.y >= topOf(o) - .05) return;   // high enough (or standing on top): pass over it
             const ox = nx - o.x, oz = nz - o.z, d = Math.hypot(ox, oz), min = radius(o) + .3;
             if (d < min && d > 0) { nx = o.x + ox / d * min; nz = o.z + oz / d * min; }
           };
           nearbyObjects(nx, nz, push); fires.forEach(push); lanterns.forEach(push); carvings.forEach(push); if (board) push(board);
+          // other frogs are solid too (unless you jump clean over one)
+          if (hop.y < 1.5) remotes.forEach(r => {
+            if (r.dead) return;
+            const q = r.remote.sample(), ox = nx - q.x, oz = nz - q.z, d = Math.hypot(ox, oz), min = .7;
+            if (d < min && d > 0) { nx = q.x + ox / d * min; nz = q.z + oz / d * min; }
+          });
           px = nx; pz = nz;
         }
         const tf = Math.atan2(dx, dz);
@@ -3326,10 +3357,10 @@
       const now = performance.now();
       const cam = Math.atan2(px - camera.position.x, pz - camera.position.z);   // which way you're looking
       const changed = Math.abs(px - lastSent.x) > .01 || Math.abs(pz - lastSent.z) > .01 || Math.abs(face - lastSent.face) > .02
-        || moving !== lastSent.moving || wantSprint !== lastSent.sprint || Math.abs(cam - lastSent.cam) > .04;
-      if (net && net.open && ((changed && now - lastSent.at > 66) || now - lastSent.at > 1000)) {
-        net.send({ t: 'pos', x: px, z: pz, face, moving, sprint: wantSprint, cam });
-        lastSent = { at: now, x: px, z: pz, face, moving, sprint: wantSprint, cam };
+        || moving !== lastSent.moving || wantSprint !== lastSent.sprint || Math.abs(cam - lastSent.cam) > .04 || Math.abs((hop.floor || 0) - (lastSent.stand || 0)) > .05;
+      if (net && net.open && !(window.__dbg && __dbg.noSend) && ((changed && now - lastSent.at > 66) || now - lastSent.at > 1000)) {
+        net.send({ t: 'pos', x: px, z: pz, face, moving, sprint: wantSprint, cam, stand: +(hop.floor || 0).toFixed(2) });
+        lastSent = { at: now, x: px, z: pz, face, moving, sprint: wantSprint, cam, stand: hop.floor || 0 };
       }
     }
     stepHop(hop, dt);
@@ -3352,6 +3383,8 @@
       if (r.knockT > 0) r.knockT -= dt;
       if (r.bubble && (r.bubbleT -= dt) <= 0) { r.bubble = null; renderTag(r); }
       poseCastaway(r.av, s.x, s.z, s.face, s.moving, !!s.dead || r.knockT > 0, dt, elapsed);
+      r.standS = (r.standS || 0) + ((r.stand || 0) - (r.standS || 0)) * Math.min(1, dt * 8);   // standing on a rock
+      r.av.root.position.y += r.standS;
       if (r.hop) { const A = airTime(r.hop.mul); r.hop.t += dt; const air = r.hop.t < A; applyHop(r.av, air ? hopHeight(r.hop.t, r.hop.mul) : 0, air, air ? 0 : .18 - (r.hop.t - A)); if (r.hop.t > A + .18) r.hop = null; }
       tagV.set(s.x, Math.max(groundAt(s.x, s.z), -.75) + 2.05, s.z).project(camera);
       const dist = Math.hypot(s.x - camera.position.x, s.z - camera.position.z);
@@ -3416,7 +3449,8 @@
     } else {
       // Past the lowest orbit angle the camera stops sinking, comes in closer
       // behind the frog and tilts up, so you can look at the sky and treetops.
-      const py = Math.max(heightAt(px, pz), -.75), LOW = .18;
+      camLift += ((hop.floor || 0) - camLift) * Math.min(1, dt * 6);   // follow you up onto a rock, smoothly
+      const py = Math.max(heightAt(px, pz), -.75) + camLift, LOW = .18;
       const up = Math.max(0, LOW - pitch), orbit = Math.max(pitch, LOW - up * .12);
       const dist = camDist * (1 - Math.min(up, 1) * .45);
       const cx = px + Math.sin(yaw) * Math.cos(orbit) * dist;

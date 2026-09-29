@@ -611,7 +611,7 @@ class Island {
     // Everyone's position, in one shared message.
     const snap = JSON.stringify({
       t: 'snap', time: this.time, day: this.day,
-      p: [...this.players.values()].map(p => [p.id, r2(p.x), r2(p.z), r2(p.face), p.moving ? (p.running ? 2 : 1) : 0, p.dead ? 1 : 0]),
+      p: [...this.players.values()].map(p => [p.id, r2(p.x), r2(p.z), r2(p.face), p.moving ? (p.running ? 2 : 1) : 0, p.dead ? 1 : 0, p.stand ? r2(p.stand) : 0]),
       s: this.stilled.map(s => [s.id, r2(s.x), r2(s.z), r2(s.face)]),
     });
     for (const p of this.players.values()) this.sendRaw(p, snap);
@@ -668,8 +668,9 @@ class Island {
     }
   }
 
-  onPos(p, { x, z, face, moving, sprint, cam }) {
+  onPos(p, { x, z, face, moving, sprint, cam, stand }) {
     if (num(cam)) p.camYaw = cam;
+    if (num(stand)) p.stand = Math.min(2.2, Math.max(0, stand));   // standing on a rock (just for show)
     if (p.dead || !num(x) || !num(z) || !num(face)) return;
     const now = Date.now();
     if (p.knockedUntil > now) { p.lastPosAt = now; p.moving = false; if (Math.hypot(x - p.x, z - p.z) > .3) this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }
