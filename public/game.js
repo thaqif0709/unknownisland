@@ -254,51 +254,76 @@
   // with their own ink outline and drifting slowly around the island.
   // Three kinds: long and flat, tall and stacked, or a small puff. Sizes and curls vary.
   function cloudTexture(seed) {
-    // Cumulus: a wide soft base with rows of bigger billows heaped higher toward
-    // the middle, so each cloud is a tall, rounded pile rather than a long strip.
-    const W = 512, H = 448, r = mulberry32(seed), c = document.createElement('canvas'); c.width = W; c.height = H;
-    const g = c.getContext('2d');
-    const kind = r() < .35 ? 'tower' : r() < .75 ? 'heap' : 'small';
-    const puffs = [], baseY = H - 70;
-    const halfW = kind === 'small' ? 110 : kind === 'tower' ? 150 : 190, rows = kind === 'tower' ? 5 : kind === 'heap' ? 4 : 3;
-    for (let row = 0; row < rows; row++) {
-      const k = row / Math.max(1, rows - 1), span = halfW * Math.sqrt(Math.max(.02, 1 - k * k * .92)) * (1 - k * .35), y = baseY - row * (kind === 'tower' ? 60 : 50) - r() * 14;
-      const n = Math.max(1, Math.round((span * 2) / 80));
-      for (let i = 0; i < n; i++) {
-        const t = n > 1 ? i / (n - 1) : .5, x = W / 2 + (t - .5) * span * 2 + (r() - .5) * 26 + (r() - .5) * k * 40;
-        const mid = 1 - Math.abs(t - .5) * 1.2;   // bigger in the middle of each row
-        puffs.push([x, y, (kind === 'small' ? 42 : 56) * (.75 + mid * .5) * (1 + k * .1) + r() * 12]);
+    // Curled clouds in the old inked style: a few round lobes heaped together,
+    // a spiral curl in the big ones, and long tapering wisps trailing off the
+    // sides that flick up at the tip. Every cloud is drawn from its own seed.
+    const W = 512, H = 320, r = mulberry32(seed), c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d'), INK = '#2B211F';
+    const kind = r() < .3 ? 'small' : r() < .6 ? 'tall' : 'wide';
+    const cx = W / 2 + (r() - .5) * 40, baseY = H - 95;
+    // lobes: [x, y, radius], biggest at the back and middle
+    const lobes = [];
+    const big = kind === 'small' ? 48 : 64;
+    lobes.push([cx + (r() - .5) * 30, baseY - big * (kind === 'tall' ? 1.05 : .8), big * (kind === 'tall' ? 1.12 : 1)]);
+    const sideN = kind === 'small' ? 1 : 2;
+    for (const dir of [-1, 1]) for (let i = 0; i < sideN; i++) {
+      const rad = big * (.7 - i * .14 + r() * .12);
+      lobes.push([cx + dir * (big * (.75 + i * .7) + r() * 12), baseY - rad * .75 - r() * 10, rad]);
+    }
+    if (kind === 'tall') lobes.push([cx + (r() - .5) * 40, baseY - big * 1.62, big * .7]);   // sunk into the pile, not perched on it
+    // wisps: tapered ribbons from the base out to one or both sides
+    const wisps = [];
+    const sides = r() < .45 ? [-1, 1] : [r() < .5 ? -1 : 1];
+    for (const dir of sides) wisps.push({ dir, len: (kind === 'small' ? 110 : 150) + r() * 70, amp: 10 + r() * 16, up: r() < .7 });
+    const wispPath = w => {
+      // grow out of the side of the outermost lobe on that side
+      const edge = lobes.reduce((m, l) => (w.dir * l[0] > w.dir * m[0] ? l : m), lobes[0]);
+      const x0 = edge[0] + w.dir * edge[2] * .35, y0 = edge[1] + edge[2] * .62, pts = [];
+      w.len = Math.min(w.len, (w.dir > 0 ? W - 14 - x0 : x0 - 14));   // stay inside the picture
+      for (let i = 0; i <= 24; i++) {
+        const t = i / 24, x = x0 + w.dir * w.len * t;
+        const y = y0 - Math.sin(t * Math.PI * 1.1) * w.amp * (1 - t * .4) - (w.up ? Math.pow(Math.max(0, t - .7) / .3, 2) * 26 : 0);
+        pts.push([x, y, 15 * Math.pow(1 - t, 1.15) + .8]);
       }
-    }
-    // billows: smaller round bumps piled along the top of each puff, so the edge is lumpy and soft
-    const base = puffs.slice();
-    for (const [x, y, rad] of base) {
-      if (r() < .45) continue;   // only some puffs get an extra bump, so it stays soft rather than busy
-      const a = Math.PI * (1.2 + r() * .6), d = rad * (.55 + r() * .15); puffs.push([x + Math.cos(a) * d, y + Math.sin(a) * d, rad * (.6 + r() * .2)]);
-    }
-    for (const p of puffs) p[2] = Math.max(6, Math.min(p[2], p[1] - 8, H - 8 - p[1], p[0] - 8, W - 8 - p[0]));
-    const circle = (x, y, rad) => { g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); };
-    g.fillStyle = '#2B211F'; puffs.forEach(([x, y, rad]) => circle(x, y, rad + 5));   // ink outline
-    // each billow in turn, top ones first so the lower, nearer ones overlap them:
-    // a blue-grey shadow, the sunlit body offset up, then a highlight. The shadow
-    // crescent left under every lump is what makes the pile look round and deep.
-    puffs.slice().sort((a, b) => a[1] - b[1]).forEach(([x, y, rad]) => {
-      g.fillStyle = '#B9C8D9'; circle(x, y, rad);
-      g.fillStyle = '#DCE5EF'; circle(x - rad * .03, y - rad * .1, rad * .92);
-      g.fillStyle = '#FFFDF7'; circle(x - rad * .07, y - rad * .2, rad * .8);
-      g.fillStyle = 'rgba(255,255,255,.95)'; circle(x - rad * .22, y - rad * .38, rad * .34);
-    });
-    // one or two ink curls per cloud, on the upper billows
-    const curlAt = new Set([base.length - 1 - (seed % 2), r() < .5 ? Math.floor(base.length / 2) : -1]);
-    base.forEach(([x, y, rad], i) => {
-      if (!curlAt.has(i)) return;
-      const turns = 2.6 + r() * 1.2, dirn = r() < .5 ? 1 : -1;
       g.beginPath();
-      for (let a = 0; a < Math.PI * turns; a += .1) { const rr = rad * .55 * (1 - a / (Math.PI * (turns + .4))); g.lineTo(x + Math.cos(dirn * a + 2) * rr, y + Math.sin(dirn * a + 2) * rr); }
-      g.lineWidth = 2.5; g.lineCap = 'round'; g.strokeStyle = 'rgba(110,130,158,.45)'; g.stroke();   // a faint blue-grey swirl
+      pts.forEach(([x, y, wd], i) => { const [nx, ny] = i < pts.length - 1 ? pts[i + 1] : pts[i - 1]; const a = Math.atan2(ny - y, nx - x) * (i < pts.length - 1 ? 1 : 1) + Math.PI / 2; g[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * wd, y + Math.sin(a) * wd); });
+      for (let i = pts.length - 1; i >= 0; i--) { const [x, y, wd] = pts[i]; const [nx, ny] = i < pts.length - 1 ? pts[i + 1] : pts[i - 1]; const a = Math.atan2(ny - y, nx - x) + Math.PI / 2; g.lineTo(x - Math.cos(a) * wd, y - Math.sin(a) * wd); }
+      g.closePath();
+    };
+    const circle = (x, y, rad) => { g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); };
+    // 1) the ink silhouette
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    wisps.forEach(w => { wispPath(w); g.lineWidth = 9; g.strokeStyle = INK; g.stroke(); });
+    g.fillStyle = INK; lobes.forEach(([x, y, rad]) => { circle(x, y, rad + 4.5); g.fill(); });
+    // 2) fills: wisps, then lobes back to front with a soft shadow along the bottom
+    wisps.forEach(w => { wispPath(w); g.fillStyle = '#F4F6F8'; g.fill(); });
+    const order = lobes.slice().sort((a, b) => a[1] - b[1]);   // top of the pile first (furthest back), front lobes last
+    // back lobes first; the ones in front overlap them. The biggest lobe and one
+    // side lobe carry a curl: a single spiral that starts at the lobe's lower
+    // edge (facing the middle of the cloud) and winds in about one and a quarter turns.
+    // curls go on the front lobes (the lowest ones), where nothing covers them
+    const front = order.slice().reverse();
+    const curled = new Set(kind === 'small' ? [front[0]] : [front[0], front[1 + ((r() * Math.min(2, front.length - 1)) | 0)]]);
+    order.forEach((l, i) => {
+      const [x, y, rad] = l;
+      g.fillStyle = '#C9D5E2'; circle(x, y, rad); g.fill();
+      g.fillStyle = '#FBFCFD'; circle(x - rad * .04, y - rad * .12, rad * .9); g.fill();
+      if (i > 0) {   // a front lobe: ink its rounded edge where it sits over the lobe behind
+        g.beginPath(); g.arc(x, y, rad, Math.PI * 1.05, Math.PI * 1.95); g.lineWidth = 4; g.strokeStyle = INK; g.stroke();
+      }
+      if (!curled.has(l)) return;
+      const toMid = x < cx ? 1 : -1, dirn = -toMid;   // wind toward the middle of the cloud
+      const a0 = Math.PI / 2 + toMid * .6, turns = 1.25, R0 = rad * .78, ccx = x + toMid * rad * .12, ccy = y + rad * .05;
+      g.beginPath();
+      for (let a = 0; a <= Math.PI * 2 * turns; a += .06) {
+        const k = a / (Math.PI * 2 * turns), rr = R0 * Math.pow(1 - k, 1.25) + rad * .06;
+        const px2 = ccx + Math.cos(a0 + dirn * a) * rr, py2 = ccy + Math.sin(a0 + dirn * a) * rr;
+        a ? g.lineTo(px2, py2) : g.moveTo(px2, py2);
+      }
+      g.lineWidth = 3.4; g.strokeStyle = 'rgba(43,33,31,.6)'; g.stroke();
     });
     const t = new THREE.CanvasTexture(c);
-    t.userData = { kind };
+    t.userData = { kind: kind === 'small' ? 'small' : 'big', aspect: H / W };
     return t;
   }
   const clouds = [];
@@ -306,9 +331,9 @@
     const map = cloudTexture(100 + i * 7);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, fog: false, depthWrite: false }));
     const bx = WG.hash2(i, 1) * 260, bz = WG.hash2(i, 2) * 260;
-    const w = map.userData.kind === 'small' ? 20 + WG.hash2(i, 3) * 8 : 34 + WG.hash2(i, 3) * 22;
+    const w = map.userData.kind === 'small' ? 36 + WG.hash2(i, 3) * 12 : 56 + WG.hash2(i, 3) * 26;
     sp.userData = { bx, bz, y: 52 + (i % 4) * 6 + WG.hash2(i, 4) * 6, speed: .6 + WG.hash2(i, 5) * .6 };
-    sp.scale.set(w, w * 448 / 512, 1);   // the texture is nearly square now: tall, piled clouds
+    sp.scale.set(w, w * map.userData.aspect, 1);
     scene.add(sp); clouds.push(sp); noInk.add(sp);
   }
 
@@ -2704,7 +2729,7 @@
   if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, camera, chunks, objects: () => objects, stats, stilled,
     pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); },
     washups: () => washups, bugs: () => bugs, previewJournal: keys => { keys.forEach(k => { journal.mine[k] = 1 + (k.length % 3); journal.firsts[k] = journal.firsts[k] || 'aiman'; }); },
-    setEnv: e => setEnv(e), teleport: (x, z) => { px = x; pz = z; }, floorAt: (x, z, y) => floorAt(x, z, y), setHealth: v => { stats.health = v; }, drops: () => drops, hop: () => hop, why: () => ({ state, air: hop.air, knockT, down: stats.down, ex: nrg.exhausted, panel: panelOpen(), h: heightAt(px, pz) }), addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
+    setEnv: e => setEnv(e), cloudSheet: () => clouds.slice(0, 12).map(c => c.material.map.image.toDataURL()), teleport: (x, z) => { px = x; pz = z; }, floorAt: (x, z, y) => floorAt(x, z, y), setHealth: v => { stats.health = v; }, drops: () => drops, hop: () => hop, why: () => ({ state, air: hop.air, knockT, down: stats.down, ex: nrg.exhausted, panel: panelOpen(), h: heightAt(px, pz) }), addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
     recarve: (id, text, st) => { const c = carvings.get(id); setCarvings([{ id, key: c.key, x: c.x, z: c.z, face: c.mesh.rotation.y, text, state: st || 'active', tally: [2, 5] }], id, 'new'); }, face: () => face, gy: () => groundAt(px, pz), board: () => board, openPanel: w => togglePanel(w), patches: l => { myPatches = l; setPatches(hero, l); },
     lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); } }; }
 
