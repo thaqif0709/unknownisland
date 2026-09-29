@@ -2357,7 +2357,7 @@
       joy.x = dx / 45; joy.y = dy / 45; knob.style.transform = `translate(${dx}px,${dy}px)`;
     } else if (e.pointerId === orb.id) {
       yaw -= (e.clientX - orb.lx) * .007 * prefs.sens;
-      pitch = clamp(pitch + (e.clientY - orb.ly) * .004 * prefs.sens * (prefs.invertY ? -1 : 1), .18, 1.15);
+      pitch = clamp(pitch + (e.clientY - orb.ly) * .004 * prefs.sens * (prefs.invertY ? -1 : 1), -1.1, 1.15);   // below .18 you look up
       orb.lx = e.clientX; orb.ly = e.clientY;
     }
   });
@@ -2769,7 +2769,8 @@
         C.actor.root.rotation.x = -1.45 * (1 - up); C.actor.root.rotation.y = lerp(C.lie, face, up);
         // ease from the high shot down into the ordinary camera behind the frog
         const k = ease(clamp((u - .3) / .6, 0, 1)), fx = lx, fz = lz, fy = Math.max(heightAt(fx, fz), -.75);
-        const hx = fx + Math.sin(yaw) * Math.cos(pitch) * camDist, hz = fz + Math.cos(yaw) * Math.cos(pitch) * camDist, hy = Math.max(fy + 1.2 + Math.sin(pitch) * camDist, heightAt(hx, hz) + .8);
+        const pp = Math.max(pitch, .18);
+        const hx = fx + Math.sin(yaw) * Math.cos(pp) * camDist, hz = fz + Math.cos(yaw) * Math.cos(pp) * camDist, hy = Math.max(fy + 1.2 + Math.sin(pp) * camDist, heightAt(hx, hz) + .8);
         cutCam.set(lerp(lx + 3, hx, k), lerp(gy + 16, hy, k), lerp(lz + 20, hz, k)); cutLook.set(fx, lerp(gy + 2, fy + 1.3, k), lerp(lz - 25, fz, k));
       }
       C.focus = { x: lx, z: lz };
@@ -3020,14 +3021,18 @@
       camera.position.set(TITLE.x + Math.sin(a) * 60, 30, TITLE.z + Math.cos(a) * 60);
       camera.lookAt(TITLE.x, 2, TITLE.z);
     } else {
-      const py = Math.max(heightAt(px, pz), -.75);
-      const cx = px + Math.sin(yaw) * Math.cos(pitch) * camDist;
-      const cz = pz + Math.cos(yaw) * Math.cos(pitch) * camDist;
-      let cy = py + 1.2 + Math.sin(pitch) * camDist;
+      // Past the lowest orbit angle the camera stops sinking, comes in closer
+      // behind the frog and tilts up, so you can look at the sky and treetops.
+      const py = Math.max(heightAt(px, pz), -.75), LOW = .18;
+      const up = Math.max(0, LOW - pitch), orbit = Math.max(pitch, LOW - up * .12);
+      const dist = camDist * (1 - Math.min(up, 1) * .45);
+      const cx = px + Math.sin(yaw) * Math.cos(orbit) * dist;
+      const cz = pz + Math.cos(yaw) * Math.cos(orbit) * dist;
+      let cy = py + 1.2 + Math.sin(orbit) * dist;
       cy = Math.max(cy, heightAt(cx, cz) + .8, .8);
       camera.position.set(cx, cy, cz);
       if (tremor > 0) { tremor -= dt; const k = Math.min(1, tremor) * .07; camera.position.x += (Math.random() - .5) * k; camera.position.y += (Math.random() - .5) * k; }
-      camera.lookAt(px, py + 1.3, pz);
+      camera.lookAt(px, py + 1.3 + Math.tan(Math.min(up * 1.1, 1.3)) * dist, pz);
     }
 
     if (Cut.on) { camera.position.copy(cutCam); camera.lookAt(cutLook); }
