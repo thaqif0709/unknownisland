@@ -1499,19 +1499,64 @@
 
   // Sacks of things dropped when someone was knocked down.
   let drops = new Map();
-  const sackM = soft(0xB59A72), tieM = soft(0x7A5A45);
+  // A burlap sack: woven texture, lumpy bottom, gathered neck tied with rope, a
+  // frill of cloth on top. A soft white outline and ground glow pulse around it so
+  // dropped things are easy to spot (and never mistaken for a mud patch).
+  const burlapTex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 128; i += 4) {   // the weave: light and dark threads each way
+      g.fillStyle = i % 8 ? 'rgba(90,60,30,.13)' : 'rgba(255,245,220,.35)'; g.fillRect(i, 0, 2, 128);
+      g.fillStyle = i % 8 ? 'rgba(90,60,30,.1)' : 'rgba(255,245,220,.3)'; g.fillRect(0, i, 128, 2);
+    }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 2);
+    return t;
+  })();
+  const sackM = soft(0xD8BE8C, { map: burlapTex }), tieM = soft(0x7A5A45), sackPatchM = soft(0xA9784E, { map: burlapTex });
+  const sackGlowM = new THREE.MeshBasicMaterial({ color: 0xFFFBEA, side: THREE.BackSide, transparent: true, opacity: .85, depthWrite: false });
+  const sackGround = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d'), grd = g.createRadialGradient(32, 32, 4, 32, 32, 32);
+    grd.addColorStop(0, 'rgba(255,250,225,.75)'); grd.addColorStop(.5, 'rgba(255,248,220,.3)'); grd.addColorStop(1, 'rgba(255,248,220,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+    return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  })();
+  let sackGeo = null;
+  function sackBodyGeo() {
+    if (sackGeo) return sackGeo;
+    // profile from the bottom up: flat base, round belly, pulled in at the neck, flared frill
+    const prof = [[0, 0], [.2, .01], [.3, .06], [.34, .16], [.33, .28], [.26, .4], [.12, .5], [.08, .54], [.1, .58], [.16, .66]].map(([r, y]) => new THREE.Vector2(r, y));
+    const g = new THREE.LatheGeometry(prof, 18), pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i++) {   // lumps from whatever is inside, and soft vertical folds
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), a = Math.atan2(x, z);
+      const lump = 1 + (y < .45 ? Math.sin(a * 3 + 1) * .07 + Math.sin(a * 5) * .04 : 0) + (y > .56 ? Math.sin(a * 9) * .18 : Math.sin(a * 11) * .025);
+      pos.setX(i, x * lump); pos.setZ(i, z * lump);
+    }
+    g.computeVertexNormals();
+    return (sackGeo = g);
+  }
   function addDrop(d) {
     if (drops.has(d.id)) return;
     const g = new THREE.Group();
-    const sack = ball(.32, sackM); sack.scale.set(1, .75, .9); sack.position.y = .22; g.add(sack);
-    const neck = new THREE.Mesh(new THREE.ConeGeometry(.12, .22, 8), sackM); neck.position.y = .5; g.add(neck);
-    const tie = new THREE.Mesh(new THREE.TorusGeometry(.09, .025, 6, 12), tieM); tie.rotation.x = Math.PI / 2; tie.position.y = .45; g.add(tie);
+    const body = new THREE.Mesh(sackBodyGeo(), sackM); body.material.side = THREE.DoubleSide; body.scale.set(1.05, 1, .95); g.add(body);
+    const tie = new THREE.Mesh(new THREE.TorusGeometry(.095, .022, 6, 14), tieM); tie.rotation.x = Math.PI / 2; tie.position.y = .52; g.add(tie);
+    const end = new THREE.Mesh(new THREE.CylinderGeometry(.014, .014, .2, 5), tieM); end.position.set(.1, .44, .06); end.rotation.z = .5; g.add(end);
+    const patch = new THREE.Mesh(new THREE.PlaneGeometry(.14, .12), sackPatchM); patch.position.set(0, .22, .345); patch.rotation.set(-.08, 0, .15); g.add(patch);
+    shadows(g);
+    // the glow: a slightly larger back-facing shell (reads as a white outline) and a soft light on the ground
+    const halo = new THREE.Mesh(sackBodyGeo(), sackGlowM.clone()); halo.scale.set(1.2, 1.12, 1.12); halo.position.y = -.03; g.add(halo);
+    const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), sackGround.clone()); pool.rotation.x = -Math.PI / 2; pool.position.y = .03; g.add(pool);
+    noInk.add(halo); noInk.add(pool);
     g.position.set(d.x, groundAt(d.x, d.z), d.z); g.rotation.y = d.id;
-    shadows(g); scene.add(g);
-    drops.set(d.id, { id: d.id, type: 'drop', x: d.x, z: d.z, r: .4, mesh: g, state: {}, items: d.items || null });
+    scene.add(g);
+    drops.set(d.id, { id: d.id, type: 'drop', x: d.x, z: d.z, r: .4, mesh: g, halo, pool, state: {}, items: d.items || null });
   }
-  function removeDrop(id) { const d = drops.get(id); if (d) { scene.remove(d.mesh); drops.delete(id); } }
-  function clearDrops() { drops.forEach(d => scene.remove(d.mesh)); drops = new Map(); }
+  function removeDrop(id) { const d = drops.get(id); if (d) { scene.remove(d.mesh); noInk.delete(d.halo); noInk.delete(d.pool); drops.delete(id); } }
+  function clearDrops() { [...drops.keys()].forEach(removeDrop); }
+  function pulseDrops(elapsed) {
+    drops.forEach(d => { const k = .5 + .5 * Math.sin(elapsed * 2.4 + d.id); d.halo.material.opacity = .45 + k * .5; d.pool.material.opacity = .55 + k * .45; });
+  }
   function clearFires() { fires.forEach(f => { setPot(f, null); scene.remove(f.mesh); }); fires = new Map(); }
 
   // ================= State =================
@@ -2600,7 +2645,7 @@
   if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, camera, chunks, objects: () => objects, stats, stilled,
     pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); },
     washups: () => washups, bugs: () => bugs, previewJournal: keys => { keys.forEach(k => { journal.mine[k] = 1 + (k.length % 3); journal.firsts[k] = journal.firsts[k] || 'aiman'; }); },
-    setEnv: e => setEnv(e), hop: () => hop, why: () => ({ state, air: hop.air, knockT, down: stats.down, ex: nrg.exhausted, panel: panelOpen(), h: heightAt(px, pz) }), addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
+    setEnv: e => setEnv(e), setHealth: v => { stats.health = v; }, drops: () => drops, hop: () => hop, why: () => ({ state, air: hop.air, knockT, down: stats.down, ex: nrg.exhausted, panel: panelOpen(), h: heightAt(px, pz) }), addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
     recarve: (id, text, st) => { const c = carvings.get(id); setCarvings([{ id, key: c.key, x: c.x, z: c.z, face: c.mesh.rotation.y, text, state: st || 'active', tally: [2, 5] }], id, 'new'); }, face: () => face, gy: () => groundAt(px, pz), board: () => board, openPanel: w => togglePanel(w), patches: l => { myPatches = l; setPatches(hero, l); },
     lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); } }; }
 
@@ -2984,6 +3029,21 @@
     C.focus = { x: bx, z: bz - 40 };
   }
 
+  // ================= Hurt glow =================
+  // Below half health the screen edges glow faintly red (stronger as it drops,
+  // with a heartbeat pulse when it's very low), and any damage flashes it.
+  let lastHealth = null, hurtFlash = 0;
+  function updateHurt(dt) {
+    const h = window.__dbg && __dbg.hp != null ? __dbg.hp : stats.health;   // (debug override)
+    // a slow drain (cold, hunger) keeps a faint glow on; a big hit flashes strongly
+    if (lastHealth != null && h < lastHealth - .05) hurtFlash = Math.min(1, Math.max(hurtFlash, .38 + (lastHealth - h) * .05));
+    lastHealth = h;
+    hurtFlash = Math.max(0, hurtFlash - dt * 1.2);
+    let o = h < 50 ? (50 - h) / 50 * .75 : 0;
+    if (h < 25) o *= .75 + .25 * Math.abs(Math.sin(elapsed * 3.2));
+    $('hurt').style.opacity = state === 'play' ? Math.min(1, Math.max(o, hurtFlash * .8)).toFixed(3) : 0;
+  }
+
   // ================= Jumping =================
   // Roughly how tall each kind of obstacle is (from how its model is built), so a
   // jump that's higher than the top passes over it. Trees, palms, lanterns, the
@@ -3215,6 +3275,7 @@
 
     animateBugs(elapsed);
     updatePots(dt);
+    pulseDrops(elapsed);
     animateCarvings(dt);
     if (state === 'play' && env.drowning && isNight(t) && (nextTremor -= dt) <= 0) { nextTremor = 25 + Math.random() * 35; tremor = 1.6; Sound.rumble(); }
     washups.forEach(w => { if (w.mesh.userData.bell) w.mesh.userData.bell.rotation.z = Math.sin(elapsed * 3 + w.id) * .25; });
@@ -3256,6 +3317,7 @@
       else { ui.prompt.classList.add('hidden'); $('btnAct').textContent = 'Act'; }
 
       $('bHealth').style.setProperty('--v', stats.health + '%');
+      updateHurt(dt);
       $('bFood').style.setProperty('--v', stats.hunger + '%');
       $('bWater').style.setProperty('--v', stats.thirst + '%');
       $('bEnergy').style.setProperty('--v', nrg.energy + '%');
