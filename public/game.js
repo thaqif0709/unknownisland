@@ -591,12 +591,14 @@
     tuft: new THREE.ConeGeometry(.07, .32, 5),
     // a toadstool: a stout stem that bulges a little, a round cap with a curled-under rim, pale gills beneath
     mStem: (() => { const pr = [[.05, 0], [.058, .04], [.052, .1], [.045, .15], [.05, .17]].map(([r, y]) => new THREE.Vector2(r, y)); return new THREE.LatheGeometry(pr, 12); })(),
-    mCap: (() => { const pr = [[.001, .16], [.06, .15], [.11, .12], [.15, .07], [.17, .035], [.165, .015], [.14, .02]].map(([r, y]) => new THREE.Vector2(r, y)); return new THREE.LatheGeometry(pr, 16); })(),
+    // (points run from the rim up to the crown, so the cap's surface faces outward)
+    mCap: (() => { const pr = [[.14, .02], [.165, .015], [.17, .035], [.15, .07], [.11, .12], [.06, .15], [.001, .16]].map(([r, y]) => new THREE.Vector2(r, y)); return new THREE.LatheGeometry(pr, 16); })(),
     mGills: (() => { const g = new THREE.CylinderGeometry(.14, .06, .02, 16); return g; })(),
     mSpot: (() => { const g = new THREE.SphereGeometry(.026, 6, 4); g.scale(1, .45, 1); return g; })(),
   };
   const DM = { stem: decorLambert(0x6F8F5A), tint: decorLambert(0xFFFFFF), yellow: decorLambert(0xE0A33A), lav: decorLambert(0x8C7BA8),
-    mushStem: decorLambert(0xEFE3C8), gills: decorLambert(0xE6D2B0), white: decorLambert(0xFFFFFF), tuftA: decorLambert(0x7F9A64), tuftB: decorLambert(0x93A873) };
+    // mushrooms are solid little objects: their parts need normal depth so the cap hides what's under it
+    mushStem: soft(0xEFE3C8), gills: soft(0xE6D2B0), mushCap: soft(0xFFFFFF), mushSpot: soft(0xFFFFFF), white: decorLambert(0xFFFFFF), tuftA: decorLambert(0x7F9A64), tuftB: decorLambert(0x93A873) };
   const decorCols = a => a.map(c => new THREE.Color(c));
   // species: which biomes, how many per chunk, and its parts [geometry, material, y, colours, scale]
   const DECOR = [
@@ -606,9 +608,9 @@
     { biomes: ['spring', 'forest'], n: 14, parts: [[DG.stem, DM.stem, 0, null, [1, .2, 1]], [DG.bell, DM.tint, .2, decorCols(['#5F7FA8', '#7E97B8', '#4F6687'])]] },
     { biomes: ['highland'], n: 30, parts: [[DG.stem, DM.stem, 0, null, [1, .18, 1]], [DG.spike, DM.lav, .3]] },
     // toadstools: stem, gills, cap and a few white spots (the spots sit on the cap's curve, off-centre)
-    { biomes: ['forest'], n: 16, parts: [[DG.mStem, DM.mushStem, 0], [DG.mGills, DM.gills, .158], [DG.mCap, DM.tint, .15, decorCols(['#B8504A', '#C0704F', '#C9623E'])],
-      [DG.mSpot, DM.white, .308, null, null, [.03, -.02]], [DG.mSpot, DM.white, .292, null, null, [-.07, .03]], [DG.mSpot, DM.white, .276, null, null, [.05, .09]],
-      [DG.mSpot, DM.white, .269, null, null, [-.02, -.11]], [DG.mSpot, DM.white, .254, null, null, [.12, -.03]]] },
+    { biomes: ['forest'], n: 16, parts: [[DG.mStem, DM.mushStem, 0], [DG.mGills, DM.gills, .158], [DG.mCap, DM.mushCap, .15, decorCols(['#B8504A', '#C0704F', '#C9623E'])],
+      [DG.mSpot, DM.mushSpot, .308, null, null, [.03, -.02]], [DG.mSpot, DM.mushSpot, .292, null, null, [-.07, .03]], [DG.mSpot, DM.mushSpot, .276, null, null, [.05, .09]],
+      [DG.mSpot, DM.mushSpot, .269, null, null, [-.02, -.11]], [DG.mSpot, DM.mushSpot, .254, null, null, [.12, -.03]]] },
     { biomes: ['meadow', 'forest', 'highland', 'spring'], n: 40, parts: [[DG.tuft, DM.tuftA, .14], [DG.tuft, DM.tuftB, .12, null, [.8, .8, .8]]] },
   ];
   const dummy = new THREE.Object3D();
