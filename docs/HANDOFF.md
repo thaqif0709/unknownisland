@@ -20,10 +20,11 @@ decorations (flowers, tufts) have depthWrite off and are hidden from the normal
 pass so they stay as uninked dabs; swirl clouds are canvas sprites with their
 own outline.
 
-Characters are humanoid frogs (from Thaqif's character sheet): green spotted
-head with bulging orange-ringed eyes, cream scarf-collared vest, orange arms,
-dark green gauntlets, cream shorts and boots, and a backpack whose colour
-identifies the player (`PACKS`). Boot soles sit at y=0 and everything stands on
+Characters are humanoid frogs (head from Thaqif's character sheet: green, spotted,
+bulging orange-ringed eyes, long smile) wearing only a simple hooded cloak, part
+wizard, part wanderer: a long ragged robe with a rope belt and a patch, wide
+sleeves, a hood with a drooping tip, and bare webbed hands and feet. The cloak
+colour identifies the player (`CLOAKS`). Feet sit at y=0 and everything stands on
 `groundAt()`, which follows the drawn terrain triangles rather than `heightAt()`.
 
 Sky: east is +x and north is -z. The sun rises in the east, passes slightly

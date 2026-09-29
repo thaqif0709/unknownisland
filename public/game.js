@@ -655,47 +655,49 @@
   buildProps(WG.generateObjects(7));
 
   // ================= Castaways =================
-  // Each player's backpack has its own colour so friends can tell each other apart.
-  const PACKS = [0xB9A04A, 0xC4574F, 0x5F7FA8, 0x7C9A6B, 0x8C7BA8, 0xD0803F, 0x5E9A92, 0xD98C8C, 0x4F6687, 0x9A7A5E];
-  const packFor = id => PACKS[(id - 1) % PACKS.length];
+  // Each player's cloak has its own colour so friends can tell each other apart.
+  const CLOAKS = [0x8A6A52, 0x6F7B5A, 0x5F6F85, 0x8C5A4F, 0x6E5F7A, 0x9A8A6A, 0x4F6B66, 0x7A4F4F, 0x5E5A57, 0xA07A4A];
+  const colorFor = id => CLOAKS[(id - 1) % CLOAKS.length];
   const hex = c => '#' + c.toString(16).padStart(6, '0');
-  const frogM = soft(0x7DBB3C), spotM = soft(0x4E8A2E), throatM = soft(0xC9DC86), vestM = soft(0xE9E4D2), sleeveM = soft(0xE07B39),
-    gloveM = soft(0x3F6B45), webM = soft(0xE8872E), shortsM = soft(0xD9D2BC), bootM = soft(0xE3DCC8), strapM = soft(0x8C8A4E);
+  const frogM = soft(0x7DBB3C), spotM = soft(0x4E8A2E), throatM = soft(0xC9DC86), webM = soft(0xE8872E), ropeM = soft(0xC9A86A);
   const ringM = new THREE.MeshBasicMaterial({ color: 0xE8872E }), irisM = new THREE.MeshBasicMaterial({ color: 0x3A2620 }),
     shineM = new THREE.MeshBasicMaterial({ color: 0xFFF8EA }), mouthM = new THREE.MeshBasicMaterial({ color: 0x2B211F });
   const blushM = new THREE.MeshBasicMaterial({ color: 0xE0705A, transparent: true, opacity: .6 });
   const cyl = (rt, rb, h, m, seg = 12) => new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m);
-  const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
 
-  // A frog castaway: big bulging eyes, scarf-collared vest, gauntlets, boots and a backpack.
-  function makeCastaway(pack) {
+  // A frog castaway in a simple hooded cloak: part wizard, part wanderer.
+  function makeCastaway(cloak) {
     const root = new THREE.Group();
     const body = new THREE.Group(); root.add(body);
     const add = (m, x, y, z, parent = body) => { m.position.set(x, y, z); parent.add(m); return m; };
+    const cloakM = softShared(cloak);
+    const patchM = softShared(new THREE.Color(cloak).lerp(new THREE.Color(0xE9D7AE), .45).getHex());
+    const innerM = softShared(new THREE.Color(cloak).multiplyScalar(.7).getHex());
 
-    // legs: green shins, chunky cream boots, orange webbed toes
+    // bare green legs and webbed feet under the robe
     function leg(x) {
       const p = new THREE.Group(); p.position.set(x, .6, 0); body.add(p);
-      add(cyl(.065, .06, .4, frogM), 0, -.2, 0, p);
-      add(cyl(.105, .1, .2, bootM), 0, -.5, 0, p);               // sole at -.6 = the ground
-      add(cyl(.108, .108, .045, strapM), 0, -.44, 0, p);
-      for (const dx of [-.05, 0, .05]) { const toe = add(ball(.04, webM, 8, 6), dx, -.58, .12, p); toe.scale.set(1, .5, 1.5); }
+      add(cyl(.06, .055, .56, frogM), 0, -.3, 0, p);
+      add(ball(.09, frogM, 12, 8), 0, -.57, .05, p).scale.set(1, .35, 1.5);
+      for (const dx of [-.05, 0, .05]) add(ball(.035, webM, 8, 6), dx, -.585, .17, p).scale.set(1, .5, 1.3);
       return p;
     }
-    const legL = leg(-.12), legR = leg(.12);
-    add(cyl(.23, .27, .22, shortsM), 0, .64, 0);
-    // vest with zip, and the big scarf collar
-    add(cyl(.22, .25, .44, vestM, 16), 0, .95, 0);
-    add(box(.02, .36, .02, strapM), 0, .95, .245);
-    const collar = add(new THREE.Mesh(new THREE.TorusGeometry(.17, .08, 10, 22), vestM), 0, 1.19, 0); collar.rotation.x = Math.PI / 2;
-    const hood = add(ball(.17, vestM, 12, 10), 0, 1.22, -.15); hood.scale.set(1.2, .8, .8);
+    const legL = leg(-.11), legR = leg(.11);
+    // the robe: loose, long, ragged at the hem, tied with a rope, with a patch sewn on
+    add(cyl(.2, .38, .78, cloakM, 18), 0, .74, 0);
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * Math.PI * 2, tatter = new THREE.Mesh(new THREE.ConeGeometry(.07, .13 + (i % 3) * .04, 5), cloakM);
+      tatter.rotation.x = Math.PI; add(tatter, Math.cos(a) * .35, .31, Math.sin(a) * .35);
+    }
+    const belt = add(new THREE.Mesh(new THREE.TorusGeometry(.265, .026, 8, 24), ropeM), 0, .88, 0); belt.rotation.x = Math.PI / 2;
+    add(new THREE.Mesh(new THREE.CylinderGeometry(.02, .02, .2, 6), ropeM), .12, .77, .24).rotation.z = .2;   // rope end
+    const patch = add(new THREE.Mesh(new THREE.BoxGeometry(.13, .12, .02), patchM), -.2, .62, .26); patch.rotation.set(-.2, -.6, .15);
+    const drape = add(new THREE.Mesh(new THREE.TorusGeometry(.17, .09, 10, 22), cloakM), 0, 1.16, 0); drape.rotation.x = Math.PI / 2;
     // head: wide and flat, pale throat, dark spots, bulging eyes, long smile
     const head = new THREE.Group(); head.position.y = 1.42; body.add(head);
     add(ball(.3, frogM, 24, 16), 0, .06, 0, head).scale.set(1.3, .78, 1.05);
     add(ball(.27, throatM, 18, 12), 0, -.04, .04, head).scale.set(1.18, .45, 1);
-    [[-.16, .2, -.12, .06], [.05, .25, -.06, .05], [.2, .14, -.14, .055], [-.28, .06, -.02, .04], [.1, .16, -.24, .045]].forEach(([x, y, z, r]) => {
-      add(ball(r, spotM, 10, 8), x, y, z, head).scale.set(1, .45, 1);
-    });
+    [[-.28, .06, -.02, .04], [.26, .08, -.04, .045]].forEach(([x, y, z, r]) => add(ball(r, spotM, 10, 8), x, y, z, head).scale.set(1, .45, 1));
     for (const sx of [-1, 1]) {
       add(ball(.125, frogM, 16, 12), sx * .2, .24, .08, head);
       add(ball(.1, ringM, 14, 10), sx * .215, .26, .155, head).scale.z = .6;
@@ -705,27 +707,26 @@
     }
     const mouth = add(new THREE.Mesh(new THREE.TorusGeometry(.27, .011, 5, 28, Math.PI * .62), mouthM), 0, .12, .235, head);
     mouth.rotation.z = -Math.PI / 2 - Math.PI * .31;
-    // arms: orange sleeves, dark green gauntlets, orange webbed hands
+    // the hood: a cowl around the back and top of the head, open at the face, with a drooping tip
+    const open = 1.45;
+    const hood = add(new THREE.Mesh(new THREE.SphereGeometry(.36, 22, 14, Math.PI / 2 + open, Math.PI * 2 - open * 2, 0, Math.PI * .72), cloakM), 0, .06, -.02, head);
+    hood.scale.set(1.2, 1.05, 1.12); hood.material.side = THREE.DoubleSide;
+    const lining = add(new THREE.Mesh(new THREE.SphereGeometry(.345, 22, 14, Math.PI / 2 + open, Math.PI * 2 - open * 2, 0, Math.PI * .72), innerM), 0, .06, -.02, head);
+    lining.scale.set(1.2, 1.05, 1.12); lining.material.side = THREE.BackSide;
+    const tip = add(new THREE.Mesh(new THREE.ConeGeometry(.13, .46, 12), cloakM), 0, .08, -.5, head);
+    tip.rotation.x = -2.35;   // droops down the back
+    // arms: wide ragged sleeves, green webbed hands
     function arm(x) {
-      const p = new THREE.Group(); p.position.set(x, 1.1, 0); body.add(p);
-      add(cyl(.06, .055, .18, sleeveM), 0, -.09, 0, p);
-      add(cyl(.085, .075, .2, gloveM), 0, -.28, 0, p);
-      add(ball(.065, webM, 10, 8), 0, -.42, 0, p).scale.set(1, 1.1, .7);
-      for (const dx of [-.04, 0, .04]) add(ball(.026, webM, 6, 5), dx, -.49, 0, p);
+      const p = new THREE.Group(); p.position.set(x, 1.08, 0); body.add(p);
+      add(cyl(.065, .12, .36, cloakM), 0, -.18, 0, p);
+      add(ball(.06, frogM, 10, 8), 0, -.4, 0, p).scale.set(1, 1.1, .75);
+      for (const dx of [-.035, 0, .035]) add(ball(.024, webM, 6, 5), dx, -.465, 0, p);
       return p;
     }
-    const armL = arm(-.3), armR = arm(.3);
-    // backpack (per-player colour) with a dark green pocket and shoulder straps
-    const packM = softShared(pack), flapM = softShared(new THREE.Color(pack).multiplyScalar(.78).getHex());
-    const bag = new THREE.Group(); bag.position.set(0, .98, -.3); body.add(bag);
-    add(box(.44, .5, .26, packM), 0, 0, 0, bag);
-    add(box(.46, .17, .28, flapM), 0, .2, 0, bag);
-    add(box(.3, .18, .08, gloveM), 0, -.1, -.16, bag);
-    for (const sx of [-1, 1]) add(box(.08, .22, .18, gloveM), sx * .26, -.08, 0, bag);
-    for (const sx of [-1, 1]) add(box(.05, .38, .03, strapM), sx * .12, .98, .245);
+    const armL = arm(-.27), armR = arm(.27);
 
     const av = { root, body, legL, legR, armL, armR, walk: 0, swingT: 0 };
-    av.armL.rotation.z = -.2; av.armR.rotation.z = .2;
+    av.armL.rotation.z = -.18; av.armR.rotation.z = .18;
     shadows(root);
     scene.add(root);
     return av;
@@ -914,12 +915,12 @@
     const tag = document.createElement('div');
     tag.textContent = p.name;
     ui.tags.appendChild(tag);
-    const av = makeCastaway(packFor(p.id));
+    const av = makeCastaway(colorFor(p.id));
     remotes.set(p.id, { name: p.name, remote: new Net.Remote(p.x, p.z, p.face), av, tag, dead: p.dead });
   }
   function renderOnline() {
-    const rows = [`<span><i style="background:${hex(packFor(me.id))}"></i>${esc(me.name)} (you)</span>`];
-    remotes.forEach((r, id) => rows.push(`<span><i style="background:${hex(packFor(id))}"></i>${esc(r.name)}</span>`));
+    const rows = [`<span><i style="background:${hex(colorFor(me.id))}"></i>${esc(me.name)} (you)</span>`];
+    remotes.forEach((r, id) => rows.push(`<span><i style="background:${hex(colorFor(id))}"></i>${esc(r.name)}</span>`));
     ui.online.innerHTML = `<b>On the island (${remotes.size + 1})</b>` + rows.join('');
   }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -935,7 +936,7 @@
         clearFires(); m.fires.forEach(addFire);
         resetRemotes(); m.players.forEach(addRemote);
         if (hero) removeCastaway(hero);
-        hero = makeCastaway(packFor(me.id));
+        hero = makeCastaway(colorFor(me.id));
         applySelf(m.you);
         renderOnline();
         ui.banner.classList.add('hidden');
