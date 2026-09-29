@@ -254,33 +254,44 @@
   // with their own ink outline and drifting slowly around the island.
   // Three kinds: long and flat, tall and stacked, or a small puff. Sizes and curls vary.
   function cloudTexture(seed) {
-    const r = mulberry32(seed), c = document.createElement('canvas'); c.width = 512; c.height = 256;
+    // Cumulus: a wide soft base with rows of bigger billows heaped higher toward
+    // the middle, so each cloud is a tall, rounded pile rather than a long strip.
+    const W = 512, H = 448, r = mulberry32(seed), c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d');
-    const kind = r() < .4 ? 'long' : r() < .6 ? 'tall' : 'small';
-    const puffs = [];
-    const n = kind === 'long' ? 6 + ((r() * 3) | 0) : kind === 'tall' ? 5 : 3 + ((r() * 2) | 0);
-    const x0 = kind === 'small' ? 170 : 70, x1 = kind === 'small' ? 340 : 440;
-    for (let i = 0; i < n; i++) {
-      const k = n > 1 ? i / (n - 1) : .5;
-      const rad = (kind === 'long' ? 30 : 42) + r() * (kind === 'small' ? 22 : 26);
-      puffs.push([x0 + (x1 - x0) * k + (r() - .5) * 24, 180 - Math.sin(k * Math.PI) * (kind === 'long' ? 34 : 56) + (r() - .5) * 18, rad]);
+    const kind = r() < .35 ? 'tower' : r() < .75 ? 'heap' : 'small';
+    const puffs = [], baseY = H - 70;
+    const halfW = kind === 'small' ? 110 : kind === 'tower' ? 150 : 190, rows = kind === 'tower' ? 5 : kind === 'heap' ? 4 : 3;
+    for (let row = 0; row < rows; row++) {
+      const k = row / Math.max(1, rows - 1), span = halfW * Math.sqrt(Math.max(.02, 1 - k * k * .92)) * (1 - k * .35), y = baseY - row * (kind === 'tower' ? 60 : 50) - r() * 14;
+      const n = Math.max(1, Math.round((span * 2) / 80));
+      for (let i = 0; i < n; i++) {
+        const t = n > 1 ? i / (n - 1) : .5, x = W / 2 + (t - .5) * span * 2 + (r() - .5) * 26 + (r() - .5) * k * 40;
+        const mid = 1 - Math.abs(t - .5) * 1.2;   // bigger in the middle of each row
+        puffs.push([x, y, (kind === 'small' ? 42 : 56) * (.75 + mid * .5) * (1 + k * .1) + r() * 12]);
+      }
     }
-    if (kind === 'tall') for (let i = 0; i < 3; i++) puffs.push([180 + i * 70 + (r() - .5) * 30, 95 + (r() - .5) * 20, 34 + r() * 16]);
     // billows: smaller round bumps piled along the top of each puff, so the edge is lumpy and soft
     const base = puffs.slice();
     for (const [x, y, rad] of base) {
-      const nb = 3 + ((r() * 3) | 0);
-      for (let j = 0; j < nb; j++) { const a = Math.PI * (1.08 + r() * .84), d = rad * (.62 + r() * .2); puffs.push([x + Math.cos(a) * d, y + Math.sin(a) * d, rad * (.42 + r() * .22)]); }
+      if (r() < .45) continue;   // only some puffs get an extra bump, so it stays soft rather than busy
+      const a = Math.PI * (1.2 + r() * .6), d = rad * (.55 + r() * .15); puffs.push([x + Math.cos(a) * d, y + Math.sin(a) * d, rad * (.6 + r() * .2)]);
     }
-    for (const p of puffs) p[2] = Math.max(6, Math.min(p[2], p[1] - 8, 248 - p[1], p[0] - 8, 504 - p[0]));
+    for (const p of puffs) p[2] = Math.max(6, Math.min(p[2], p[1] - 8, H - 8 - p[1], p[0] - 8, W - 8 - p[0]));
     const circle = (x, y, rad) => { g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill(); };
     g.fillStyle = '#2B211F'; puffs.forEach(([x, y, rad]) => circle(x, y, rad + 5));   // ink outline
-    g.fillStyle = '#C9D6E4'; puffs.forEach(([x, y, rad]) => circle(x, y, rad));       // soft blue-grey underside
-    g.fillStyle = '#FFFDF7'; puffs.forEach(([x, y, rad]) => circle(x - rad * .06, y - rad * .16, rad * .86));   // sunlit tops
-    g.fillStyle = 'rgba(255,255,255,.9)'; puffs.forEach(([x, y, rad]) => circle(x - rad * .2, y - rad * .34, rad * .38));   // highlights
-    const curls = 3;   // only the odd puff gets an ink curl now
+    // each billow in turn, top ones first so the lower, nearer ones overlap them:
+    // a blue-grey shadow, the sunlit body offset up, then a highlight. The shadow
+    // crescent left under every lump is what makes the pile look round and deep.
+    puffs.slice().sort((a, b) => a[1] - b[1]).forEach(([x, y, rad]) => {
+      g.fillStyle = '#B9C8D9'; circle(x, y, rad);
+      g.fillStyle = '#DCE5EF'; circle(x - rad * .03, y - rad * .1, rad * .92);
+      g.fillStyle = '#FFFDF7'; circle(x - rad * .07, y - rad * .2, rad * .8);
+      g.fillStyle = 'rgba(255,255,255,.95)'; circle(x - rad * .22, y - rad * .38, rad * .34);
+    });
+    // one or two ink curls per cloud, on the upper billows
+    const curlAt = new Set([base.length - 1 - (seed % 2), r() < .5 ? Math.floor(base.length / 2) : -1]);
     base.forEach(([x, y, rad], i) => {
-      if ((i + seed) % (curls + 1)) return;
+      if (!curlAt.has(i)) return;
       const turns = 2.6 + r() * 1.2, dirn = r() < .5 ? 1 : -1;
       g.beginPath();
       for (let a = 0; a < Math.PI * turns; a += .1) { const rr = rad * .55 * (1 - a / (Math.PI * (turns + .4))); g.lineTo(x + Math.cos(dirn * a + 2) * rr, y + Math.sin(dirn * a + 2) * rr); }
@@ -295,9 +306,9 @@
     const map = cloudTexture(100 + i * 7);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, fog: false, depthWrite: false }));
     const bx = WG.hash2(i, 1) * 260, bz = WG.hash2(i, 2) * 260;
-    const w = map.userData.kind === 'small' ? 16 + WG.hash2(i, 3) * 8 : 28 + WG.hash2(i, 3) * 20;
-    sp.userData = { bx, bz, y: 48 + (i % 4) * 5 + WG.hash2(i, 4) * 6, speed: .6 + WG.hash2(i, 5) * .6 };
-    sp.scale.set(w, w / 2, 1);
+    const w = map.userData.kind === 'small' ? 20 + WG.hash2(i, 3) * 8 : 34 + WG.hash2(i, 3) * 22;
+    sp.userData = { bx, bz, y: 52 + (i % 4) * 6 + WG.hash2(i, 4) * 6, speed: .6 + WG.hash2(i, 5) * .6 };
+    sp.scale.set(w, w * 448 / 512, 1);   // the texture is nearly square now: tall, piled clouds
     scene.add(sp); clouds.push(sp); noInk.add(sp);
   }
 
@@ -1056,8 +1067,9 @@
       add(ball(.07, irisM, 12, 8), sx * .22, .26, .2, head).scale.z = .5;
       add(ball(.022, shineM, 6, 4), sx * .22 + .03, .29, .235, head);
     }
-    const mouth = add(new THREE.Mesh(new THREE.TorusGeometry(.27, .011, 5, 28, Math.PI * .62), mouthM), 0, .12, .235, head);
-    mouth.rotation.z = -Math.PI / 2 - Math.PI * .31;
+    // a small smile on the front of the face, just under the eyes
+    const mouth = add(new THREE.Mesh(new THREE.TorusGeometry(.13, .012, 5, 24, Math.PI * .56), mouthM), 0, .2, .29, head);
+    mouth.rotation.set(-.25, 0, -Math.PI / 2 - Math.PI * .28);
     // the hood: a cowl around the back and top of the head, open at the face, with a drooping tip
     const open = 1.45;
     const hoodUp = new THREE.Group(); head.add(hoodUp);
