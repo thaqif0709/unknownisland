@@ -433,20 +433,27 @@
 
   // ================= Fire smoke =================
   // Inked swirl puffs that rise from lit fires, grow and fade.
-  function puffTexture() {
+  // Soft wisps: a few overlapping blurred blobs per texture, no outline, so
+  // they read as smoke; several shapes so the column never looks stamped.
+  function puffTexture(seed) {
     const c = document.createElement('canvas'); c.width = c.height = 128;
-    const g = c.getContext('2d');
-    g.fillStyle = '#2B211F'; g.beginPath(); g.arc(64, 64, 56, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#DDD2C1'; g.beginPath(); g.arc(64, 64, 49, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#C3B6A3'; g.beginPath(); g.arc(72, 74, 36, 0, Math.PI * 2); g.fill();
-    g.beginPath();
-    for (let a = 0; a < Math.PI * 3.3; a += .1) { const r = 30 * (1 - a / (Math.PI * 3.7)); g.lineTo(62 + Math.cos(a + 2.4) * r, 62 + Math.sin(a + 2.4) * r); }
-    g.lineWidth = 5; g.strokeStyle = '#2B211F'; g.lineCap = 'round'; g.stroke();
+    const g = c.getContext('2d'), r = mulberry32(seed);
+    for (let i = 0; i < 7; i++) {
+      const x = 64 + (r() - .5) * 46, y = 64 + (r() - .5) * 40, rad = 18 + r() * 26, a = .3 + r() * .25;
+      const grd = g.createRadialGradient(x, y, 0, x, y, rad);
+      grd.addColorStop(0, `rgba(236,230,220,${a})`); grd.addColorStop(.55, `rgba(222,214,202,${a * .6})`); grd.addColorStop(1, 'rgba(220,212,200,0)');
+      g.fillStyle = grd; g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+    }
+    // a faint curl, the only hint of ink
+    g.globalAlpha = .18; g.strokeStyle = '#6B5E55'; g.lineWidth = 2.5; g.lineCap = 'round'; g.beginPath();
+    for (let a = 0; a < Math.PI * 2.4; a += .1) { const rr = 20 * (1 - a / (Math.PI * 2.8)); g.lineTo(64 + Math.cos(a + seed) * rr, 64 + Math.sin(a + seed) * rr); }
+    g.stroke();
     return new THREE.CanvasTexture(c);
   }
-  const puffTex = puffTexture(), puffs = [];
-  for (let i = 0; i < 36; i++) {
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTex, transparent: true, depthWrite: false }));
+  const puffTexs = [11, 23, 37, 51].map(puffTexture), puffs = [];
+  const smokeDark = new THREE.Color(0x5E574F), smokeLight = new THREE.Color(0xB8B0A4);
+  for (let i = 0; i < 70; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: puffTexs[i % puffTexs.length], transparent: true, depthWrite: false }));
     sp.visible = false; sp.userData = { life: 0 };
     scene.add(sp); puffs.push(sp); noInk.add(sp);
   }
@@ -455,24 +462,27 @@
     const sp = puffs.find(p => p.userData.life <= 0);
     if (!sp) return;
     const big = f.kind === 'hearth' ? 1.3 : 1;
-    sp.userData = { life: 1, x: f.x + (Math.random() - .5) * .3, z: f.z + (Math.random() - .5) * .3, y: heightAt(f.x, f.z) + 1.2 * big,
-      big, sway: Math.random() * 6.28, spin: (Math.random() - .5) * 1.5 };
+    sp.userData = { life: 1, x: f.x + (Math.random() - .5) * .25, z: f.z + (Math.random() - .5) * .25, y: groundAt(f.x, f.z) + .75 * big,
+      big, sway: Math.random() * 6.28, spin: (Math.random() - .5) * .8, dur: 4.5 + Math.random() * 2, drift: .5 + Math.random() * .5 };
     sp.visible = true;
   }
   function updatePuffs(dt, elapsed) {
     for (const sp of puffs) {
       const u = sp.userData;
       if (u.life <= 0) continue;
-      u.life -= dt / 3.2;
+      u.life -= dt / u.dur;
       if (u.life <= 0) { sp.visible = false; continue; }
       const k = 1 - u.life;
-      sp.position.set(u.x + Math.sin(elapsed * .8 + u.sway) * .35 * k, u.y + k * 3.2, u.z + Math.cos(elapsed * .7 + u.sway) * .25 * k);
-      const size = (.9 + k * 1.9) * u.big;
-      sp.scale.set(size, size, 1);
+      // rises, slows, and leans with the breeze as it goes
+      sp.position.set(u.x + Math.sin(elapsed * .6 + u.sway) * .3 * k + k * k * u.drift * 1.6, u.y + Math.sqrt(k) * 4.2, u.z + Math.cos(elapsed * .5 + u.sway) * .3 * k);
+      const size = (.55 + k * 2.6) * u.big;
+      sp.scale.set(size, size * (.9 + k * .2), 1);
       sp.material.rotation = u.sway + k * u.spin;
-      sp.material.opacity = Math.min(1, u.life * 1.6) * .95;
+      sp.material.color.copy(smokeDark).lerp(smokeLight, Math.min(1, k * 1.6));
+      sp.material.opacity = Math.min(1, k * 6) * Math.pow(u.life, .8) * .85;
     }
   }
+
 
   // ================= Shore ripples =================
   // Curling wave crests on the water just off the coast, washing in and out.
@@ -580,9 +590,35 @@
   // Positions come from the server; small visual details (leaf angles, colors)
   // come from an RNG seeded by the object's id so everyone sees the same thing.
   const trunkM = [soft(0x9A7A5E), soft(0x8A6A52)], barkM = soft(0x7A5A45);
-  const palmLeaf = [soft(0x86A06A), soft(0x6F8F5A)];
-  const treeLeaf = [soft(0x6E8F5E), soft(0x809A62), soft(0x5C7D55), soft(0xD8928F)];   // the pink one is blossom
-  const coconutM = soft(0x7A5A45), berryM = soft(0xC4574F, { shininess: 60, specular: 0x666666 }), bushM = [soft(0x6A8A5A), soft(0x7C9868)];
+  const palmLeaf = [soft(0x86A06A), soft(0x6F8F5A)];   // (the leafy texture is defined just below)
+  // Foliage texture, inked: little scalloped leaf marks all over, and toward the
+  // underside (the bottom of the texture on spheres and cones) a darker band with
+  // cross-hatching, so every clump of leaves reads as lit from above.
+  const leafTex = (() => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+    const g = c.getContext('2d'), r = mulberry32(808);
+    g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 256);
+    const sh = g.createLinearGradient(0, 0, 0, 256);
+    sh.addColorStop(0, 'rgba(255,255,230,0)'); sh.addColorStop(.45, 'rgba(0,0,0,0)'); sh.addColorStop(.75, 'rgba(20,30,20,.22)'); sh.addColorStop(1, 'rgba(10,15,10,.42)');
+    g.fillStyle = sh; g.fillRect(0, 0, 256, 256);
+    g.lineCap = 'round';
+    for (let i = 0; i < 260; i++) {   // leaf scallops, darker lower down
+      const x = r() * 256, y = r() * 256, s2 = 5 + r() * 6, a = (r() - .5) * .8, dark = .18 + y / 256 * .3;
+      g.strokeStyle = `rgba(30,45,25,${dark})`; g.lineWidth = 1.8;
+      g.beginPath(); g.arc(x, y, s2, a + .3, a + Math.PI - .3); g.stroke();
+    }
+    for (let i = 0; i < 70; i++) {   // light flecks where the sun catches the top
+      const x = r() * 256, y = r() * 110;
+      g.fillStyle = `rgba(255,252,220,${.25 + r() * .25})`; g.beginPath(); g.ellipse(x, y, 3 + r() * 3, 1.6, (r() - .5), 0, 7); g.fill();
+    }
+    g.strokeStyle = 'rgba(20,28,18,.28)'; g.lineWidth = 1.4;   // hatching in the shade
+    for (let x = -256; x < 256; x += 7) { g.beginPath(); g.moveTo(x, 256); g.lineTo(x + 70, 186); g.stroke(); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.repeat.set(3, 1);
+    return t;
+  })();
+  const leafy = c => { const m = soft(c, { map: leafTex }); m.userData.leafy = true; return m; };
+  const treeLeaf = [leafy(0x6E8F5E), leafy(0x809A62), leafy(0x5C7D55), leafy(0xD8928F)];   // the pink one is blossom
+  const coconutM = soft(0x7A5A45), berryM = soft(0xC4574F, { shininess: 60, specular: 0x666666 }), bushM = [leafy(0x6A8A5A), leafy(0x7C9868)];
   const rockM = [soft(0xA9A193), soft(0x948E83)];
 
   function makePalm(rng) {
@@ -611,7 +647,7 @@
     g.rotation.y = rng() * Math.PI * 2;
     return { g, nuts };
   }
-  const pineM = [soft(0x4F6F5A), soft(0x5E7F66)], blueberryM = soft(0x5873A8, { shininess: 60, specular: 0x666666 });
+  const pineM = [leafy(0x4F6F5A), leafy(0x5E7F66)], blueberryM = soft(0x5873A8, { shininess: 60, specular: 0x666666 });
   // Every tree, bush and stone gets its own shape from an RNG seeded by its id,
   // so all players see the same island.
   const rr = (rng, a, b) => a + rng() * (b - a);
@@ -650,10 +686,12 @@
       } else {
         const n = 3 + ((rng() * 4) | 0);
         const sx = shape === 'wide' ? 1.6 : shape === 'tall' ? .6 : 1, sy = shape === 'tall' ? 1.7 : shape === 'wide' ? .55 : 1;
-        blob(0, .7 * sy, 0, rr(rng, 1, 1.35), shape === 'wide' ? .75 : 1);
+        // the main clump always swallows the top of the trunk; the others sit inside its height
+        const R = rr(rng, 1, 1.35), my = R * sy * .45;
+        blob(0, my, 0, R, shape === 'wide' ? .75 : shape === 'tall' ? sy : 1);
         for (let i = 0; i < n; i++) {
           const a = rng() * 6.28, d = rr(rng, .45, .85) * sx;
-          blob(Math.cos(a) * d, rr(rng, .2, 1.3) * sy, Math.sin(a) * d, rr(rng, .55, .95), shape === 'wide' ? .8 : 1);
+          blob(Math.cos(a) * d, clamp(rr(rng, .2, 1.3) * sy, my - R * .3, my + R * sy * .55), Math.sin(a) * d, rr(rng, .55, .95), shape === 'wide' ? .8 : 1);
         }
       }
     }
@@ -771,16 +809,17 @@
       byMat.get(m.material).push(g); victims.push(m);
     });
     victims.forEach(m => { m.parent.remove(m); m.geometry.dispose(); });
-    for (const [mat, geos] of byMat) group.add(new THREE.Mesh(mergeGeos(geos), mat));
+    for (const [mat, geos] of byMat) { const mesh = new THREE.Mesh(mergeGeos(geos), mat); if (mat.userData.leafy) mesh.receiveShadow = true; group.add(mesh); }
     return group;
   }
   function mergeGeos(geos) {
     let n = 0; geos.forEach(g => { n += g.attributes.position.count; });
-    const pos = new Float32Array(n * 3), nrm = new Float32Array(n * 3);
+    const pos = new Float32Array(n * 3), nrm = new Float32Array(n * 3), withUv = geos.every(g => g.attributes.uv), uv = withUv ? new Float32Array(n * 2) : null;
     let off = 0;
-    geos.forEach(g => { pos.set(g.attributes.position.array, off * 3); nrm.set(g.attributes.normal.array, off * 3); off += g.attributes.position.count; g.dispose(); });
+    geos.forEach(g => { pos.set(g.attributes.position.array, off * 3); nrm.set(g.attributes.normal.array, off * 3); if (uv) uv.set(g.attributes.uv.array, off * 2); off += g.attributes.position.count; g.dispose(); });
     const out = new THREE.BufferGeometry();
     out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
+    if (uv) out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     out.computeBoundingSphere();
     return out;
   }
@@ -891,8 +930,26 @@
   const frogM = soft(0x7DBB3C), spotM = soft(0x4E8A2E), throatM = soft(0xC9DC86), webM = soft(0xE8872E), ropeM = soft(0xC9A86A);
   const ringM = new THREE.MeshBasicMaterial({ color: 0xE8872E }), irisM = new THREE.MeshBasicMaterial({ color: 0x3A2620 }),
     shineM = new THREE.MeshBasicMaterial({ color: 0xFFF8EA }), mouthM = new THREE.MeshBasicMaterial({ color: 0x2B211F });
-  const blushM = new THREE.MeshBasicMaterial({ color: 0xE0705A, transparent: true, opacity: .6 });
   const cyl = (rt, rb, h, m, seg = 12) => new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m);
+
+  // The robe: an open tube that flares toward the hem, with soft folds and a torn,
+  // uneven bottom edge (deep notches, longer tongues of cloth), built once and shared.
+  let robeGeo = null;
+  function raggedRobe() {
+    if (robeGeo) return robeGeo;
+    const H = .82, seg = 40, rows = 6, g = new THREE.CylinderGeometry(.2, .4, H, seg, rows, true), pos = g.attributes.position, r = mulberry32(4242);
+    const tear = [];   // per column: how far the hem hangs down (+) or is torn up (-)
+    for (let j = 0; j <= seg; j++) tear.push(j === seg ? tear[0] : (r() < .22 ? -(.05 + r() * .09) : r() * .07) + Math.sin(j * 1.7) * .015);
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), a = Math.atan2(x, z), k = (H / 2 - y) / H;   // 0 top, 1 hem
+      const col = Math.round(((a / (Math.PI * 2)) + 1) % 1 * seg) % seg;
+      const fold = 1 + Math.sin(a * 7) * .05 * k + Math.sin(a * 3 + 1) * .03 * k;   // folds grow toward the hem
+      pos.setX(i, x * fold); pos.setZ(i, z * fold);
+      pos.setY(i, y - tear[col] * k * k * (k > .99 ? 1 : .6));
+    }
+    g.computeVertexNormals();
+    return (robeGeo = g);
+  }
 
   // A frog castaway in a simple hooded cloak: part wizard, part wanderer.
   function makeCastaway(cloak) {
@@ -913,11 +970,8 @@
     }
     const legL = leg(-.11), legR = leg(.11);
     // the robe: loose, long, ragged at the hem, tied with a rope, with a patch sewn on
-    add(cyl(.2, .38, .78, cloakM, 18), 0, .74, 0);
-    for (let i = 0; i < 12; i++) {
-      const a = i / 12 * Math.PI * 2, tatter = new THREE.Mesh(new THREE.ConeGeometry(.07, .13 + (i % 3) * .04, 5), cloakM);
-      tatter.rotation.x = Math.PI; add(tatter, Math.cos(a) * .35, .31, Math.sin(a) * .35);
-    }
+    add(new THREE.Mesh(raggedRobe(), cloakM), 0, .74, 0);
+
     const belt = add(new THREE.Mesh(new THREE.TorusGeometry(.265, .026, 8, 24), ropeM), 0, .88, 0); belt.rotation.x = Math.PI / 2;
     add(new THREE.Mesh(new THREE.CylinderGeometry(.02, .02, .2, 6), ropeM), .12, .77, .24).rotation.z = .2;   // rope end
     const patch = add(new THREE.Mesh(new THREE.BoxGeometry(.13, .12, .02), patchM), -.2, .62, .26); patch.rotation.set(-.2, -.6, .15);
@@ -932,7 +986,6 @@
       add(ball(.1, ringM, 14, 10), sx * .215, .26, .155, head).scale.z = .6;
       add(ball(.07, irisM, 12, 8), sx * .22, .26, .2, head).scale.z = .5;
       add(ball(.022, shineM, 6, 4), sx * .22 + .03, .29, .235, head);
-      add(ball(.045, blushM, 8, 6), sx * .3, .02, .2, head).scale.set(1, .6, .4);
     }
     const mouth = add(new THREE.Mesh(new THREE.TorusGeometry(.27, .011, 5, 28, Math.PI * .62), mouthM), 0, .12, .235, head);
     mouth.rotation.z = -Math.PI / 2 - Math.PI * .31;
@@ -1033,7 +1086,37 @@
 
   // ================= Fires =================
   let fires = new Map();
-  const logM = soft(0x7A5A45), flameA = new THREE.MeshBasicMaterial({ color: 0xE0843A }), flameB = new THREE.MeshBasicMaterial({ color: 0xF3D48A });
+  const logM = soft(0x7A5A45);
+  // Flames in layers, like a flash-sheet fire: deep red tongues outside, then
+  // orange, yellow, and a pale core. Each tongue leans out and flickers on its own.
+  const flameMats = [0xB8402A, 0xE2742C, 0xF2B33D, 0xFFEBA6].map(c => new THREE.MeshBasicMaterial({ color: c }));
+  const emberM = new THREE.MeshBasicMaterial({ color: 0xD9542A }), charM = soft(0x3E302A);
+  // a teardrop: round belly low down, drawn up into a soft tip that curls a little
+  const tongueGeo = [0, 1, 2].map(k => {
+    const prof = []; for (let i = 0; i <= 10; i++) { const t2 = i / 10; prof.push(new THREE.Vector2(.15 * Math.sin(Math.PI * Math.pow(t2, .55)) * (1 - t2 * .25) + .001, t2 * .7)); }
+    const g2 = new THREE.LatheGeometry(prof, 9);
+    const pos = g2.attributes.position; for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); pos.setX(i, pos.getX(i) + Math.sin(y * 4 + k) * .06 * y * y); }
+    g2.computeVertexNormals(); return g2; });
+  function makeFlames(g) {
+    const tongues = [];
+    const layer = (n, w, h, rad, lean, mat, y0) => {
+      for (let i = 0; i < n; i++) {
+        const a = i / n * Math.PI * 2 + Math.random() * .6, holder = new THREE.Group();
+        const t = new THREE.Mesh(tongueGeo[i % 3], mat); t.scale.set(w / .15, h / .7, w / .15); holder.add(t);
+        holder.position.set(Math.cos(a) * rad, y0, Math.sin(a) * rad);
+        holder.rotation.set(Math.sin(a) * lean, Math.random() * 6, -Math.cos(a) * lean);
+        g.add(holder); tongues.push({ m: holder, ph: Math.random() * 6.28, sp: 8 + Math.random() * 7, h: 1 });
+      }
+    };
+    layer(6, .1, .34, .2, .55, flameMats[0], .07);    // low red licks, flared out
+    layer(4, .13, .62, .09, .22, flameMats[1], .1);   // the tall orange body
+    layer(3, .1, .5, .04, .1, flameMats[2], .13);     // yellow inside
+    layer(1, .07, .3, 0, 0, flameMats[3], .15);       // pale heart
+    // embers glowing between the logs
+    for (let i = 0; i < 6; i++) { const a = Math.random() * 6.28, r = .1 + Math.random() * .28, e = ball(.045 + Math.random() * .03, i % 3 ? emberM : charM, 6, 5);
+      e.position.set(Math.cos(a) * r, .1, Math.sin(a) * r); g.add(e); tongues.push({ m: e, ember: true, ph: Math.random() * 6.28 }); }
+    return tongues;
+  }
   const clayM = soft(0xB8704F);
   function addFire(src) {
     const g = new THREE.Group();
@@ -1043,13 +1126,11 @@
       ring.castShadow = true; g.add(ring);
     } else for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28; const s = ball(.15, rockM[i % 2], 10, 8); s.scale.y = .7; s.position.set(Math.cos(a) * .55, .08, Math.sin(a) * .55); s.castShadow = true; g.add(s); }
     for (let i = 0; i < 3; i++) { const l = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, .9, 10), logM); l.rotation.set(Math.PI / 2 - .35, i * 2.1, 0); l.position.y = .18; l.castShadow = true; g.add(l); }
-    const f1 = ball(.28, flameA, 14, 10); f1.position.y = .5;
-    const f2 = ball(.16, flameB, 12, 8); f2.position.y = .48;
-    g.add(f1, f2);
+    const fg = new THREE.Group(); g.add(fg);
+    const flames = makeFlames(fg);
     g.position.set(src.x, groundAt(src.x, src.z), src.z);
     scene.add(g);
-    if (kind === 'hearth') { f1.scale.setScalar(1.3); f2.scale.setScalar(1.3); }
-    const f = { id: src.id, type: 'fire', kind, x: src.x, z: src.z, r: kind === 'hearth' ? .8 : .6, mesh: g, flames: [f1, f2], fuel: src.fuel, state: {} };
+    const f = { id: src.id, type: 'fire', kind, x: src.x, z: src.z, r: kind === 'hearth' ? .8 : .6, mesh: g, flameGroup: fg, flames, fuel: src.fuel, state: {} };
     fires.set(f.id, f);
     return f;
   }
@@ -1789,14 +1870,58 @@
   const releaseKeys = () => { for (const k in keys) keys[k] = false; };
   window.addEventListener('blur', releaseKeys);
 
-  let lastInv = '';
+  let lastInv = '', lastCounts = {};
+  // Small inked icons for carried things and tools, drawn once on a canvas.
+  const itemIcons = new Map();
+  function itemIcon(key) {
+    if (itemIcons.has(key)) return itemIcons.get(key);
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d'), INK = '#2B211F';
+    g.lineWidth = 3; g.lineJoin = g.lineCap = 'round'; g.strokeStyle = INK;
+    const fill = (col, draw) => { g.beginPath(); draw(); g.fillStyle = col; g.fill(); g.stroke(); };
+    const handle = () => { g.lineWidth = 6; g.strokeStyle = INK; g.beginPath(); g.moveTo(16, 52); g.lineTo(44, 18); g.stroke(); g.lineWidth = 3.5; g.strokeStyle = '#A57A55'; g.beginPath(); g.moveTo(16, 52); g.lineTo(44, 18); g.stroke(); g.strokeStyle = INK; g.lineWidth = 3; };
+    switch (key) {
+      case 'wood':   // two logs, cut ends showing rings
+        fill('#9A7055', () => g.rect(10, 30, 38, 14)); fill('#B98A62', () => g.ellipse(48, 37, 6, 7, 0, 0, 7));
+        fill('#8A6248', () => g.rect(16, 16, 36, 13)); fill('#C9A078', () => g.ellipse(52, 22.5, 6, 6.5, 0, 0, 7));
+        g.lineWidth = 1.5; g.beginPath(); g.arc(52, 22.5, 2.5, 0, 7); g.stroke(); g.beginPath(); g.arc(48, 37, 2.5, 0, 7); g.stroke(); break;
+      case 'stone':
+        fill('#A9A193', () => { g.moveTo(12, 44); g.lineTo(18, 24); g.lineTo(36, 16); g.lineTo(52, 26); g.lineTo(54, 44); g.lineTo(36, 52); g.closePath(); });
+        g.lineWidth = 2; g.beginPath(); g.moveTo(22, 30); g.lineTo(34, 26); g.stroke(); break;
+      case 'clay': fill('#B8704F', () => g.ellipse(32, 38, 22, 14, 0, 0, 7)); fill('#C98563', () => g.ellipse(28, 33, 10, 5, -.2, 0, 7)); break;
+      case 'copper': case 'iron': {
+        const base = key === 'copper' ? '#948E83' : '#7E8590', fleck = key === 'copper' ? '#D9803A' : '#C9D2DA';
+        fill(base, () => { g.moveTo(10, 42); g.lineTo(20, 18); g.lineTo(40, 14); g.lineTo(54, 30); g.lineTo(46, 50); g.lineTo(22, 52); g.closePath(); });
+        g.fillStyle = fleck; [[24, 28, 5], [38, 24, 4], [34, 40, 6], [46, 36, 3]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.lineWidth = 1.5; g.stroke(); });
+        break; }
+      case 'seeds': [[22, 38, -.5], [36, 26, .3], [40, 44, 1.1]].forEach(([x, y, a]) => fill('#C8A860', () => g.ellipse(x, y, 7, 11, a, 0, 7))); break;
+      case 'oil':   // a little stoppered flask
+        fill('#E0A33A', () => { g.moveTo(24, 22); g.lineTo(40, 22); g.lineTo(40, 28); g.quadraticCurveTo(52, 34, 50, 46); g.quadraticCurveTo(48, 56, 32, 56); g.quadraticCurveTo(16, 56, 14, 46); g.quadraticCurveTo(12, 34, 24, 28); g.closePath(); });
+        fill('#8A6A52', () => g.rect(26, 12, 12, 10)); g.fillStyle = 'rgba(255,245,210,.6)'; g.beginPath(); g.ellipse(24, 42, 3, 6, .3, 0, 7); g.fill(); break;
+      case 'shovel': handle(); fill('#B3AC9F', () => { g.moveTo(10, 50); g.quadraticCurveTo(6, 40, 14, 36); g.lineTo(26, 46); g.quadraticCurveTo(22, 56, 10, 50); }); break;
+      case 'pickaxe': case 'ironpick': handle();
+        fill(key === 'ironpick' ? '#9AA4B0' : '#A9A193', () => { g.moveTo(24, 10); g.quadraticCurveTo(44, 12, 56, 32); g.quadraticCurveTo(44, 22, 34, 22); g.lineTo(30, 18); g.closePath(); }); break;
+      case 'axe': handle(); fill('#D9803A', () => { g.moveTo(36, 12); g.quadraticCurveTo(56, 12, 56, 30); g.lineTo(42, 30); g.lineTo(36, 22); g.closePath(); }); break;
+      default: fill('#D9C9A6', () => g.arc(32, 32, 18, 0, 7));
+    }
+    const url = c.toDataURL(); itemIcons.set(key, url); return url;
+  }
   function renderInventory() {
     const key = JSON.stringify([stats.inv, stats.tools, prefs.binds.book]);
     if (key === lastInv) return;
     lastInv = key;
-    $('invList').innerHTML = Object.keys(WG.ITEMS).filter(k => k === 'wood' || k === 'stone' || stats.inv[k] > 0)
-      .map(k => `<span>${esc(WG.ITEMS[k])} <b>${stats.inv[k] || 0}</b></span>`).join('');
-    $('toolList').innerHTML = stats.tools.map(t => `<span>${esc(WG.recipeById(t).name)}</span>`).join('');
+    // eight slots: whatever you carry fills them in order, the rest stay empty
+    const held = Object.keys(WG.ITEMS).filter(k => (stats.inv[k] || 0) > 0), SLOTS = 8;
+    $('invList').innerHTML = Array.from({ length: SLOTS }, (_, i) => {
+      const k = held[i];
+      if (!k) return '<div class="slot empty"></div>';
+      const n = stats.inv[k], fresh = (lastCounts[k] || 0) < n ? ' new' : '';
+      return `<div class="slot${fresh}" title="${esc(WG.ITEMS[k])}: ${n}"><img src="${itemIcon(k)}" alt="${esc(WG.ITEMS[k])}"><b>${n}</b></div>`;
+    }).join('');
+    lastCounts = { ...stats.inv };
+    $('toolList').innerHTML = stats.tools.length ? '<span class="toolsLabel">Tools</span>' + stats.tools.map(t =>
+      `<div class="slot tool" title="${esc(WG.recipeById(t).name)}"><img src="${itemIcon(t)}" alt="${esc(WG.recipeById(t).name)}"></div>`).join('') : '';
+    document.documentElement.style.setProperty('--invH', ui.inv.offsetHeight + 'px');
     const ready = WG.RECIPES.filter(r => canAfford(r) && !(r.kind === 'tool' && has(r.id)) && !(r.needs && !has(r.needs))).length;
     $('craftHint').textContent = ready
       ? `You can make ${ready} thing${ready > 1 ? 's' : ''}. Press ${keyLabel(prefs.binds.book)} for recipes.`
@@ -2225,7 +2350,7 @@
   if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, camera, chunks, objects: () => objects, stats, stilled,
     pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); },
     washups: () => washups, bugs: () => bugs, previewJournal: keys => { keys.forEach(k => { journal.mine[k] = 1 + (k.length % 3); journal.firsts[k] = journal.firsts[k] || 'aiman'; }); },
-    setEnv: e => setEnv(e), cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
+    setEnv: e => setEnv(e), addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
     recarve: (id, text, st) => { const c = carvings.get(id); setCarvings([{ id, key: c.key, x: c.x, z: c.z, face: c.mesh.rotation.y, text, state: st || 'active', tally: [2, 5] }], id, 'new'); }, face: () => face, gy: () => groundAt(px, pz), board: () => board, openPanel: w => togglePanel(w), patches: l => { myPatches = l; setPatches(hero, l); },
     lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); } }; }
 
@@ -2711,11 +2836,19 @@
     fires.forEach(f => {
       if (inGame()) f.fuel = Math.max(0, f.fuel - dt * WG.FIRES[f.kind].burn);
       const on = f.fuel > 0, s = on ? clamp(f.fuel / 40, .35, 1) * (f.kind === 'hearth' ? 1.3 : 1) : 0;
-      f.flames.forEach((fl, i) => { fl.visible = on; fl.scale.set(s * (1 + Math.sin(elapsed * 13 + i) * .08), s * (1.7 + Math.sin(elapsed * 17 + i * 2) * .25), s); });
+      f.flameGroup.scale.setScalar(s || 1);
+      f.flames.forEach(fl => {
+        if (fl.ember) { fl.m.visible = true; fl.m.material = on && Math.sin(elapsed * 2 + fl.ph) > -.6 ? emberM : charM; return; }
+        fl.m.visible = on;
+        if (!on) return;
+        const k = Math.sin(elapsed * fl.sp + fl.ph), k2 = Math.sin(elapsed * fl.sp * .63 + fl.ph * 2);
+        fl.m.scale.set(1 - k * .08, 1 + k * .22 + k2 * .1, 1 - k * .08);
+        fl.m.rotation.y += .6 / 60;
+      });
       if (on) lit.push({ f, s, d: Math.hypot(f.x - px, f.z - pz) });
     });
     if ((puffNext -= dt) <= 0) {
-      puffNext = lowGfx ? .9 : .5;
+      puffNext = lowGfx ? .5 : .22;
       for (const e of lit) if (Math.hypot(e.f.x - camera.position.x, e.f.z - camera.position.z) < 50) emitPuff(e.f);
     }
     lanterns.forEach(l => {

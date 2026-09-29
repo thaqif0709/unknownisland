@@ -57,11 +57,25 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 
 .inv{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);pointer-events:none;
   background:rgba(245,236,215,.94);padding:8px 14px;border-radius:18px;font-size:17px;transition:opacity .4s;border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
-.inv b{font-size:19px}
-.inv .items{display:flex;flex-wrap:wrap;gap:4px 14px;max-width:min(360px,60vw)}
-.inv .tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-.inv .tools span{font-size:13px;background:rgba(108,203,106,.2);border-radius:10px;padding:0 8px}
-.inv .craft{display:block;font-size:14px;color:var(--soft);margin-top:2px}
+.inv{padding:8px 10px 6px}
+.inv .slots{display:grid;grid-template-columns:repeat(8,var(--slot));gap:5px}
+.inv .tools{display:flex;gap:5px;margin-top:6px;align-items:center}
+.inv .tools:empty{display:none}
+.slot{--slot:48px;position:relative;width:var(--slot);height:var(--slot);border:2.5px solid var(--ink);border-radius:10px;background:#E9DCC0;
+  box-shadow:inset 2px 2px 0 rgba(255,250,235,.7),inset -2px -2px 0 rgba(43,33,31,.12)}
+.slot.empty{background:rgba(233,220,192,.45);border-style:dashed;border-color:rgba(43,33,31,.35);box-shadow:none}
+.slot img{position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px)}
+.slot b{position:absolute;right:-5px;bottom:-6px;min-width:20px;padding:0 4px;font-size:13px;line-height:17px;text-align:center;
+  background:var(--ink);color:#F5ECD7;border-radius:9px;font-weight:600}
+.slot.tool{--slot:38px;border-radius:50%;background:#D8E3C8}
+.slot.new{animation:slotpop .45s ease-out}
+@keyframes slotpop{0%{transform:scale(1.25)}100%{transform:scale(1)}}
+.inv .toolsLabel{font-size:12px;color:var(--soft);margin-right:2px}
+.inv .craft{display:block;font-size:13px;color:var(--soft);margin-top:5px}
+:root{--slot:48px}
+@media (max-width:600px){ :root{--slot:36px} .slot{--slot:36px} .slot.tool{--slot:30px} .slot b{font-size:11px;line-height:15px;min-width:17px}
+  .inv .slots{grid-template-columns:repeat(4,var(--slot))} }
+@media (pointer:coarse){ .inv .craft{display:none} }
 .gear{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);width:50px;height:50px;border-radius:16px;border:3px solid var(--ink);
   background:rgba(245,236,215,.94);color:var(--ink);cursor:pointer;padding:0;display:grid;place-items:center;box-shadow:3px 3px 0 var(--ink);transition:opacity .4s,transform .15s}
 .gear svg{width:30px;height:30px;transition:transform .5s}
@@ -151,7 +165,7 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 #carveEar{font-style:italic;color:#2B211F;min-height:0;margin:6px 0 0}
 #carveTally{font-size:16px;margin:4px 0 0}
 /* chat */
-.chat{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 118px);width:min(400px,calc(100vw - 130px));transition:opacity .4s;z-index:3;pointer-events:none}
+.chat{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + var(--invH,110px) + 26px);width:min(400px,calc(100vw - 130px));transition:opacity .4s;z-index:3;pointer-events:none}
 .chat-log{display:flex;flex-direction:column;gap:3px;max-height:34vh;overflow:hidden;font-size:15px;line-height:1.3}
 .chat.open .chat-log{overflow-y:auto;pointer-events:auto;background:rgba(245,236,215,.9);border:3px solid var(--ink);border-radius:14px;padding:6px 10px;box-shadow:3px 3px 0 var(--ink)}
 .chat-log p{margin:0;padding:1px 8px;border-radius:10px;background:rgba(245,236,215,.82);color:var(--ink);width:fit-content;max-width:100%;overflow-wrap:anywhere;
@@ -220,7 +234,7 @@ kbd.k{font-family:var(--hand);font-weight:600;border:2px solid var(--ink);border
     background:rgba(245,236,215,.95);border-radius:50%;min-width:84px;min-height:84px;padding:8px}
   .touch button.small{min-height:52px;font-size:16px}
   .prompt kbd{display:none}
-  .gear{bottom:auto;right:auto;left:14px;top:calc(env(safe-area-inset-top,0px) + 196px)}
+  .gear{bottom:auto;right:auto;left:14px;top:calc(env(safe-area-inset-top,0px) + 238px)}
   .online{font-size:13px}
   .minimap canvas{width:110px;height:110px}
 }
@@ -273,7 +287,7 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
     <canvas id="minimapCanvas" width="150" height="150"></canvas>
   </div>
 </div>
-<div class="inv hidden" id="inv"><div class="items" id="invList"></div><div class="tools" id="toolList"></div>
+<div class="inv hidden" id="inv"><div class="slots" id="invList" aria-label="What you're carrying"></div><div class="tools" id="toolList" aria-label="Your tools"></div>
   <span class="craft" id="craftHint"></span></div>
 <button class="gear hidden" id="btnSettings" type="button" aria-label="Settings" title="Settings (Esc)"><svg viewBox="0 0 32 32" aria-hidden="true">
   <path fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M26.74 13.64 L30.39 14.18 L30.39 17.82 L26.74 18.36 L25.26 21.93 L27.46 24.89 L24.89 27.46 L21.93 25.26 L18.36 26.74 L17.82 30.39 L14.18 30.39 L13.64 26.74 L10.07 25.26 L7.11 27.46 L4.54 24.89 L6.74 21.93 L5.26 18.36 L1.61 17.82 L1.61 14.18 L5.26 13.64 L6.74 10.07 L4.54 7.11 L7.11 4.54 L10.07 6.74 L13.64 5.26 L14.18 1.61 L17.82 1.61 L18.36 5.26 L21.93 6.74 L24.89 4.54 L27.46 7.11 L25.26 10.07 Z"/>
