@@ -1134,7 +1134,7 @@
     }
     const armL = arm(-.27), armR = arm(.27);
 
-    const av = { root, body, legL, legR, armL, armR, walk: 0, swingT: 0, hoodUp, hoodDown };
+    const av = { root, body, head, legL, legR, armL, armR, walk: 0, swingT: 0, hoodUp, hoodDown, sit: 0 };
     av.armL.rotation.z = -.18; av.armR.rotation.z = .18;
     shadows(root);
     scene.add(root);
@@ -1173,6 +1173,19 @@
     av.body.position.y = moving ? Math.abs(Math.cos(av.walk)) * .08 : Math.sin(elapsed * 2.2) * .015;
     const sq = moving ? 1 + Math.abs(Math.sin(av.walk)) * .04 : 1 + Math.sin(elapsed * 2.2) * .01;
     av.body.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
+    // sitting: a deep squat, knees up, arms hanging forward between them, head tipped down.
+    // av.sit eases 0..1 so sitting down and getting up are smooth.
+    av.sit += ((av.sitting && !moving ? 1 : 0) - av.sit) * Math.min(1, dt * 7);
+    const k = av.sit;
+    av.legL.rotation.z = av.legR.rotation.z = 0; av.head.rotation.x = 0;
+    if (k > .01) {
+      av.body.position.y = -.36 * k;
+      av.legL.rotation.x = av.legR.rotation.x = -.95 * k;   // feet tucked under, knees forward
+      av.legL.rotation.z = -.38 * k; av.legR.rotation.z = .38 * k;   // knees apart
+      if (!(av.swingT > 0)) { av.armL.rotation.x = -.85 * k; if (!av.held) av.armR.rotation.x = -.85 * k; }
+      av.armL.rotation.z = -.18 + .1 * k; av.armR.rotation.z = .18 - .1 * k;
+      av.head.rotation.x = .38 * k;   // looking down
+    }
   }
 
   // ================= The Stilled =================
@@ -1769,7 +1782,7 @@
     tag.textContent = p.name;
     ui.tags.appendChild(tag);
     const av = makeCastaway(colorFor(p.id));
-    setPatches(av, p.patches); setHood(av, !p.hoodDown); setHeld(av, p.hold);
+    setPatches(av, p.patches); setHood(av, !p.hoodDown); setHeld(av, p.hold); av.sitting = !!p.sit;
     remotes.set(p.id, { name: p.name, remote: new Net.Remote(p.x, p.z, p.face), av, tag, dead: p.dead, patches: p.patches || [] });
   }
   function renderOnline() {
@@ -1857,7 +1870,7 @@
       }
       case 'toast': toast(m.msg); break;
       case 'knocked':
-        if (me && m.id === me.id) { knockT = RULES.KNOCK ? RULES.KNOCK.DOWN_MS / 1000 : 3; }
+        if (me && m.id === me.id) { knockT = RULES.KNOCK ? RULES.KNOCK.DOWN_MS / 1000 : 3; setSitting(false); }
         else { const r = remotes.get(m.id); if (r) r.knockT = 3; }
         break;
       case 'drop': addDrop(m.drop); break;
@@ -1902,12 +1915,14 @@
       case 'undrop': removeDrop(m.id); break;
       case 'dropitems': { const d = drops.get(m.id); if (d) d.items = m.items; break; }
       case 'hold': { const r = remotes.get(m.id); if (r) setHeld(r.av, m.key); break; }
+      case 'sit': { const r = remotes.get(m.id); if (r) r.av.sitting = !!m.on; break; }
+      case 'charge': { const r = remotes.get(m.id); if (r) r.chargeAt = m.on ? performance.now() : 0; break; }
       case 'jump': { const r = remotes.get(m.id); if (r) r.hop = { t: 0, mul: clamp(+m.mul || 1, 1, 3) }; break; }
       case 'dawn':
         if (state === 'play') toast(`Morning of day ${m.day}. You made it through the night.`);
         break;
       case 'correct': px = m.x; pz = m.z; break;
-      case 'died': state = 'dead'; deadT = 0; deathInfo = { cause: m.cause, day: m.day }; ui.prompt.classList.add('hidden'); break;
+      case 'died': setSitting(false); state = 'dead'; deadT = 0; deathInfo = { cause: m.cause, day: m.day }; ui.prompt.classList.add('hidden'); break;
       case 'respawned':
         applySelf(m.you);
         hero.root.rotation.x = 0;
@@ -2065,7 +2080,7 @@
   const ACTIONS = [
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
-    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'], ['jump', 'Jump (hold to leap higher and forward)', 'Space'], ['cycle', 'Next item slot (Shift: back)', 'KeyQ'],
+    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'], ['jump', 'Jump (hold to leap higher and forward)', 'Space'], ['cycle', 'Next item slot (Shift: back)', 'KeyQ'], ['sit', 'Sit down / get up', 'KeyV'],
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -2120,6 +2135,7 @@
     if (e.code === prefs.binds.book) togglePanel('book');
     if (e.code === prefs.binds.journal) togglePanel('journal');
     if (e.code === prefs.binds.hood) toggleHood();
+    if (e.code === prefs.binds.sit) setSitting(!sitting);
     if (/^Digit[1-8]$/.test(e.code) || /^Numpad[1-8]$/.test(e.code)) selectSlot(+e.code.slice(-1) - 1);
     if (e.code === prefs.binds.drop) dropHeld(e.shiftKey);
     if (e.code === prefs.binds.cycle) cycleSlot(e.shiftKey ? -1 : 1);
@@ -3194,7 +3210,15 @@
   let jumpBtnHeld = false; let camLift = 0;
   const hop = { y: 0, v: 0, air: false, land: 0, charge: -1 };
   const canJump = () => !(state !== 'play' || hop.air || knockT > 0 || stats.down || nrg.exhausted || panelOpen() || heightAt(px, pz) < .1);   // not while wading
-  function startCharge() { if (canJump() && hop.charge < 0) hop.charge = 0; }
+  function startCharge() { if (canJump() && hop.charge < 0) { if (sitting) setSitting(false); hop.charge = 0; } }
+  // Sitting (V): moving, jumping or getting knocked down stands you up again.
+  let sitting = false, sentCharge = false;
+  function setSitting(on) {
+    if (on && (state !== 'play' || hop.air || knockT > 0 || stats.down)) return;
+    if (sitting === !!on) return;
+    sitting = !!on; if (hero) hero.sitting = sitting;
+    if (net) net.send({ t: 'sit', on: sitting });
+  }
   function releaseJump() {
     if (hop.charge < 0) return;
     const k = clamp(hop.charge / CHARGE_FULL, 0, 1), mul = 1 + k * 2;   // height x1 .. x3
@@ -3224,6 +3248,8 @@
     if (h.charge >= 0) { h.charge += dt; if (!canJump()) h.charge = -1; }
     else if ((keys[prefs.binds.jump] || jumpBtnHeld) && canJump()) h.charge = 0;   // pressed just before landing: start charging now
     h.floor = floorAt(px, pz, h.y);
+    const charging = h.charge >= 0;   // tell friends so they see you crouch
+    if (charging !== sentCharge && net && net.open) { sentCharge = charging; net.send({ t: 'charge', on: charging }); }
     if (h.air) {
       h.v -= GRAVITY * dt; h.y += h.v * dt;
       if (h.v > 0) { const ceil = leafCeiling(px, pz, h.y - h.v * dt); if (h.y + FROG_H > ceil) { h.y = Math.max(h.floor, ceil - FROG_H); h.v = 0; } }   // bonk: the leaves stop you
@@ -3431,6 +3457,7 @@
           let df = tf - face; while (df > Math.PI) df -= Math.PI * 2; while (df < -Math.PI) df += Math.PI * 2;
           face += df * Math.min(1, dt * 12);
           moving = true;
+          if (sitting) setSitting(false);   // walking off stands you up
         }
       }
       const now = performance.now();
@@ -3464,7 +3491,8 @@
       poseCastaway(r.av, s.x, s.z, s.face, s.moving, !!s.dead || r.knockT > 0, dt, elapsed);
       r.standS = (r.standS || 0) + ((r.stand || 0) - (r.standS || 0)) * Math.min(1, dt * 8);   // standing on a rock
       r.av.root.position.y += r.standS;
-      if (r.hop) { const A = airTime(r.hop.mul); r.hop.t += dt; const air = r.hop.t < A; applyHop(r.av, air ? hopHeight(r.hop.t, r.hop.mul) : 0, air, air ? 0 : .18 - (r.hop.t - A)); if (r.hop.t > A + .18) r.hop = null; }
+      if (r.chargeAt && !r.hop) applyHop(r.av, 0, false, 0, Math.min(1, (performance.now() - r.chargeAt) / 1000 / CHARGE_FULL));   // crouching to jump
+      if (r.hop) { r.chargeAt = 0; const A = airTime(r.hop.mul); r.hop.t += dt; const air = r.hop.t < A; applyHop(r.av, air ? hopHeight(r.hop.t, r.hop.mul) : 0, air, air ? 0 : .18 - (r.hop.t - A)); if (r.hop.t > A + .18) r.hop = null; }
       tagV.set(s.x, Math.max(groundAt(s.x, s.z), -.75) + 2.05, s.z).project(camera);
       const dist = Math.hypot(s.x - camera.position.x, s.z - camera.position.z);
       if (tagV.z > 1 || dist > 45) r.tag.style.display = 'none';

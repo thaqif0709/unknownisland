@@ -534,7 +534,7 @@ class Island {
     return { id: p.id, name: p.name, x: p.x, z: p.z, face: p.face, health: p.health, hunger: p.hunger,
       thirst: p.thirst, inv: p.inv, tools: p.tools, buckets: p.buckets, energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches, hoodDown: p.hoodDown };
   }
-  publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown, hold: p.hold || null }; }
+  publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown, hold: p.hold || null, sit: !!p.sitting }; }
   fireView(f) { return { id: f.id, x: f.x, z: f.z, fuel: r2(f.fuel), kind: f.kind, pot: this.potView(f) }; }
   potView(f) { return f.pot ? { mat: f.pot.mat, left: r2(f.pot.left) } : null; }
 
@@ -585,7 +585,7 @@ class Island {
       if (nf > .5 && !p.warm) dd += D.DARK * nf * (this.has(p, 'violet_charm') ? 1.5 : 1);
       if (alone) dd += nf > .5 ? D.ALONE_NIGHT : D.ALONE_DAY;
       else dd += D.FRIENDS * (this.has(p, 'conch_charm') ? 2 : 1);
-      if (p.warm) dd += D.LIGHT;
+      if (p.warm) dd += D.LIGHT * (p.sitting ? 2 : 1);   // resting by the fire calms you faster
       if (nf < .5 && p.fog < .3) dd += D.DAY;
       if (this.stilled.some(s => Math.hypot(s.x - p.x, s.z - p.z) < RULES.STILLED.NEAR_RADIUS)) dd += RULES.STILLED.NEAR_DREAD;
       if (dd > 0 && this.has(p, 'moon_wing')) dd *= 1.3;
@@ -656,6 +656,11 @@ class Island {
         return this.broadcast({ t: 'hold', id: p.id, key: p.hold }, p);
       case 'dropitem': return this.onDropItem(p, msg);
       case 'bucket': return this.onBucket(p, msg);
+      case 'charge':   // crouching to jump (just for show)
+        return this.broadcast({ t: 'charge', id: p.id, on: !!msg.on && !p.dead }, p);
+      case 'sit':   // sitting down; everyone sees it
+        p.sitting = !!msg.on && !p.dead;
+        return this.broadcast({ t: 'sit', id: p.id, on: p.sitting }, p);
       case 'hood':   // hood up or down; everyone sees it, and it's remembered
         p.hoodDown = !!msg.down;
         return this.broadcast({ t: 'hood', id: p.id, down: p.hoodDown });
