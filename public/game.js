@@ -1349,7 +1349,7 @@
   const $ = id => document.getElementById(id);
   const ui = { hud: $('hud'), inv: $('inv'), prompt: $('prompt'), toast: $('toast'), overlay: $('overlay'), online: $('online'),
     touch: $('touchUi'), banner: $('banner'), tags: $('tags'), gear: $('btnSettings'), book: $('book'), settings: $('settings'), journal: $('journal'),
-    board: $('boardPanel'), carvingPanel: $('carvingPanel'), chat: $('chat'), map: $('map') };
+    board: $('boardPanel'), carvingPanel: $('carvingPanel'), chat: $('chat'), map: $('map'), minimap: $('minimap') };
   let myPatches = [];
   const WEATHER_SAY = { clear: 'The sky clears.', rain: 'It starts to rain. Fires burn smaller in the wet.',
     storm: 'A storm rolls in. The sea will bring things up tomorrow.', fogstorm: 'The fog is coming in, in broad daylight.' };
@@ -1357,7 +1357,7 @@
   function toast(msg) { if (Cut.on) return; ui.toast.textContent = msg; ui.toast.classList.add('on'); toastTimer = 2.6; }
 
   function showHud(on) {
-    [ui.hud, ui.inv, ui.online, ui.touch, ui.gear, ui.chat].forEach(el => el.classList.toggle('hidden', !on));
+    [ui.hud, ui.inv, ui.online, ui.touch, ui.gear, ui.chat, ui.minimap].forEach(el => el.classList.toggle('hidden', !on));
     if (!on) { ui.prompt.classList.add('hidden'); closePanels(); closeChat(); }
   }
 
@@ -2044,8 +2044,9 @@
   // ================= Map =================
   // A top-down chart of the island, inked in flat biome colours once and cached;
   // markers for springs, lanterns, carving stones, the board, fires and players
-  // are redrawn on top each time the panel is open.
-  const MAP_PX = 480, MAP_HALF = WG.ISL * 1.15;
+  // are redrawn on top of a scaled copy of that cache for both the full panel
+  // (opened with M) and the always-on minimap in the top-right corner.
+  const MAP_PX = 480, MINI_PX = 150, MINI_DOT = .55, MAP_HALF = WG.ISL * 1.15;
   const BIOME_COL = { sea: '#4A6F91', beach: '#D8C9A0', meadow: '#8FAE72', forest: '#5C7A4B', highland: '#9C8A6A', peak: '#D9D3C4', spring: '#7FC9D6' };
   let mapBase = null, mapTimer = 0;
   function buildMapBase() {
@@ -2059,29 +2060,35 @@
     }
     mapBase = c;
   }
-  const mapX = x => (x + MAP_HALF) / (MAP_HALF * 2) * MAP_PX;
-  const mapZ = z => (z + MAP_HALF) / (MAP_HALF * 2) * MAP_PX;
-  function mapDot(g, x, z, r, fill) {
-    g.beginPath(); g.arc(mapX(x), mapZ(z), r, 0, Math.PI * 2);
-    g.fillStyle = fill; g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#2B211F'; g.stroke();
-  }
-  function renderMap() {
-    if (!mapBase) buildMapBase();
-    const g = $('mapCanvas').getContext('2d');
-    g.drawImage(mapBase, 0, 0);
-    WG.SPRINGS.forEach(s => mapDot(g, s.x, s.z, 4, '#2E6B7A'));
-    if (board) mapDot(g, board.x, board.z, 4, '#8A6A4A');
-    carvings.forEach(c => mapDot(g, c.x, c.z, 4.5, '#5B4A63'));
-    lanterns.forEach(l => mapDot(g, l.x, l.z, l.big ? 5.5 : 4, l.lit ? '#E0A33A' : '#8A8171'));
-    fires.forEach(f => mapDot(g, f.x, f.z, 3.5, f.fuel > 0 ? '#C9622F' : '#8A8171'));
-    remotes.forEach((r, id) => { if (!r.dead) { const s = r.remote.sample(); mapDot(g, s.x, s.z, 4, hex(colorFor(id))); } });
+  const mapCoord = (v, size) => (v + MAP_HALF) / (MAP_HALF * 2) * size;
+  function drawMapMarkers(g, size, dotScale) {
+    const dot = (x, z, r, fill) => {
+      g.beginPath(); g.arc(mapCoord(x, size), mapCoord(z, size), r * dotScale, 0, Math.PI * 2);
+      g.fillStyle = fill; g.fill(); g.lineWidth = Math.max(1, 1.5 * dotScale); g.strokeStyle = '#2B211F'; g.stroke();
+    };
+    WG.SPRINGS.forEach(s => dot(s.x, s.z, 4, '#2E6B7A'));
+    if (board) dot(board.x, board.z, 4, '#8A6A4A');
+    carvings.forEach(c => dot(c.x, c.z, 4.5, '#5B4A63'));
+    lanterns.forEach(l => dot(l.x, l.z, l.big ? 5.5 : 4, l.lit ? '#E0A33A' : '#8A8171'));
+    fires.forEach(f => dot(f.x, f.z, 3.5, f.fuel > 0 ? '#C9622F' : '#8A8171'));
+    remotes.forEach((r, id) => { if (!r.dead) { const s = r.remote.sample(); dot(s.x, s.z, 4, hex(colorFor(id))); } });
     if (inGame()) {
-      g.save(); g.translate(mapX(px), mapZ(pz)); g.rotate(Math.PI - face);
+      g.save(); g.translate(mapCoord(px, size), mapCoord(pz, size)); g.rotate(Math.PI - face); g.scale(dotScale, dotScale);
       g.beginPath(); g.moveTo(0, -7); g.lineTo(4.5, 5); g.lineTo(-4.5, 5); g.closePath();
       g.fillStyle = hex(colorFor(me.id)); g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#2B211F'; g.stroke();
       g.restore();
     }
   }
+  function drawMap(canvas, size, dotScale) {
+    if (!mapBase) buildMapBase();
+    const g = canvas.getContext('2d');
+    g.clearRect(0, 0, size, size);
+    g.drawImage(mapBase, 0, 0, MAP_PX, MAP_PX, 0, 0, size, size);
+    drawMapMarkers(g, size, dotScale);
+  }
+  const renderMap = () => drawMap($('mapCanvas'), MAP_PX, 1);
+  const renderMinimap = () => drawMap($('minimapCanvas'), MINI_PX, MINI_DOT);
+  $('minimap').addEventListener('click', () => togglePanel('map'));
 
   // ================= Recipe book & settings =================
   function togglePanel(which) {
@@ -2666,7 +2673,11 @@
       remotes.forEach(r => { if (r.patches && r.patches.includes('firefly_jar') && !r.dead) { const q = r.remote.sample(); lights.push({ x: q.x, z: q.z, r: 3.5 }); } });
       updateFogMap(focusX, focusZ, t, lights);
     }
-    if (!ui.map.classList.contains('gone') && (mapTimer -= dt) <= 0) { mapTimer = .3; renderMap(); }
+    if ((mapTimer -= dt) <= 0) {
+      mapTimer = .3;
+      if (!ui.map.classList.contains('gone')) renderMap();
+      if (!ui.minimap.classList.contains('hidden')) renderMinimap();
+    }
     if (window.__dbg && __dbg.forceDread != null) stats.dread = __dbg.forceDread;   // debug only
     dreadShown += ((inGame() ? stats.dread / 100 : 0) - dreadShown) * Math.min(1, dt * 1.5);
     inkMat.uniforms.dread.value = dreadShown;
