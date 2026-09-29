@@ -1173,18 +1173,20 @@
     av.body.position.y = moving ? Math.abs(Math.cos(av.walk)) * .08 : Math.sin(elapsed * 2.2) * .015;
     const sq = moving ? 1 + Math.abs(Math.sin(av.walk)) * .04 : 1 + Math.sin(elapsed * 2.2) * .01;
     av.body.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
-    // sitting: a deep squat, knees up, arms hanging forward between them, head tipped down.
+    // sitting: down on the ground, legs straight out in front, back slouched
+    // forward, arms resting toward the knees, head hanging a little.
     // av.sit eases 0..1 so sitting down and getting up are smooth.
     av.sit += ((av.sitting && !moving ? 1 : 0) - av.sit) * Math.min(1, dt * 7);
-    const k = av.sit;
-    av.legL.rotation.z = av.legR.rotation.z = 0; av.head.rotation.x = 0;
+    const k = av.sit, slouch = .38 * k;
+    av.legL.rotation.z = av.legR.rotation.z = 0; av.head.rotation.x = 0; av.body.rotation.x = 0;
     if (k > .01) {
-      av.body.position.y = -.36 * k;
-      av.legL.rotation.x = av.legR.rotation.x = -.95 * k;   // feet tucked under, knees forward
-      av.legL.rotation.z = -.38 * k; av.legR.rotation.z = .38 * k;   // knees apart
-      if (!(av.swingT > 0)) { av.armL.rotation.x = -.85 * k; if (!av.held) av.armR.rotation.x = -.85 * k; }
-      av.armL.rotation.z = -.18 + .1 * k; av.armR.rotation.z = .18 - .1 * k;
-      av.head.rotation.x = .38 * k;   // looking down
+      av.body.position.y = -.5 * k;
+      av.body.rotation.x = slouch;   // lean forward from the hips
+      av.legL.rotation.x = av.legR.rotation.x = -1.5 * k - slouch;   // flat out along the ground
+      av.legL.rotation.z = -.12 * k; av.legR.rotation.z = .12 * k;
+      if (!(av.swingT > 0)) { av.armL.rotation.x = -1.05 * k; if (!av.held) av.armR.rotation.x = -1.05 * k; }
+      av.armL.rotation.z = -.18 + .06 * k; av.armR.rotation.z = .18 - .06 * k;
+      av.head.rotation.x = .25 * k;
     }
   }
 
