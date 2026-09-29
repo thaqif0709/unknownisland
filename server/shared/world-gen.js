@@ -49,6 +49,7 @@
     EXHAUST_RECOVER: 35,
     EXHAUSTED_MULT: 0.75,    // walking speed while exhausted
     SPRINT_HUNGER: 0.9,      // extra hunger per second while sprinting
+    JUMP_ENERGY: 6,          // energy per normal hop; a full-charge jump (twice as high) costs twice as much
     // Dread (0-100) changes what you perceive. Per-second rates:
     DREAD: {
       FOG: 2.4,          // times the fog density where you stand
@@ -391,6 +392,13 @@
     }
     return running;
   }
+  // A jump costs energy (more for a charged one) and pauses recovery, like sprinting.
+  // mul: 1 (tap) to 2 (full charge). Shared so the server and your browser agree.
+  function spendJump(p, mul = 1) {
+    p.energy = Math.max(0, p.energy - RULES.JUMP_ENERGY * Math.min(2, Math.max(1, mul)));
+    p.rest = 0;
+    if (p.energy <= 0) p.exhausted = true;
+  }
   const speedMult = (running, exhausted) => running ? RULES.SPRINT_MULT : exhausted ? RULES.EXHAUSTED_MULT : 1;
 
   // Object state. Only states that differ from the default are stored in the database.
@@ -414,7 +422,7 @@
   const WorldGen = {
     RULES, ITEMS, RECIPES, FIRES, PATCHES, MOON_NAMES, moonPhase, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
-    generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, speedMult,
+    generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, speedMult,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;
   else root.WorldGen = WorldGen;

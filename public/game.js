@@ -2152,9 +2152,15 @@
     iconCache.set(id, url);
     return url;
   }
+  const RARITY = {
+    common: { name: 'Common', pips: '\u25c6', tip: 'Easy to find. You will see these most days.' },
+    uncommon: { name: 'Uncommon', pips: '\u25c6\u25c6', tip: 'Turns up now and then. Keep an eye out.' },
+    rare: { name: 'Rare', pips: '\u25c6\u25c6\u25c6', tip: 'Hard to find: only in the right place, time or weather, or very seldom.' },
+  };
   function renderJournal() {
     const found = Object.keys(journal.mine).length;
-    $('journalCount').textContent = `${found} of ${journal.entries.length} found`;
+    $('journalCount').innerHTML = `${found} of ${journal.entries.length} found. How hard to find: `
+      + Object.entries(RARITY).map(([k, r]) => `<span class="rar r-${k}">${r.pips} ${r.name}</span>`).join(' ');
     $('journalBody').innerHTML = renderCloak() + JCATS.map(([cat, title]) => {
       const list = journal.entries.filter(e => e.category === cat);
       if (!list.length) return '';
@@ -2163,6 +2169,8 @@
         return `<figure class="flashcard ${known ? '' : 'unknown'} r-${esc(e.rarity)}">
           <img src="${flashIcon(e.key, known)}" alt="">
           <figcaption><b>${known ? esc(e.name) : '???'}</b>
+          <span class="rar r-${esc(e.rarity)}" title="${esc((RARITY[e.rarity] || RARITY.common).tip)}">${(RARITY[e.rarity] || RARITY.common).pips} ${(RARITY[e.rarity] || RARITY.common).name}</span>
+          ${e.hint ? `<span class="hint">${esc(e.hint)}</span>` : ''}
           ${known ? `<span class="desc">${esc(e.description)}</span><span class="meta">Found ${n}\u00d7${first ? ` \u00b7 first found by ${esc(first)}` : ''}</span>`
                   : first ? `<span class="meta">Someone has found this</span>` : ''}</figcaption></figure>`;
       }).join('') + '</div>';
@@ -2858,6 +2866,18 @@
   }
 
   // ================= Jumping =================
+  // Roughly how tall each kind of obstacle is (from how its model is built), so a
+  // jump that's higher than the top passes over it. Trees, palms, lanterns, the
+  // board and the carving stones are always too tall.
+  function topOf(o) {
+    switch (o.type) {
+      case 'rock': return (o.species === 'pebble' ? .45 : .85) * (o.s || 1);
+      case 'ore': return 1.1 * (o.s || 1);
+      case 'bush': return 1.2 * (o.size || 1);
+      case 'fire': return o.kind === 'hearth' ? .6 : .7;
+      default: return Infinity;
+    }
+  }
   // A short hop: up about a frog's height, legs tucked, a squash on landing.
   // Purely for fun (and for friends to see); it doesn't change where you can walk.
   const JUMP_V = 5.4, GRAVITY = 17, AIR = 2 * JUMP_V / GRAVITY;
@@ -2873,6 +2893,7 @@
     hop.charge = -1;
     if (!canJump()) return;
     hop.air = true; hop.v = JUMP_V * Math.sqrt(mul); hop.mul = mul;   // height grows with speed squared
+    WG.spendJump(nrg, mul);   // the server charges the same
     if (net) net.send({ t: 'jump', mul });
   }
   function jump() { startCharge(); releaseJump(); }
@@ -3049,6 +3070,7 @@
         if (heightAt(nx, nz) > -1) {
           const push = o => {
             if (o.state.gone || o.type === 'dig') return;
+            if (hop.y > 0 && hop.y > topOf(o)) return;   // high enough in the air: sail over it
             const ox = nx - o.x, oz = nz - o.z, d = Math.hypot(ox, oz), min = radius(o) + .3;
             if (d < min && d > 0) { nx = o.x + ox / d * min; nz = o.z + oz / d * min; }
           };
