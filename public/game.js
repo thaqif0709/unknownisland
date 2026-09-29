@@ -1750,6 +1750,7 @@
       case 'undrop': removeDrop(m.id); break;
       case 'dropitems': { const d = drops.get(m.id); if (d) d.items = m.items; break; }
       case 'hold': { const r = remotes.get(m.id); if (r) setHeld(r.av, m.key); break; }
+      case 'jump': { const r = remotes.get(m.id); if (r) r.hop = { t: 0 }; break; }
       case 'dawn':
         if (state === 'play') toast(`Morning of day ${m.day}. You made it through the night.`);
         break;
@@ -1876,6 +1877,7 @@
   $('btnSettings').addEventListener('click', () => togglePanel('settings'));
   $('btnHood').addEventListener('click', () => toggleHood());
   $('btnDrop').addEventListener('click', () => dropHeld(false));
+  $('btnJump').addEventListener('click', () => jump());
   $('btnRun').addEventListener('click', () => { runToggle = !runToggle; $('btnRun').setAttribute('aria-pressed', String(runToggle)); });
 
   // ================= Input =================
@@ -1883,7 +1885,7 @@
   const ACTIONS = [
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
-    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'],
+    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'], ['jump', 'Jump', 'Space'],
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -1940,6 +1942,7 @@
     if (e.code === prefs.binds.hood) toggleHood();
     if (/^Digit[1-8]$/.test(e.code) || /^Numpad[1-8]$/.test(e.code)) selectSlot(+e.code.slice(-1) - 1);
     if (e.code === prefs.binds.drop) dropHeld(e.shiftKey);
+    if (e.code === prefs.binds.jump) { e.preventDefault(); jump(); }
     if (e.code === prefs.binds.map) togglePanel('map');
     if (e.code.startsWith('Arrow') || e.code === 'Space' || e.code === 'Tab') e.preventDefault();
   });
@@ -2457,7 +2460,7 @@
   if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, camera, chunks, objects: () => objects, stats, stilled,
     pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); },
     washups: () => washups, bugs: () => bugs, previewJournal: keys => { keys.forEach(k => { journal.mine[k] = 1 + (k.length % 3); journal.firsts[k] = journal.firsts[k] || 'aiman'; }); },
-    setEnv: e => setEnv(e), addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
+    setEnv: e => setEnv(e), hop: () => hop, addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
     recarve: (id, text, st) => { const c = carvings.get(id); setCarvings([{ id, key: c.key, x: c.x, z: c.z, face: c.mesh.rotation.y, text, state: st || 'active', tally: [2, 5] }], id, 'new'); }, face: () => face, gy: () => groundAt(px, pz), board: () => board, openPanel: w => togglePanel(w), patches: l => { myPatches = l; setPatches(hero, l); },
     lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); } }; }
 
@@ -2840,6 +2843,32 @@
     C.focus = { x: bx, z: bz - 40 };
   }
 
+  // ================= Jumping =================
+  // A short hop: up about a frog's height, legs tucked, a squash on landing.
+  // Purely for fun (and for friends to see); it doesn't change where you can walk.
+  const JUMP_V = 5.4, GRAVITY = 17, AIR = 2 * JUMP_V / GRAVITY;
+  const hop = { y: 0, v: 0, air: false, land: 0 };
+  function jump() {
+    if (state !== 'play' || hop.air || knockT > 0 || stats.down || nrg.exhausted || panelOpen()) return;
+    if (heightAt(px, pz) < .1) return;   // no jumping while wading
+    hop.air = true; hop.v = JUMP_V;
+    if (net) net.send({ t: 'jump' });
+  }
+  function stepHop(h, dt) {   // own frog: simple physics
+    if (h.air) { h.v -= GRAVITY * dt; h.y += h.v * dt; if (h.y <= 0) { h.y = 0; h.v = 0; h.air = false; h.land = .18; } }
+    else if (h.land > 0) h.land -= dt;
+  }
+  const hopHeight = tt => Math.max(0, JUMP_V * tt - GRAVITY * tt * tt / 2);   // friends: replay the same arc
+  // lift the frog, tuck the legs while airborne, squash for a moment after landing
+  function applyHop(av, y, airborne, land) {
+    if (y > 0) {
+      av.root.position.y += y;
+      av.legL.rotation.x = -.7; av.legR.rotation.x = -.4;
+      if (!av.swingT || av.swingT <= 0) { av.armL.rotation.x = -1.1; if (!av.held) av.armR.rotation.x = -1.1; }
+    }
+    if (!airborne && land > 0) { const k = land / .18 * .18; av.body.scale.set(1 + k * .6, 1 - k, 1 + k * .6); }
+  }
+
   // ================= Loop =================
   const clock = new THREE.Clock();
   const tagV = new THREE.Vector3();
@@ -3010,7 +3039,8 @@
         lastSent = { at: now, x: px, z: pz, face, moving, sprint: wantSprint, cam };
       }
     }
-    if (hero) poseCastaway(hero, px, pz, face, moving ? (running ? 2 : 1) : 0, state === 'dead' || knockT > 0, dt, elapsed);
+    stepHop(hop, dt);
+    if (hero) { poseCastaway(hero, px, pz, face, moving ? (running ? 2 : 1) : 0, state === 'dead' || knockT > 0, dt, elapsed); applyHop(hero, hop.y, hop.air, hop.land); }
 
     animateBugs(elapsed);
     animateCarvings(dt);
@@ -3027,6 +3057,7 @@
       if (r.knockT > 0) r.knockT -= dt;
       if (r.bubble && (r.bubbleT -= dt) <= 0) { r.bubble = null; renderTag(r); }
       poseCastaway(r.av, s.x, s.z, s.face, s.moving, !!s.dead || r.knockT > 0, dt, elapsed);
+      if (r.hop) { r.hop.t += dt; const air = r.hop.t < AIR; applyHop(r.av, air ? hopHeight(r.hop.t) : 0, air, air ? 0 : .18 - (r.hop.t - AIR)); if (r.hop.t > AIR + .18) r.hop = null; }
       tagV.set(s.x, Math.max(groundAt(s.x, s.z), -.75) + 2.05, s.z).project(camera);
       const dist = Math.hypot(s.x - camera.position.x, s.z - camera.position.z);
       if (tagV.z > 1 || dist > 45) r.tag.style.display = 'none';

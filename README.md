@@ -56,7 +56,7 @@ Environment*). Existing players aren't affected.
 
 ## Playing
 
-- **Computer:** WASD or arrow keys to walk, hold **Shift** to sprint, drag the mouse
+- **Computer:** WASD or arrow keys to walk, hold **Shift** to sprint, **Space** to jump, drag the mouse
   to look around, scroll to zoom, **E** to use whatever you're next to, **B** for the
   recipe book, **J** for the journal, **T** to put your hood up or down, **1-8** to hold an item and **G** to drop one (Shift+G drops the whole stack, in a sack anyone can pick up with E; that's how you give things to friends), **M** for the map, **F** to quickly build a
   campfire, **Esc** for settings.

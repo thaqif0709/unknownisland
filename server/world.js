@@ -616,6 +616,12 @@ class Island {
       case 'respawn': return this.onRespawn(p);
       case 'pin': return this.onPin(p, msg);
       case 'chat': return this.onChat(p, msg);
+      case 'jump': {   // just for show: tell everyone else so they see the hop
+        const now = Date.now();
+        if (p.dead || p.knockedUntil > now || now - (p.lastJumpAt || 0) < 400) return;
+        p.lastJumpAt = now;
+        return this.broadcast({ t: 'jump', id: p.id }, p);
+      }
       case 'hold':   // which item is in your hand (just for show; everyone sees it)
         p.hold = typeof msg.key === 'string' && ITEMS[msg.key] ? msg.key : null;
         return this.broadcast({ t: 'hold', id: p.id, key: p.hold }, p);
