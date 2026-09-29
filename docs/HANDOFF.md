@@ -18,7 +18,27 @@ depth jumps and normal creases (`inkMat` in public/game.js). The sea is drawn
 into the normal buffer in pure red so the shoreline gets a line. Tiny
 decorations (flowers, tufts) have depthWrite off and are hidden from the normal
 pass so they stay as uninked dabs; swirl clouds are canvas sprites with their
-own outline. It started as a single-player prototype
+own outline.
+
+Characters are humanoid frogs (from Thaqif's character sheet): green spotted
+head with bulging orange-ringed eyes, cream scarf-collared vest, orange arms,
+dark green gauntlets, cream shorts and boots, and a backpack whose colour
+identifies the player (`PACKS`). Boot soles sit at y=0 and everything stands on
+`groundAt()`, which follows the drawn terrain triangles rather than `heightAt()`.
+
+Sky: east is +x and north is -z. The sun rises in the east, passes slightly
+south (`SUN_TILT`) and sets in the west; the moon is opposite. Shadows follow
+whichever is up. Also: varied swirl clouds, a mist band around the horizon,
+fireflies at night, inked smoke puffs over fires, curling wave crests off the
+shore, and per-id shape variation for trees (round/tall/wide/forked, pine
+tiers), bushes and lumpy stones. Settings has a Graphics option (Auto/High/Low;
+Low = device pixel ratio 1, no shadows, depth-only outlines).
+
+Survival rule change: hunger and thirst only drain while the player is moving
+(server-side; moving = client flag or any real position change). Standing
+still costs nothing; night cold still hurts.
+
+The game started as a single-player prototype
 (Castaway, https://claude.ai/artifact/67m4EsRbAwp9zuvBU89AD7) and is now a
 private, persistent multiplayer island for Thaqif and friends (about 2 to 10 players).
 

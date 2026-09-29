@@ -64,7 +64,8 @@ Environment*). Existing players aren't affected.
 - **Settings (Esc):** change any key, camera sensitivity and invert. Settings are
   saved in your browser.
 
-Survival basics: drink at the spring inland (seawater makes it worse), eat coconuts
+Survival basics: hunger and thirst only go down while you're moving (standing still
+costs nothing, but the night cold still hurts). Drink at the spring inland (seawater makes it worse), eat coconuts
 and berries, and build a fire to stay warm at night. Sprinting uses energy and makes
 you hungry faster; if energy runs out you're exhausted and slow until you recover.
 

@@ -86,6 +86,7 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 .bind button.wait{border-color:var(--blue);background:rgba(77,184,240,.12)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:16px;padding:4px 0}
 .row input[type=range]{width:50%}
+.row select{font:inherit;font-size:15px;border:2px solid var(--ink);background:var(--field);color:var(--card-ink);border-radius:12px;padding:3px 8px}
 .row.check{justify-content:flex-start}
 .row.check input{width:auto}
 .actions{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:10px;flex-wrap:wrap}
@@ -110,6 +111,7 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
     background:rgba(245,236,215,.95);border-radius:50%;min-width:84px;min-height:84px;padding:8px}
   .touch button.small{min-height:52px;font-size:16px}
   .prompt kbd{display:none}
+  .gear{bottom:auto;right:auto;left:14px;top:calc(env(safe-area-inset-top,0px) + 196px)}
   .online{font-size:13px}
 }
 .joy{position:fixed;width:110px;height:110px;margin:-55px 0 0 -55px;border-radius:50%;border:2px solid rgba(52,51,90,.35);
@@ -187,6 +189,9 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
     <h3>Camera</h3>
     <label class="row">Look sensitivity <input type="range" id="sens" min="0.3" max="2.5" step="0.1"></label>
     <label class="row check"><input type="checkbox" id="invertY"> Invert up and down</label>
+    <h3>Graphics</h3>
+    <label class="row">Quality <select id="quality"><option value="auto">Auto (Low on phones)</option><option value="high">High</option><option value="low">Low (faster)</option></select></label>
+    <p class="note">Low turns off shadows and some outlines so older phones run smoothly.</p>
     <div class="actions"><button type="button" class="main" id="resume">Back to the island</button><button type="button" class="link" id="logout2">Log out</button></div>
   </div>
 </div>

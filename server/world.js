@@ -182,8 +182,11 @@ class Island {
       if (p.dead) continue;
       p.warm = this.fires.some(f => f.fuel > 0 && Math.hypot(f.x - p.x, f.z - p.z) < FIRES[f.kind].warm);
       p.running = WG.stepEnergy(p, dt, p.wantSprint && p.moving);
-      p.hunger = Math.max(0, p.hunger - (RULES.HUNGER_DRAIN + (p.running ? RULES.SPRINT_HUNGER : 0)) * dt);
-      p.thirst = Math.max(0, p.thirst - RULES.THIRST_DRAIN * dt);
+      // Hunger and thirst only go down while you're moving; standing still costs nothing.
+      if (p.moving) {
+        p.hunger = Math.max(0, p.hunger - (RULES.HUNGER_DRAIN + (p.running ? RULES.SPRINT_HUNGER : 0)) * dt);
+        p.thirst = Math.max(0, p.thirst - RULES.THIRST_DRAIN * dt);
+      }
       let hurt = 0;
       if (p.hunger <= 0) { hurt += RULES.STARVE_DMG; p.cause = 'hunger'; }
       if (p.thirst <= 0) { hurt += RULES.STARVE_DMG; p.cause = 'thirst'; }
@@ -244,7 +247,7 @@ class Island {
       this.send(p, { t: 'correct', x: p.x, z: p.z });
     } else { p.x = x; p.z = z; }
     p.face = face;
-    p.moving = !!moving;
+    p.moving = !!moving || d > 0.02;   // actually changing position counts, whatever the client says
   }
 
   onAct(p, { target }) {

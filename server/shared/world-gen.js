@@ -7,7 +7,7 @@
   // ================= Tuning =================
   const RULES = {
     DAY_LEN: 240,            // real seconds per in-game day
-    HUNGER_DRAIN: 0.28,      // per second
+    HUNGER_DRAIN: 0.28,      // per second while moving (standing still costs no hunger or thirst)
     THIRST_DRAIN: 0.42,
     STARVE_DMG: 1.6,         // per second each, when hunger or thirst is 0
     COLD_DMG: 0.6,           // per second at night away from a lit fire
