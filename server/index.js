@@ -69,6 +69,7 @@ function serveStatic(req, res) {
   let base = PUBLIC;
   if (urlPath.startsWith('/shared/')) { base = SHARED; urlPath = urlPath.slice('/shared'.length); }
   if (urlPath === '/') urlPath = '/index.html';
+  if (urlPath === '/wiki' || urlPath === '/wiki/') urlPath = '/wiki.html';
   const file = path.normalize(path.join(base, urlPath));
   if (!file.startsWith(base + path.sep)) { res.writeHead(403); return res.end(); }
   sendFile(res, file, 'no-cache');
@@ -87,6 +88,7 @@ const server = http.createServer(async (req, res) => {
     const { pathname } = new URL(req.url, 'http://x');
     if (pathname === '/healthz') return sendJson(res, 200, { ok: true });
     if (pathname === '/api/world') return sendWorld(req, res);
+    if (pathname === '/api/wiki') return sendWiki(res);
     if (pathname.startsWith('/api/')) {
       if (req.method === 'GET' && pathname === '/api/me') {
         const player = await auth.playerForToken(bearer(req));
@@ -109,6 +111,22 @@ const server = http.createServer(async (req, res) => {
     if (!res.headersSent) sendJson(res, 500, { error: 'Something went wrong on the server.' });
   }
 });
+
+// Live facts for the wiki page (/wiki): the journal with rarities and where to look,
+// and how many carving-stone requests exist. Numbers the wiki shows come from
+// /shared/world-gen.js directly, so the page never goes out of date.
+async function sendWiki(res) {
+  try {
+    const island = await getIsland(DEFAULT_ISLAND);
+    const c = island.content;
+    sendJson(res, 200, {
+      journal: c.journal.map(e => ({ key: e.key, category: e.category, name: e.name, rarity: e.rarity, hint: island.findHint(e.key) })),
+      tide: c.tide.filter(t => t.weight > 0).map(t => ({ label: t.label, kind: t.kind, minDay: t.minDay || 1 })),
+      requests: (c.sleeper || []).length,
+      day: island.day,
+    });
+  } catch (e) { sendJson(res, 500, { error: 'The island is not answering.' }); }
+}
 
 // The island layout (every tree and rock), sent once per visit and compressed.
 let worldCache = null;

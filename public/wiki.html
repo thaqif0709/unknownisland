@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Unknown Island Wiki</title>
+<meta name="description" content="How everything on Unknown Island works: survival, crafting, the fog, the Stilled, lanterns, tides, the journal and more.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  KEEP THIS PAGE CURRENT. Whenever a feature is added or changed in the game,
+  update the matching section here and add a line to the Changelog at the
+  bottom. Numbers marked data-r / filled by the script come live from
+  /shared/world-gen.js and /api/wiki, so they update on their own.
+-->
+<style>
+:root{
+  --paper:#F1E6CC; --card:#FBF4E3; --ink:#2B211F; --soft:#6B5E55; --line:rgba(43,33,31,.18);
+  --rose:#C4574F; --ochre:#B07A1E; --blue:#3F5F88; --leaf:#5F7A4F; --chip:#EFE3C8;
+  --hand:"Fredoka", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --paper:#1F1D2B; --card:#2A2838; --ink:#F2EAD8; --soft:#B7B3D6; --line:rgba(242,234,216,.16); --chip:#353349; --rose:#E08078; --ochre:#E0A33A; --blue:#8FB0DE; --leaf:#9CC08A; } }
+:root[data-theme="dark"]{ --paper:#1F1D2B; --card:#2A2838; --ink:#F2EAD8; --soft:#B7B3D6; --line:rgba(242,234,216,.16); --chip:#353349; --rose:#E08078; --ochre:#E0A33A; --blue:#8FB0DE; --leaf:#9CC08A; }
+*{box-sizing:border-box}
+html{scroll-padding-top:16px}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 var(--hand)}
+a{color:var(--blue)}
+.wrap{display:grid;grid-template-columns:230px minmax(0,1fr);gap:28px;max-width:1120px;margin:0 auto;padding:24px 20px 60px}
+nav{position:sticky;top:16px;align-self:start;max-height:calc(100vh - 32px);overflow:auto;font-size:14.5px}
+nav b{display:block;font-size:13px;color:var(--soft);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 4px}
+nav a{display:block;color:var(--ink);text-decoration:none;padding:2px 8px;border-radius:8px}
+nav a:hover{background:var(--chip)}
+header.top{grid-column:1/-1;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:3px solid var(--ink);padding-bottom:12px}
+header.top h1{margin:0;font-size:clamp(30px,5vw,44px);line-height:1;color:var(--rose)}
+header.top p{margin:4px 0 0;color:var(--soft)}
+header.top .play{font-weight:600;background:var(--rose);color:#FBF4E3;text-decoration:none;padding:8px 16px;border-radius:14px;border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
+main section{background:var(--card);border:2.5px solid var(--ink);border-radius:18px;box-shadow:4px 4px 0 var(--ink);padding:14px 22px 16px;margin:0 0 22px}
+h2{margin:4px 0 8px;font-size:24px;color:var(--rose)}
+h3{margin:16px 0 4px;font-size:18px}
+p{margin:6px 0}
+ul{margin:6px 0;padding-left:22px}
+li{margin:2px 0}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:15px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--soft);font-size:13.5px}
+kbd{font:600 13px var(--hand);border:2px solid var(--ink);border-radius:6px;padding:0 6px;background:var(--chip);white-space:nowrap}
+code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--chip);border-radius:5px;padding:1px 5px}
+.tip{border-left:4px solid var(--ochre);background:var(--chip);padding:6px 12px;border-radius:0 10px 10px 0;margin:10px 0}
+.n{font-weight:600;color:var(--blue)}
+.pill{display:inline-block;font-size:12px;font-weight:600;border:1.5px solid currentColor;border-radius:8px;padding:0 7px;white-space:nowrap}
+.r-common{color:var(--leaf)} .r-uncommon{color:var(--blue)} .r-rare{color:var(--ochre)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px 18px}
+.log li{margin:4px 0}
+.muted{color:var(--soft);font-size:14px}
+.scroll{overflow-x:auto}
+@media (max-width:820px){
+  .wrap{grid-template-columns:minmax(0,1fr);padding:16px 16px 48px;gap:14px}
+  main section{overflow-wrap:break-word}
+  nav{position:static;max-height:none;border:2px solid var(--line);border-radius:14px;padding:4px 10px 10px}
+  nav .cols{columns:2}
+  main section{padding:12px 16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><h1>Unknown Island Wiki</h1><p>How everything on the island works, kept up to date with the game. <span class="muted" id="liveNote"></span></p></div>
+    <a class="play" href="/">Play &rsaquo;</a>
+  </header>
+
+  <nav aria-label="Contents"><div class="cols">
+    <b>Start</b><a href="#start">Getting started</a><a href="#controls">Controls</a><a href="#hud">The screen</a>
+    <b>Surviving</b><a href="#survival">Food, water, health</a><a href="#water">Clean water &amp; buckets</a><a href="#moving">Moving, jumping, sitting</a><a href="#time">Day, night, moon, weather</a>
+    <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
+    <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
+    <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a>
+    <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
+    <b>History</b><a href="#changelog">Changelog</a>
+  </div></nav>
+
+  <main>
+    <section id="start"><h2>Getting started</h2>
+      <p>Unknown Island is a shared island for you and your friends. Everyone plays on the same island, and it keeps going when nobody is online: days pass, fires burn out, things regrow, the tide comes in and the fog creeps back.</p>
+      <ul>
+        <li>The first time, choose <b>I have an invite</b>, pick a name and password, and type the invite code (ask Thaqif). After that just log in.</li>
+        <li>New arrivals see a short intro. You can watch it again from Settings.</li>
+        <li>When you log off, your frog leaves the island and your stats freeze until you come back. You reappear where you left.</li>
+        <li>If nobody has played for a while the server is asleep; the first visit can take up to a minute to wake it.</li>
+      </ul>
+      <div class="tip">First night: find fresh water inland (the spring), gather wood and stone, and build a campfire (<kbd>F</kbd>) before dark.</div>
+    </section>
+
+    <section id="controls"><h2>Controls</h2>
+      <p>Every key can be changed in Settings (<kbd>Esc</kbd>). The arrow keys always walk too.</p>
+      <div class="scroll"><table>
+        <tr><th>Key</th><th>What it does</th></tr>
+        <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Walk</td></tr>
+        <tr><td><kbd>Shift</kbd> (hold)</td><td>Sprint (uses energy)</td></tr>
+        <tr><td><kbd>Space</kbd></td><td>Jump. Hold to charge a leap: higher and forward</td></tr>
+        <tr><td><kbd>E</kbd></td><td>Use / pick up / talk to what's in front of you (the prompt at the bottom says what)</td></tr>
+        <tr><td><kbd>1</kbd>&ndash;<kbd>8</kbd></td><td>Hold the item in that slot (press again to put it away)</td></tr>
+        <tr><td><kbd>Q</kbd> / <kbd>Shift</kbd>+<kbd>Q</kbd></td><td>Next / previous item slot</td></tr>
+        <tr><td><kbd>G</kbd> / <kbd>Shift</kbd>+<kbd>G</kbd></td><td>Drop one / all of the held item</td></tr>
+        <tr><td><kbd>F</kbd></td><td>Quick-build a campfire</td></tr>
+        <tr><td><kbd>V</kbd></td><td>Sit down / get up</td></tr>
+        <tr><td><kbd>T</kbd></td><td>Hood up / down</td></tr>
+        <tr><td><kbd>B</kbd></td><td>Recipe book</td></tr>
+        <tr><td><kbd>J</kbd></td><td>Journal (and cloak patches)</td></tr>
+        <tr><td><kbd>M</kbd></td><td>Map (the minimap in the corner opens it too)</td></tr>
+        <tr><td><kbd>Enter</kbd> or <kbd>/</kbd></td><td>Chat</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Settings / close a panel</td></tr>
+        <tr><td>Mouse drag, scroll</td><td>Look around, zoom. Drag down past the lowest angle to look up at the sky</td></tr>
+      </table></div>
+      <p><b>On a phone:</b> drag the left side to walk, the right side to look, and use the buttons (Act, Run, Jump &ndash; hold it to charge &ndash;, Drop, Hood, Chat, Journal, Recipes). Tap a slot to hold it.</p>
+    </section>
+
+    <section id="hud"><h2>The screen</h2>
+      <ul>
+        <li><b>Top left:</b> the day number and time of day, a countdown (<i>Night in 3:12</i> / <i>Dawn in 1:05</i>), the moon phase and any weather, then your bars: Health, Food, Water, Energy and Dread. The line underneath warns you when you're cold, warm by a fire, exhausted, knocked down or in thick fog.</li>
+        <li><b>Top right:</b> who's on the island (in their map colours) and the minimap.</li>
+        <li><b>Bottom left:</b> your eight item slots and your tools.</li>
+        <li><b>Bottom middle:</b> what <kbd>E</kbd> will do right now.</li>
+        <li><b>Red glow at the screen edges:</b> your health is below half (stronger as it drops, pulsing below a quarter), or you just got hurt.</li>
+        <li>Dropped sacks glow white on the ground so they're easy to spot.</li>
+      </ul>
+    </section>
+
+    <section id="survival"><h2>Food, water and health</h2>
+      <ul>
+        <li><b>Hunger and thirst only go down while you move</b> (<span class="n" data-r="HUNGER_DRAIN"></span> food and <span class="n" data-r="THIRST_DRAIN"></span> water per second). Standing still costs nothing. Sprinting makes you hungrier.</li>
+        <li>At zero food or water you lose <span class="n" data-r="STARVE_DMG"></span> health a second (each).</li>
+        <li><b>The cold:</b> at night, away from a fire or lit lantern, you lose <span class="n" data-r="COLD_DMG"></span> health a second.</li>
+        <li><b>Healing:</b> with food and water above <span class="n" data-r="REGEN_MIN"></span> and nothing hurting you, you heal <span class="n" data-r="REGEN"></span> a second.</li>
+        <li>You start with <span class="n" id="startStats"></span>.</li>
+      </ul>
+      <h3>Food</h3>
+      <table>
+        <tr><th>Food</th><th>Gives</th><th>Where</th></tr>
+        <tr><td>Coconut</td><td>+<span data-r="COCONUT_FOOD"></span> food, +<span data-r="COCONUT_WATER"></span> water, 1 seed</td><td>Full-grown palms (<span data-r="COCONUTS"></span> each, refill every sunrise)</td></tr>
+        <tr><td>Berries</td><td>+<span data-r="BERRY_FOOD"></span> food, 1 seed</td><td>Bushes (refill every sunrise)</td></tr>
+        <tr><td>Silverfin</td><td>+20 food</td><td>Washed up by the tide</td></tr>
+        <tr><td>Bugs</td><td>+6 food, a little less dread</td><td>Catch them with <kbd>E</kbd> (see the Journal)</td></tr>
+      </table>
+      <h3>Water</h3>
+      <ul>
+        <li><b>Springs:</b> fresh water, +<span data-r="SPRING_WATER"></span> a drink. The main spring is south of the big hill; there are others in hollows around the island.</li>
+        <li><b>The sea:</b> drinking it makes you thirstier (<span data-r="SEA_WATER"></span>). Boil it clean in a bucket instead (below).</li>
+        <li><b>Rain</b> refills your water slowly while it lasts.</li>
+      </ul>
+    </section>
+
+    <section id="water"><h2>Clean water and buckets</h2>
+      <p>Buckets turn seawater into drinking water, so you don't have to walk back to the spring.</p>
+      <table>
+        <tr><th>Bucket</th><th>Costs</th><th>Boils before wearing out</th><th>Time to boil</th></tr>
+        <tr><td>Wooden bucket</td><td id="cost-bucket_wood"></td><td data-r="BUCKET.wood.uses"></td><td><span data-r="BUCKET.wood.boil"></span> s</td></tr>
+        <tr><td>Iron bucket</td><td id="cost-bucket_iron"></td><td data-r="BUCKET.iron.uses"></td><td><span data-r="BUCKET.iron.boil"></span> s</td></tr>
+      </table>
+      <ol>
+        <li>Hold the empty bucket (<kbd>1</kbd>&ndash;<kbd>8</kbd>), wade into the sea and press <kbd>E</kbd> to fill it.</li>
+        <li>Walk to a <b>lit</b> fire and press <kbd>E</kbd> to set it on to boil. A countdown floats over the fire. It only boils while the fire burns (<kbd>E</kbd> at the fire adds wood), and it keeps boiling while nobody's online.</li>
+        <li>When it says <i>Clean water ready</i>, press <kbd>E</kbd> at the fire to take it.</li>
+        <li>Hold it and press <kbd>E</kbd> to drink: <span data-r="BUCKET.DRINKS"></span> drinks of +<span data-r="BUCKET.DRINK"></span> water.</li>
+      </ol>
+      <p>Each boil wears the bucket by one (the green bar under its slot). A worn-out bucket breaks once it's emptied. You can carry up to <span data-r="BUCKET.MAX"></span>, and you can drop a full bucket (<kbd>G</kbd>) for a friend.</p>
+    </section>
+
+    <section id="moving"><h2>Moving, jumping and sitting</h2>
+      <ul>
+        <li><b>Energy:</b> sprinting uses <span data-r="ENERGY_DRAIN"></span> energy a second; it comes back <span data-r="ENERGY_REGEN"></span> a second after a short rest. Run out and you're <b>exhausted</b>: slower, no sprinting or jumping, until you're back to <span data-r="EXHAUST_RECOVER"></span>.</li>
+        <li><b>Jumping:</b> tap <kbd>Space</kbd> for a hop (<span data-r="JUMP_ENERGY"></span> energy). <b>Hold</b> it to crouch and charge: a full charge (about half a second) leaps three times as high and carries you forward, for three times the energy. Friends see you crouch and leap.</li>
+        <li><b>Standing on things:</b> land on a rock, ore rock, bush or a low tree top and you stand on it; walk off the edge to drop. Jump higher than something and you pass over it. Big trees are too tall, and their leaves are solid: jump up under them and you bump your head.</li>
+        <li><b>Bumping:</b> other frogs are solid; you can't walk through each other.</li>
+        <li><b>Sitting</b> (<kbd>V</kbd>): sit on the ground with your knees up. Moving or jumping gets you up. Sitting by a fire calms dread twice as fast.</li>
+        <li>Wading in the sea is slow, and you can't jump in water.</li>
+      </ul>
+    </section>
+
+    <section id="time"><h2>Day, night, the moon and weather</h2>
+      <ul>
+        <li>A full day is <span class="n" id="dayLen"></span>: <span class="n" id="dayLight"></span> of daylight (with short sunrise and sunset) and <span class="n" id="nightLen"></span> of night. The countdown in the top-left tells you how long until night falls or dawn comes.</li>
+        <li>Night is cold, the fog rolls in and the Stilled walk. Stay by a fire.</li>
+        <li>The day number goes up at sunrise. Coconuts and berries refill, the tide comes in, dug patches settle.</li>
+      </ul>
+      <h3>The moon</h3>
+      <p>The moon turns every <span class="n" data-r="MOON_CYCLE"></span> days. Day 1 was a full moon. The <b>Drowning Moon</b> (the dark one) brings the thickest fog of the cycle, more Stilled, and lanterns drink their oil <span data-r="LANTERN.DROWNING_MULT"></span>&times; as fast; you'll get a warning at dusk. Full moons bring rare finds: moon moths, glowing mushrooms, lantern fish.</p>
+      <h3>Weather</h3>
+      <p>Rolled at sunrise and at noon.</p>
+      <table>
+        <tr><th>Weather</th><th>Chance</th><th>What it does</th></tr>
+        <tr><td>Clear</td><td id="w-clear"></td><td>Nothing special.</td></tr>
+        <tr><td>Rain</td><td id="w-rain"></td><td>Refills your water slowly; fires and lanterns light and warm a smaller area; rain-only bugs come out.</td></tr>
+        <tr><td>Storm</td><td id="w-storm"></td><td>Rain plus lightning. The next morning's tide is bigger, and digging can turn up buried things.</td></tr>
+        <tr><td>Fog storm</td><td id="w-fogstorm"></td><td>Fog rolls in during the day (only from day <span data-r="WEATHER.FOGSTORM_MIN_DAY"></span> on).</td></tr>
+      </table>
+    </section>
+
+    <section id="gather"><h2>Gathering</h2>
+      <table>
+        <tr><th>What</th><th>How</th><th>Comes back after</th></tr>
+        <tr><td>Wood</td><td>Chop trees and palms (<kbd>E</kbd>); bigger trees take more chops. A copper axe gives 2 per chop.</td><td><span data-r="TREE_REGROW_DAYS"></span> days, as a sapling that grows back to full size</td></tr>
+        <tr><td>Stone</td><td>Rocks and pebbles, 1 per hit (2 with a pickaxe).</td><td><span data-r="ROCK_REGROW_DAYS"></span> days</td></tr>
+        <tr><td>Copper / iron ore</td><td>Ore rocks, with a pickaxe (2 per swing with an iron pickaxe). Copper is on the hills, iron near the rocky top.</td><td><span data-r="ORE_REGROW_DAYS"></span> days</td></tr>
+        <tr><td>Clay</td><td>Soft dirt patches, with a shovel (<span data-r="DIG_CLAY"></span> each). Sometimes seeds too.</td><td>Every sunrise</td></tr>
+        <tr><td>Seeds</td><td>From coconuts, berries, digging and crates on the beach. Used for lamp oil.</td><td>&ndash;</td></tr>
+      </table>
+      <p>Every tree, palm and bush has its own full-grown size, and felled ones regrow as saplings (trees in <span data-r="FLORA.tree.growDays"></span> days, palms <span data-r="FLORA.palm.growDays"></span>, bushes <span data-r="FLORA.bush.growDays"></span>). Palms only fruit when fully grown.</p>
+    </section>
+
+    <section id="craft"><h2>Crafting</h2>
+      <p>Open the recipe book with <kbd>B</kbd>. Tools are kept forever (even when you die); fires are placed in front of you.</p>
+      <div class="scroll"><table id="recipes"><tr><th>Make</th><th>Costs</th><th>What it does</th></tr></table></div>
+    </section>
+
+    <section id="fires"><h2>Fires</h2>
+      <p>Fires keep you warm at night, keep the fog and the Stilled away, calm your dread, and boil buckets. Feed them wood with <kbd>E</kbd>.</p>
+      <table id="firetable"><tr><th>Fire</th><th>Warms within</th><th>Starts with</th><th>Each wood adds</th><th>Holds at most</th></tr></table>
+      <p class="muted">Times are real minutes of burning. Rain shrinks the warm circle.</p>
+    </section>
+
+    <section id="items"><h2>Inventory, holding and giving</h2>
+      <ul>
+        <li>You have <b>8 slots</b>, numbered <kbd>1</kbd>&ndash;<kbd>8</kbd>. Each kind of thing keeps its slot; each bucket has its own.</li>
+        <li>Press a number (or <kbd>Q</kbd> to cycle) to hold that item. Your frog carries it in its hand and friends can see it.</li>
+        <li><kbd>G</kbd> drops one of the held item in a sack at your feet; <kbd>Shift</kbd>+<kbd>G</kbd> drops the whole stack. Drops next to a sack go into it.</li>
+        <li><b>Giving things to a friend:</b> drop them, and your friend picks up the sack with <kbd>E</kbd>. Sacks glow and say what's inside, and show on the map.</li>
+      </ul>
+    </section>
+
+    <section id="fog"><h2>The fog and dread</h2>
+      <p>The fog is the island's enemy. By day it sits out over the sea; at dusk it rises and fills the low ground and valleys (the hills stay clear on a normal night). Light cuts clear circles out of it: fires and lit lanterns.</p>
+      <h3>Dread</h3>
+      <p>Dread is your fear, from 0 to 100. It never hurts you directly, but it changes what you see and hear, and at high dread the Stilled notice you.</p>
+      <table>
+        <tr><th>Raises dread</th><th>Lowers dread</th></tr>
+        <tr><td>Being in fog<br>Darkness away from light<br>Being alone (no friend within <span data-r="DREAD.FRIEND_RADIUS"></span> steps), especially at night<br>A Stilled nearby<br>Strange things on the beach</td>
+            <td>Being near a fire or lit lantern (twice as fast sitting)<br>Daylight in clear air<br>Friends nearby<br>Eating</td></tr>
+      </table>
+      <p>As dread rises, colours drain, ink creeps in from the screen edges, and you may hear footsteps and whispers. At high dread you'll see ink dots across the picture, a frog standing where nobody is&hellip; and around the fire, sometimes <b>one frog too many</b>. Only you see it.</p>
+    </section>
+
+    <section id="stilled"><h2>The Stilled</h2>
+      <ul>
+        <li>Pale, faceless figures that stand in the fog at night.</li>
+        <li><b>They only move when nobody is looking at them.</b> Keep your camera on them and they freeze.</li>
+        <li>They can't enter light or clear air: fires and lit lanterns make safe circles.</li>
+        <li>They're drawn to frogs who are alone or frightened.</li>
+        <li>If one reaches you, you're knocked down: &minus;<span data-r="KNOCK.HEALTH"></span> health, +<span data-r="KNOCK.DREAD"></span> dread, and half of what you carry spills into a sack on the ground where you fell. Go back for it&hellip; carefully.</li>
+      </ul>
+    </section>
+
+    <section id="lanterns"><h2>Stone lanterns</h2>
+      <p>Old stone lanterns stand all over the island. Light one and it pushes the fog back in a wide circle, warms you, and makes a safe camp.</p>
+      <ul>
+        <li>They burn <b>lamp oil</b> (made from <span id="oilcost"></span> in the recipe book). One oil lasts about <span class="n" id="oilDays"></span>; <kbd>E</kbd> with oil tops a lit lantern up.</li>
+        <li>Normal lanterns clear a circle <span data-r="LANTERN.RADIUS"></span> steps wide; the four <b>great lanterns</b> on the hills clear <span data-r="LANTERN.BIG_RADIUS"></span>, but need oil from <span data-r="LANTERN.BIG_OFFERINGS"></span> different frogs to light.</li>
+      </ul>
+      <h3>The fog fights back</h3>
+      <ul>
+        <li>A lantern that runs dry goes cold and needs a fresh offering.</li>
+        <li>Once cold, the fog takes its clearing back bit by bit over <span data-r="LANTERN.RECLAIM_DAYS"></span> days. Relight it in time and nothing is lost.</li>
+        <li>When the fog fully takes an area back, some trees, rocks and bushes there are swallowed (they regrow later), fires are put out and taken, and sacks are dragged deeper into the fog.</li>
+        <li>The longer an area has been held, the more oil its lantern burns (up to <span id="heldMax"></span> as much). The Drowning Moon drains all lanterns faster.</li>
+        <li>All of this carries on while nobody is playing. Your inventory and journal are never touched.</li>
+      </ul>
+    </section>
+
+    <section id="sleeper"><h2>The carving stones</h2>
+      <p>Three old standing stones (by the beach camp, near the main spring, and on the highest ground) carry carvings that change by themselves. Sometimes the island itself seems to be asking for something: an offering, lights in a certain place, frogs gathered at night&hellip;</p>
+      <ul>
+        <li>Read a stone with <kbd>E</kbd>. If it wants something you carry, you can leave it at the stone's foot. Tally marks show how far along the group is.</li>
+        <li>Each request has a few days. <b>Answer it</b> and something good happens: the fog holds back for a night, something is left at the stone, a lantern lights itself, a note appears on the board&hellip;</li>
+        <li><b>Ignore it</b> and the fog presses harder for a while, and lanterns burn faster.</li>
+        <li>A new carving appears at dawn. Put your ear to a stone at night and listen.</li>
+      </ul>
+      <p class="muted">There are <span id="reqCount">several</span> different requests so far; more may be added.</p>
+    </section>
+
+    <section id="tides"><h2>Tides</h2>
+      <p>Every sunrise the sea takes back what it left and washes new things onto the beaches: driftwood, crates of seeds and oil, fish, shells and sea glass. Pick them up with <kbd>E</kbd>. After storms there's more.</p>
+      <p>Some things the tide brings shouldn't be there. At most one a day.</p>
+      <div class="grid2" id="tideList"></div>
+    </section>
+
+    <section id="journal"><h2>The journal and rarity</h2>
+      <p>Press <kbd>J</kbd>. Everything you find (bugs, shells, sea glass, strange tide finds, relics) goes into the journal as an inked flash sheet. The first frog to find each thing is credited for everyone to see. Every entry shows how rare it is and where to look, even before you've found it.</p>
+      <p><span class="pill r-common">&#9670; Common</span> easy, most days &nbsp; <span class="pill r-uncommon">&#9670;&#9670; Uncommon</span> now and then &nbsp; <span class="pill r-rare">&#9670;&#9670;&#9670; Rare</span> only at the right place, time or weather, or very seldom</p>
+      <div class="scroll"><table id="jtable"><tr><th>Find</th><th>Rarity</th><th>Where and when</th></tr></table></div>
+    </section>
+
+    <section id="cloak"><h2>Cloak patches</h2>
+      <p>Stitch patches onto your cloak (from the Journal) using things you've found. You have <span data-r="PATCH_SLOTS"></span> slots; unpick one to swap. Everyone can see your patches. Each one helps, and costs something.</p>
+      <div class="scroll"><table id="patches"><tr><th>Patch</th><th>Needs</th><th>Helps</th><th>Costs</th></tr></table></div>
+    </section>
+
+    <section id="friends"><h2>Friends, chat and the board</h2>
+      <h3>Chat</h3>
+      <p>Press <kbd>Enter</kbd> (or <kbd>/</kbd>) to type, <kbd>Enter</kbd> to send. Messages also pop up over your head.</p>
+      <table>
+        <tr><td><code>hello!</code></td><td>Plain text goes to everyone on the island.</td></tr>
+        <tr><td><code>/w name message</code></td><td>Whisper to one person (their number from <code>/who</code> works too). <kbd>Tab</kbd> fills in names.</td></tr>
+        <tr><td><code>/r message</code></td><td>Reply to your last whisper.</td></tr>
+        <tr><td><code>/who</code></td><td>Who's on the island, with numbers.</td></tr>
+        <tr><td><code>/help</code></td><td>The commands.</td></tr>
+      </table>
+      <h3>The driftwood board</h3>
+      <p>By the first lantern near the beach. Read it and pin notes for everyone (one every 30 seconds). Now and then a note appears that nobody wrote.</p>
+      <h3>What friends see</h3>
+      <p>Your cloak colour, patches, hood up or down (<kbd>T</kbd>), what you're holding, sitting, crouching to jump and leaping, and speech bubbles.</p>
+    </section>
+
+    <section id="map"><h2>The map</h2>
+      <p>Press <kbd>M</kbd> or click the minimap. Land is coloured by type (beach, meadow, forest, hills, peak, spring pools, sea). Markers: a droplet for springs, a diamond for lanterns (bright when lit, bigger for great ones), a standing stone for carving stones, a square for the board, a flame for fires (grey when out), and a sack for dropped things. You're the arrow labelled <i>You</i>; friends are coloured dots with their names. The legend under the map lists everything.</p>
+    </section>
+
+    <section id="death"><h2>Getting hurt and dying</h2>
+      <ul>
+        <li>Hunger, thirst, the cold and the Stilled all hurt you. The screen edges glow red below half health.</li>
+        <li>If your health hits zero you collapse. You wake up back on the beach with fresh stats: <b>you keep your tools, but lose everything you were carrying.</b></li>
+      </ul>
+    </section>
+
+    <section id="settings"><h2>Settings</h2>
+      <p><kbd>Esc</kbd> or the cog button: change any key, look sensitivity and invert, turn the creepy sounds on or off, graphics quality (Low for older phones), a how-to for chat and items, rewatch the intro, log out.</p>
+    </section>
+
+    <section id="changelog"><h2>Changelog</h2>
+      <p class="muted">Newest first.</p>
+      <ul class="log">
+        <li><b>Wiki:</b> this page, built into the game at <code>/wiki</code> and kept up to date.</li>
+        <li><b>Sitting</b> (<kbd>V</kbd>): slouched on the ground with knees up; frogs now have knees. Resting by a fire calms dread faster.</li>
+        <li><b>Jumping</b> shows to friends while you charge. Charged jumps leap three times as high and forward.</li>
+        <li><b>Fog</b> is a soft haze; ink dots only appear at high dread.</li>
+        <li><b>Standing on things:</b> rocks, ore, bushes and low tree tops. Tree leaves are solid. Frogs bump into each other.</li>
+        <li>New toadstool mushrooms. Curled inked clouds. Bluer sky. The frog's smile moved up.</li>
+        <li><b>Map:</b> clear marker shapes, a legend that matches, dropped sacks shown, players labelled.</li>
+        <li><b>Nights</b> are 5 minutes (daylight about 11&frac12;).</li>
+        <li>Red screen edges when hurt. Glowing cloth sacks for dropped items.</li>
+        <li><b>Buckets:</b> boil seawater clean on a fire.</li>
+        <li>Journal shows rarity and where to look. Jumping costs energy and clears low obstacles.</li>
+        <li>Charged jumps, <kbd>Q</kbd> to cycle slots, day/night countdown, hotbar <kbd>1</kbd>&ndash;<kbd>8</kbd> with dropping and giving (<kbd>G</kbd>).</li>
+        <li>Hood up/down (<kbd>T</kbd>). Look up at the sky. Jumping (<kbd>Space</kbd>).</li>
+        <li>New fire, smoke, cloak hem, leafy trees, inventory slots, settings button.</li>
+        <li><b>Chat</b> with whispers and commands.</li>
+        <li><b>Intro cutscene. The carving stones</b> (the island's requests).</li>
+        <li><b>Moon, weather, overnight changes, the driftwood board, cloak patches</b>, and the extra one at the fire.</li>
+        <li><b>Tides, bugs and the journal. Stone lanterns</b> and the fog fighting back. <b>The Stilled. Fog and dread.</b></li>
+        <li>The big island. Crafting, tools, digging and mining, sprinting, the recipe book, settings. The inked art style and frog castaways.</li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<script src="/shared/world-gen.js"></script>
+<script>
+(() => {
+  const W = window.WorldGen, R = W.RULES;
+  const get = path => path.split('.').reduce((o, k) => (o == null ? o : o[k]), R);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const mins = sec => { sec = Math.round(sec); const m = Math.floor(sec / 60), s = sec % 60; return m ? (s ? `${m} min ${s} s` : `${m} min`) : `${s} s`; };
+  document.querySelectorAll('[data-r]').forEach(el => { const v = get(el.dataset.r); if (v != null) el.textContent = v; });
+  const $ = id => document.getElementById(id);
+  $("startStats").textContent = `${R.START.health} health, ${R.START.hunger} food and ${R.START.thirst} water`;
+  $('dayLen').textContent = mins(R.DAY_LEN); $('dayLight').textContent = mins(R.DAYLIGHT_LEN); $('nightLen').textContent = mins(R.NIGHT_LEN);
+  const Wt = R.WEATHER.WEIGHTS, total = Object.values(Wt).reduce((a, b) => a + b, 0);
+  for (const k in Wt) if ($('w-' + k)) $('w-' + k).textContent = Math.round(Wt[k] / total * 100) + '%';
+  const cost = r => Object.entries(r.cost).map(([k, n]) => `${n} ${W.ITEMS[k].toLowerCase()}`).join(', ');
+  $('recipes').insertAdjacentHTML('beforeend', W.RECIPES.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(cost(r))}${r.needs ? ` <span class="muted">(needs a ${esc(W.recipeById(r.needs).name.toLowerCase())})</span>` : ''}</td><td>${esc(r.desc)}</td></tr>`).join(''));
+  for (const id of ['bucket_wood', 'bucket_iron']) { const r = W.recipeById(id); if (r && $('cost-' + id)) $('cost-' + id).textContent = cost(r); }
+  const oil = W.recipeById('oil'); if (oil) $('oilcost').textContent = cost(oil);
+  $('oilDays').textContent = (R.LANTERN.FUEL_PER_OIL / R.DAY_LEN).toFixed(1).replace(/\.0$/, '') + ' in-game days';
+  $('heldMax').textContent = (1 + R.LANTERN.HELD_MAX) + '×';
+  $('firetable').insertAdjacentHTML('beforeend', Object.entries(W.FIRES).map(([k, f]) => `<tr><td><b>${k === 'hearth' ? 'Clay hearth' : 'Campfire'}</b></td><td>${f.warm} steps</td><td>${mins(f.start / f.burn)}</td><td>+${mins(f.add / f.burn)}</td><td>${mins(f.max / f.burn)}</td></tr>`).join(''));
+  $('patches').insertAdjacentHTML('beforeend', W.PATCHES.map(p => `<tr><td><b>${esc(p.name)}</b></td><td data-need="${esc(p.needs)}">${esc(p.needs.replace(/_/g, ' '))}</td><td>${esc(p.perk)}</td><td>${esc(p.cost)}</td></tr>`).join(''));
+  const rar = { common: '&#9670; Common', uncommon: '&#9670;&#9670; Uncommon', rare: '&#9670;&#9670;&#9670; Rare' };
+  const cats = { bugs: 'Bugs', moon: 'Full moon', shells: 'Shells', glass: 'Sea glass', tide: 'From the tide', strange: 'Strange tides', relics: 'Left by the stones' };
+  fetch('/api/wiki').then(r => r.json()).then(d => {
+    const names = Object.fromEntries(d.journal.map(e => [e.key, e.name]));
+    document.querySelectorAll('[data-need]').forEach(td => { if (names[td.dataset.need]) td.textContent = 'a ' + names[td.dataset.need].toLowerCase(); });
+    let last = '';
+    $('jtable').insertAdjacentHTML('beforeend', d.journal.slice().sort((a, b) => Object.keys(cats).indexOf(a.category) - Object.keys(cats).indexOf(b.category)).map(e => {
+      const head = e.category !== last ? `<tr><th colspan="3">${esc(cats[e.category] || e.category)}</th></tr>` : ''; last = e.category;
+      return head + `<tr><td>${esc(e.name)}</td><td><span class="pill r-${esc(e.rarity)}">${rar[e.rarity] || esc(e.rarity)}</span></td><td>${esc(e.hint || '')}</td></tr>`;
+    }).join(''));
+    $('tideList').innerHTML = d.tide.map(t => `<div>${esc(t.label)} <span class="muted">(${esc(t.kind)}${t.minDay > 1 ? `, from day ${t.minDay}` : ''})</span></div>`).join('');
+    if (d.requests) $('reqCount').textContent = d.requests;
+    $('liveNote').textContent = `(Live numbers; the island is on day ${d.day}.)`;
+  }).catch(() => { $('liveNote').textContent = '(The island is asleep; the journal list will show once it wakes.)'; });
+})();
+</script>
+</body>
+</html>
