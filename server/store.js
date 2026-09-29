@@ -15,6 +15,11 @@ function createPgStore(url) {
 
   return {
     kind: 'postgres',
+    // Small additive migrations, safe to run on every start.
+    async migrate() {
+      await q(`ALTER TABLE island_members ADD COLUMN IF NOT EXISTS inventory JSONB NOT NULL DEFAULT '{}'`);
+      await q(`ALTER TABLE fires ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'campfire'`);
+    },
     async findPlayerByName(name) {
       const r = await q('SELECT id, username, pass_hash FROM players WHERE lower(username) = lower($1)', [name]);
       return r.rows[0] || null;
@@ -39,17 +44,17 @@ function createPgStore(url) {
       const row = r.rows[0];
       if (!row) return null;
       const objs = await q('SELECT obj_id, state FROM world_objects WHERE island_id = $1', [id]);
-      const fires = await q('SELECT id, x, z, fuel, built_by FROM fires WHERE island_id = $1 ORDER BY id', [id]);
+      const fires = await q('SELECT id, x, z, fuel, kind, built_by FROM fires WHERE island_id = $1 ORDER BY id', [id]);
       return {
         id: row.id, name: row.name, seed: row.seed, day: row.day, time: row.time_of_day,
         lastTickAt: new Date(row.last_tick_at).getTime(),
         objects: objs.rows.map(o => ({ id: o.obj_id, state: o.state })),
-        fires: fires.rows.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, builtBy: f.built_by })),
+        fires: fires.rows.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: f.kind, builtBy: f.built_by })),
       };
     },
     async getMember(islandId, playerId) {
       await q(`INSERT INTO island_members (island_id, player_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [islandId, playerId]);
-      const r = await q(`SELECT x, z, face, health, hunger, thirst, wood, stone FROM island_members
+      const r = await q(`SELECT x, z, face, health, hunger, thirst, wood, stone, inventory FROM island_members
                          WHERE island_id = $1 AND player_id = $2`, [islandId, playerId]);
       return r.rows[0];
     },
@@ -71,8 +76,8 @@ function createPgStore(url) {
         for (const f of snap.fires) await c.query('UPDATE fires SET fuel = $2 WHERE id = $1', [f.id, f.fuel]);
         for (const m of snap.members) {
           await c.query(`UPDATE island_members SET x = $3, z = $4, face = $5, health = $6, hunger = $7, thirst = $8,
-                           wood = $9, stone = $10, last_seen = now() WHERE island_id = $1 AND player_id = $2`,
-            [snap.id, m.playerId, m.x, m.z, m.face, m.health, m.hunger, m.thirst, m.wood, m.stone]);
+                           wood = $9, stone = $10, inventory = $11, last_seen = now() WHERE island_id = $1 AND player_id = $2`,
+            [snap.id, m.playerId, m.x, m.z, m.face, m.health, m.hunger, m.thirst, m.wood, m.stone, m.inventory]);
         }
         await c.query('COMMIT');
       } catch (e) {
@@ -82,9 +87,9 @@ function createPgStore(url) {
         c.release();
       }
     },
-    async insertFire(islandId, x, z, fuel, builtBy) {
-      const r = await q('INSERT INTO fires (island_id, x, z, fuel, built_by) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-        [islandId, x, z, fuel, builtBy]);
+    async insertFire(islandId, x, z, fuel, builtBy, kind) {
+      const r = await q('INSERT INTO fires (island_id, x, z, fuel, built_by, kind) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+        [islandId, x, z, fuel, builtBy, kind]);
       return r.rows[0].id;
     },
     async close() { await pool.end(); },
@@ -99,6 +104,7 @@ function createMemoryStore() {
 
   return {
     kind: 'memory',
+    async migrate() {},
     async findPlayerByName(name) {
       for (const p of players.values()) if (p.username.toLowerCase() === name.toLowerCase()) return p;
       return null;
@@ -130,7 +136,7 @@ function createMemoryStore() {
     },
     async getMember(islandId, playerId) {
       const key = islandId + ':' + playerId;
-      if (!members.has(key)) members.set(key, { x: null, z: null, face: 3.14159, health: 100, hunger: 80, thirst: 70, wood: 0, stone: 0 });
+      if (!members.has(key)) members.set(key, { x: null, z: null, face: 3.14159, health: 100, hunger: 80, thirst: 70, wood: 0, stone: 0, inventory: {} });
       return clone(members.get(key));
     },
     async saveIsland(snap) {
@@ -143,9 +149,9 @@ function createMemoryStore() {
         members.set(snap.id + ':' + playerId, clone(rest));
       }
     },
-    async insertFire(islandId, x, z, fuel, builtBy) {
+    async insertFire(islandId, x, z, fuel, builtBy, kind) {
       const id = nextFire++;
-      islands.get(islandId).fires.push({ id, x, z, fuel, builtBy });
+      islands.get(islandId).fires.push({ id, x, z, fuel, builtBy, kind });
       return id;
     },
     async close() {},

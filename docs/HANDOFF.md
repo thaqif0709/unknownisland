@@ -6,8 +6,10 @@ deliberately not written here; they live only in Render's environment settings.
 
 ## What this is
 
-A watercolor-styled 3D survival browser game, no game engine: plain HTML/CSS/JS
-with three.js r128 for rendering. It started as a single-player prototype
+A cute, soft-shaded 3D survival browser game, no game engine: plain HTML/CSS/JS
+with three.js r128 for rendering. (It started watercolor-styled, briefly went low
+poly, and Thaqif settled on smooth and cutesy: pastel colors, round shapes, chibi
+castaways, real shadows, Fredoka font.) It started as a single-player prototype
 (Castaway, https://claude.ai/artifact/67m4EsRbAwp9zuvBU89AD7) and is now a
 private, persistent multiplayer island for Thaqif and friends (about 2 to 10 players).
 
@@ -23,6 +25,10 @@ don't assume command-line fluency, and build in playable stages.
 3. **Catch-up when the island wakes**: done (it was a small addition to step 2).
 4. **Polish**: partly done (name tags, online list, reconnect with backoff).
    Still open: chat bubbles or emotes, mobile tuning.
+5. **Content added after v1**: flora sizes and growth, tree/bush/rock species by
+   biome, decorative flowers by biome, ore rocks and dig patches, tools and
+   recipes (recipe book, B), sprint with energy/exhaustion, settings (Esc) with
+   key rebinding.
 
 Deploy status: live at https://unknown-island.onrender.com (Render service
 `unknown-island`, id `srv-datju8vavr4c73drnjb0`, free plan, Singapore), deploying
@@ -68,6 +74,23 @@ automatically from `main`. Env vars are set in Render.
 - **three.js is served by our own server** (`/vendor/three.min.js`, npm package
   `three@0.128.0`) rather than cdnjs.
 - Starting a second fire within 1.4 units of another is refused.
+
+## Content model (added after v1)
+
+- **Object list:** the original 84 objects (ids 0-83) are unchanged. Ore rocks
+  (8 copper, 5 iron) and 18 dig patches were appended as ids 84-114 using a
+  separate RNG stream. Species (`pine`/`oak`/`blossom`, `berry`/`blueberry`,
+  `pebble`/`mossy`/`granite`) and full-grown sizes (`maxScale`) come from hashes of
+  the id, never from the placement RNG.
+- **Growth:** `state.planted` = in-game day a sapling sprouted; size grows from
+  20% to `maxScale` over `FLORA[type].growDays`. Chops needed scale with size.
+  Palms fruit only when full-grown, bushes from 60%.
+- **Inventory:** `wood`/`stone` columns plus `island_members.inventory` JSONB for
+  `clay`, `copper`, `iron` and `tools` (array). `fires.kind` is `campfire` or
+  `hearth`. Both columns are added by `store.migrate()` on server start.
+- **Energy:** 0-100, not persisted. `stepEnergy` in world-gen is shared by the
+  server (authoritative: hunger cost, speed check) and the client (prediction).
+- **Decorative flowers** are client-only instanced meshes, not in the database.
 
 ## Survival rules
 

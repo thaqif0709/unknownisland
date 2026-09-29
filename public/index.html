@@ -7,13 +7,13 @@
 <meta name="description" content="A watercolor survival island for friends.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --paper:#F7F1E3; --ink:#34335A; --soft:#6A6888;
-  --rose:#C8505A; --ochre:#D39A3A; --blue:#4E8FBF; --leaf:#6F9E5B;
-  --card:#F7F1E3; --card-ink:#34335A; --field:#FFFBF2;
-  --hand:"Kalam", "Segoe Print", "Comic Sans MS", cursive;
+  --paper:#FFFFFF; --ink:#3B3355; --soft:#7A7196;
+  --rose:#FF6F86; --ochre:#FFB547; --blue:#4DB8F0; --leaf:#6CCB6A;
+  --card:#FFFFFF; --card-ink:#3B3355; --field:#FFFBF2;
+  --hand:"Fredoka", "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -21,81 +21,122 @@
 @media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --card:#2E2D48; --card-ink:#F2EAD8; --soft:#B7B3D6; --field:#3A3958; } }
 :root[data-theme="dark"]{ --card:#2E2D48; --card-ink:#F2EAD8; --soft:#B7B3D6; --field:#3A3958; }
 *,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none !important}
 html,body{height:100%;margin:0;overflow:hidden}
 body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-user-select:none;user-select:none;touch-action:none}
 #stage{position:fixed;inset:0}
 #stage canvas{display:block;width:100%;height:100%}
 
 .hud{position:fixed;left:14px;top:calc(env(safe-area-inset-top,0px) + 12px);pointer-events:none;display:grid;gap:6px;
-  background:rgba(247,241,227,.82);padding:10px 14px 12px;border-radius:14px 22px 16px 20px;min-width:190px;transition:opacity .4s}
+  background:rgba(255,255,255,.88);padding:10px 14px 12px;border-radius:18px;min-width:190px;transition:opacity .4s}
 .hidden{opacity:0;pointer-events:none}
-.day{font-size:22px;font-weight:700;line-height:1.1}
+.day{font-size:22px;font-weight:600;line-height:1.1}
 .day small{font-weight:400;font-size:16px;color:var(--soft)}
-.stat{display:grid;grid-template-columns:52px 1fr;align-items:center;gap:8px;font-size:15px}
-.bar{height:10px;border-radius:6px 9px 5px 8px;background:rgba(52,51,90,.12);overflow:hidden}
-.bar i{display:block;height:100%;width:var(--v,100%);border-radius:6px 10px 7px 9px;opacity:.85;transition:width .3s}
-.b-health i{background:var(--rose)} .b-food i{background:var(--ochre)} .b-water i{background:var(--blue)}
+.stat{display:grid;grid-template-columns:56px 1fr;align-items:center;gap:8px;font-size:15px}
+.bar{height:10px;border-radius:18px;background:rgba(52,51,90,.12);overflow:hidden}
+.bar i{display:block;height:100%;width:var(--v,100%);border-radius:18px;opacity:.85;transition:width .3s}
+.b-health i{background:var(--rose)} .b-food i{background:var(--ochre)} .b-water i{background:var(--blue)} .b-energy i{background:var(--leaf)}
+.b-energy.tired i{background:#B7A9C9}
 .temp{font-size:15px;min-height:1.2em}
-.temp.cold{color:var(--blue);font-weight:700} .temp.warm{color:var(--ochre);font-weight:700}
+.temp.cold{color:var(--blue);font-weight:600} .temp.warm{color:var(--ochre);font-weight:600}
 
 .online{position:fixed;right:14px;top:calc(env(safe-area-inset-top,0px) + 12px);pointer-events:none;
-  background:rgba(247,241,227,.82);padding:8px 14px 10px;border-radius:20px 14px 18px 12px;font-size:15px;max-width:44vw;transition:opacity .4s}
+  background:rgba(255,255,255,.88);padding:8px 14px 10px;border-radius:18px;font-size:15px;max-width:44vw;transition:opacity .4s}
 .online b{font-size:17px;display:block}
 .online span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .online i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
 
 .inv{position:fixed;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);pointer-events:none;
-  background:rgba(247,241,227,.82);padding:8px 14px;border-radius:16px 12px 20px 14px;font-size:17px;transition:opacity .4s}
-.inv b{font-size:20px}
-.inv .craft{display:block;font-size:14px;color:var(--soft)}
+  background:rgba(255,255,255,.88);padding:8px 14px;border-radius:18px;font-size:17px;transition:opacity .4s}
+.inv b{font-size:19px}
+.inv .items{display:flex;flex-wrap:wrap;gap:4px 14px;max-width:min(360px,60vw)}
+.inv .tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.inv .tools span{font-size:13px;background:rgba(108,203,106,.2);border-radius:10px;padding:0 8px}
+.inv .craft{display:block;font-size:14px;color:var(--soft);margin-top:2px}
+.gear{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);width:46px;height:46px;border-radius:50%;border:0;
+  background:rgba(255,255,255,.88);color:var(--ink);font-size:24px;line-height:46px;cursor:pointer;padding:0;transition:opacity .4s}
+.gear:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+
+.panel{position:fixed;inset:0;display:grid;place-items:center;padding:16px;background:rgba(40,34,70,.35);touch-action:auto;z-index:5}
+.panel.gone{display:none}
+.sheet{width:min(480px,100%);max-height:calc(100vh - 32px);overflow-y:auto;background:var(--card);color:var(--card-ink);
+  border-radius:22px;padding:18px 22px 20px;box-shadow:0 10px 30px rgba(30,40,70,.25);-webkit-user-select:none;user-select:none}
+.sheet header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sheet h2{margin:0;font-size:26px;color:var(--rose)}
+.sheet h3{margin:16px 0 6px;font-size:17px;color:var(--soft);font-weight:600}
+.sheet .x{border:0;background:none;font:inherit;font-size:28px;line-height:1;color:var(--soft);cursor:pointer;padding:4px 8px;border-radius:12px}
+.sheet .note{font-size:14px;color:var(--soft);margin:4px 0 0}
+.sheet button.main{font-family:var(--hand);font-weight:600;font-size:18px;padding:8px 16px;color:#fff;background:var(--rose);border:0;border-radius:18px;cursor:pointer}
+.sheet button.main:disabled{background:#CFC8DA;cursor:not-allowed}
+.sheet button.link{border:0;background:none;font:inherit;font-size:15px;color:var(--soft);text-decoration:underline;cursor:pointer;padding:6px 0}
+.sheet button:focus-visible,.sheet input:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.recipe{border:2px solid #EFE9F5;border-radius:18px;padding:10px 14px;margin-top:10px}
+.recipe.can{border-color:var(--leaf)}
+.recipe .r-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.recipe .r-top b{font-size:19px}
+.recipe .kind{font-size:13px;color:var(--soft)}
+.recipe p{margin:2px 0 6px;font-size:15px;line-height:1.35}
+.recipe .r-bot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.cost{display:flex;gap:6px;flex-wrap:wrap}
+.cost span{font-size:14px;border-radius:10px;padding:1px 8px;background:#F4EFF8}
+.cost span.ok{background:rgba(108,203,106,.22)}
+.cost span.no{background:rgba(255,111,134,.18)}
+.bind{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:16px;gap:10px}
+.bind button{min-width:110px;font:inherit;font-size:15px;font-weight:600;border:2px solid #E3DCEC;background:#FBF9FD;color:var(--card-ink);border-radius:12px;padding:4px 10px;cursor:pointer}
+.bind button.wait{border-color:var(--blue);background:rgba(77,184,240,.12)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:16px;padding:4px 0}
+.row input[type=range]{width:50%}
+.row.check{justify-content:flex-start}
+.row.check input{width:auto}
+.actions{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:10px;flex-wrap:wrap}
 
 .prompt{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 22%);transform:translateX(-50%);
-  background:rgba(247,241,227,.9);padding:6px 16px;border-radius:18px 12px 16px 14px;font-size:19px;pointer-events:none;transition:opacity .2s;white-space:nowrap}
-.prompt kbd{font-family:var(--hand);font-weight:700;border:2px solid var(--ink);border-radius:7px 5px 8px 6px;padding:0 7px;margin-right:6px}
+  background:rgba(255,255,255,.9);padding:6px 16px;border-radius:18px;font-size:19px;pointer-events:none;transition:opacity .2s;white-space:nowrap}
+.prompt kbd{font-family:var(--hand);font-weight:600;border:2px solid var(--ink);border-radius:6px;padding:0 7px;margin-right:6px}
 .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 16%);transform:translateX(-50%);font-size:22px;
   color:var(--ink);text-shadow:0 0 8px var(--paper),0 0 14px var(--paper);pointer-events:none;opacity:0;transition:opacity .5s;text-align:center;max-width:90vw}
 .toast.on{opacity:1}
 .banner{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);background:var(--rose);color:var(--paper);
-  padding:4px 14px;border-radius:14px 10px 16px 12px;font-size:16px;pointer-events:none;transition:opacity .3s}
+  padding:4px 14px;border-radius:18px;font-size:16px;pointer-events:none;transition:opacity .3s}
 
 #tags{position:fixed;inset:0;pointer-events:none;overflow:hidden}
-#tags div{position:absolute;left:0;top:0;transform:translate(-50%,-100%);font-size:15px;font-weight:700;white-space:nowrap;
+#tags div{position:absolute;left:0;top:0;transform:translate(-50%,-100%);font-size:15px;font-weight:600;white-space:nowrap;
   color:var(--ink);text-shadow:0 0 4px var(--paper),0 0 8px var(--paper),0 0 2px var(--paper);will-change:transform}
 
 .touch{display:none}
 @media (pointer:coarse){
   .touch{display:flex;position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);flex-direction:column;gap:12px;align-items:flex-end}
-  .touch button{font-family:var(--hand);font-weight:700;font-size:18px;border:2px solid var(--ink);color:var(--ink);
-    background:rgba(247,241,227,.9);border-radius:40px 34px 38px 36px;min-width:84px;min-height:84px;padding:8px}
+  .touch button{font-family:var(--hand);font-weight:600;font-size:18px;border:2px solid var(--ink);color:var(--ink);
+    background:rgba(255,255,255,.9);border-radius:50%;min-width:84px;min-height:84px;padding:8px}
   .touch button.small{min-height:52px;font-size:16px}
   .prompt kbd{display:none}
   .online{font-size:13px}
 }
 .joy{position:fixed;width:110px;height:110px;margin:-55px 0 0 -55px;border-radius:50%;border:2px solid rgba(52,51,90,.35);
-  background:rgba(247,241,227,.35);pointer-events:none;display:none}
+  background:rgba(255,255,255,.35);pointer-events:none;display:none}
 .joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px;border-radius:50%;background:rgba(52,51,90,.35)}
 
 .overlay{position:fixed;inset:0;display:grid;place-items:center;padding:16px;overflow-y:auto;touch-action:auto}
 .overlay.gone{display:none}
 .card{width:min(420px,100%);background:var(--card);color:var(--card-ink);padding:26px 28px 24px;
-  border:2px solid var(--card-ink);border-radius:255px 18px 225px 16px/16px 225px 18px 255px;
-  box-shadow:6px 8px 0 rgba(52,51,90,.18);-webkit-user-select:text;user-select:text}
-.card h1{margin:0;font-size:clamp(42px,11vw,60px);line-height:1;font-weight:700}
+  border:0;border-radius:20px;
+  box-shadow:0 10px 30px rgba(30,40,70,.25);-webkit-user-select:text;user-select:text}
+.card h1{margin:0;font-size:clamp(42px,11vw,60px);line-height:1;font-weight:700;color:var(--rose)}
 .card p{margin:12px 0 0;font-size:18px;line-height:1.45}
 .card .keys{font-size:16px;color:var(--soft)}
-.card button{font-family:var(--hand);font-weight:700;font-size:22px;width:100%;padding:10px;margin-top:18px;
-  color:var(--paper);background:var(--rose);border:0;border-radius:18px 10px 16px 12px;cursor:pointer}
+.card button{font-family:var(--hand);font-weight:600;font-size:22px;width:100%;padding:10px;margin-top:18px;
+  color:var(--paper);background:var(--rose);border:0;border-radius:18px;cursor:pointer}
 .card button:hover{filter:brightness(1.07)}
 .card button:disabled{opacity:.6;cursor:wait}
 .card button:focus-visible,.card input:focus-visible,.tabs button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .card button.link{background:none;color:var(--soft);font-size:16px;font-weight:400;padding:4px;margin-top:8px;text-decoration:underline}
 .tabs{display:flex;gap:6px;margin-top:16px}
-.tabs button{flex:1;margin:0;font-size:18px;padding:6px;background:none;color:var(--card-ink);border:2px solid transparent;border-radius:14px 10px 12px 16px}
+.tabs button{flex:1;margin:0;font-size:18px;padding:6px;background:none;color:var(--card-ink);border:2px solid transparent;border-radius:18px}
 .tabs button[aria-selected="true"]{border-color:var(--card-ink)}
 form{display:grid;gap:10px;margin-top:14px}
 label{display:grid;gap:2px;font-size:16px}
 input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-ink);background:var(--field);
-  border:2px solid var(--soft);border-radius:12px 8px 14px 10px;width:100%}
+  border:2px solid var(--soft);border-radius:18px;width:100%}
 .err{color:var(--rose);font-size:16px;min-height:1.3em;margin:0}
 .view{display:none}
 .view.on{display:block}
@@ -110,18 +151,44 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
   <div class="stat"><span>Health</span><div class="bar b-health"><i id="bHealth"></i></div></div>
   <div class="stat"><span>Food</span><div class="bar b-food"><i id="bFood"></i></div></div>
   <div class="stat"><span>Water</span><div class="bar b-water"><i id="bWater"></i></div></div>
+  <div class="stat"><span>Energy</span><div class="bar b-energy" id="energyBar"><i id="bEnergy"></i></div></div>
   <div class="temp" id="temp"></div>
 </div>
 <div class="online hidden" id="online"></div>
-<div class="inv hidden" id="inv">Wood <b id="iWood">0</b> &nbsp; Stone <b id="iStone">0</b>
-  <span class="craft" id="craftHint">A fire needs 4 wood and 3 stone</span></div>
+<div class="inv hidden" id="inv"><div class="items" id="invList"></div><div class="tools" id="toolList"></div>
+  <span class="craft" id="craftHint"></span></div>
+<button class="gear hidden" id="btnSettings" type="button" aria-label="Settings" title="Settings (Esc)">&#9881;</button>
 <div class="prompt hidden" id="prompt"></div>
 <div class="toast" id="toast"></div>
 <div class="banner hidden" id="banner">Reconnecting&hellip;</div>
 <div class="joy" id="joy"><i id="joyKnob"></i></div>
 <div class="touch hidden" id="touchUi">
-  <button class="small" id="btnFire">Build fire</button>
-  <button id="btnAct">Act</button>
+  <button class="small" id="btnBook" type="button">Recipes</button>
+  <button class="small" id="btnRun" type="button" aria-pressed="false">Run</button>
+  <button id="btnAct" type="button">Act</button>
+</div>
+
+<div class="panel gone" id="book" role="dialog" aria-modal="true" aria-labelledby="bookTitle">
+  <div class="sheet">
+    <header><h2 id="bookTitle">Recipe book</h2><button type="button" class="x" data-close aria-label="Close">&times;</button></header>
+    <p class="note">What you can make with what you're carrying. Tools are yours to keep.</p>
+    <div id="recipes"></div>
+  </div>
+</div>
+
+<div class="panel gone" id="settings" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+  <div class="sheet">
+    <header><h2 id="setTitle">Settings</h2><button type="button" class="x" data-close aria-label="Close">&times;</button></header>
+    <p class="note">The island keeps going while this is open.</p>
+    <h3>Controls</h3>
+    <div id="binds"></div>
+    <p class="note">Click a key, then press the new one. The arrow keys always walk too.</p>
+    <button type="button" class="link" id="resetKeys">Reset controls to defaults</button>
+    <h3>Camera</h3>
+    <label class="row">Look sensitivity <input type="range" id="sens" min="0.3" max="2.5" step="0.1"></label>
+    <label class="row check"><input type="checkbox" id="invertY"> Invert up and down</label>
+    <div class="actions"><button type="button" class="main" id="resume">Back to the island</button><button type="button" class="link" id="logout2">Log out</button></div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay">
@@ -145,7 +212,7 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
 
     <div class="view" id="vReady">
       <p id="readyText"></p>
-      <p class="keys">WASD to walk, drag to look around, scroll to zoom, E to use things, F to build a fire. On a phone, use the left thumb stick and the buttons.</p>
+      <p class="keys">WASD to walk, Shift to sprint, drag to look around, E to use things, B for the recipe book, Esc for settings. On a phone, use the left thumb stick and the buttons.</p>
       <button type="button" id="goIsland">Go to the island</button>
       <button type="button" class="link" id="logout">Log out</button>
     </div>

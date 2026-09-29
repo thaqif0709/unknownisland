@@ -154,7 +154,10 @@ setInterval(() => {
   }
 }, 20000).unref();
 
-server.listen(PORT, () => console.log(`[server] Unknown Island running on http://localhost:${PORT} (storage: ${store.kind})`));
+store.migrate().then(() => server.listen(PORT, () => console.log(`[server] Unknown Island running on http://localhost:${PORT} (storage: ${store.kind})`))).catch(e => {
+  console.error('[setup] database migration failed:', e.message);
+  process.exit(1);
+});
 
 // Save everything before Render (or Ctrl+C) stops the server.
 let stopping = false;

@@ -1,8 +1,8 @@
 # Unknown Island
 
-A watercolor survival island you share with your friends, played in the browser.
-Find water and food, chop trees, gather stone, and keep a fire going through the
-cold nights. The island is persistent: whatever you chop, pick or build stays that
+A cute survival island you share with your friends, played in the browser.
+Find water and food, chop trees, gather stone, dig clay, mine ore, craft tools, and
+keep a fire going through the cold nights. The island is persistent: whatever you chop, pick or build stays that
 way for everyone, and time keeps passing even when nobody is playing.
 
 ## How it fits together
@@ -13,7 +13,7 @@ way for everyone, and time keeps passing even when nobody is playing.
 - **The database** is on Neon. It stores accounts, where everyone is, what they're
   carrying, and every tree, rock and fire that's been changed.
 - **The game page** (`public/`) is what players see. It draws the island with
-  three.js and the watercolor effect, and sends your moves to the server.
+  three.js in a soft, cute style, and sends your moves to the server.
 
 When nobody is playing, the free Render server goes to sleep. The next person to
 visit wakes it up (this can take up to a minute). When the island wakes, it works
@@ -56,22 +56,42 @@ Environment*). Existing players aren't affected.
 
 ## Playing
 
-- **Computer:** WASD or arrow keys to walk, drag the mouse to look around, scroll to
-  zoom, **E** to use whatever you're next to, **F** to build a fire.
+- **Computer:** WASD or arrow keys to walk, hold **Shift** to sprint, drag the mouse
+  to look around, scroll to zoom, **E** to use whatever you're next to, **B** for the
+  recipe book, **F** to quickly build a campfire, **Esc** for settings.
 - **Phone:** drag on the left side to walk, drag on the right side to look around,
-  and use the **Act** and **Build fire** buttons.
+  and use the **Act**, **Run** and **Recipes** buttons. The gear button opens settings.
+- **Settings (Esc):** change any key, camera sensitivity and invert. Settings are
+  saved in your browser.
 
 Survival basics: drink at the spring inland (seawater makes it worse), eat coconuts
-and berries, collect wood and stone, and build a fire (4 wood + 3 stone) to stay
-warm at night. When you log off, your castaway leaves the island and your health,
-food, water and inventory are frozen until you come back. If you die, you wake up
-on the beach again with empty pockets.
+and berries, and build a fire to stay warm at night. Sprinting uses energy and makes
+you hungry faster; if energy runs out you're exhausted and slow until you recover.
+
+Crafting (see the recipe book in the game):
+
+| Make | Costs | What it does |
+|---|---|---|
+| Campfire | 4 wood, 3 stone | Warmth at night |
+| Shovel | 3 wood, 2 stone | Dig clay from soft dirt patches |
+| Stone pickaxe | 3 wood, 3 stone | Mine copper and iron ore; breaks stone faster |
+| Clay hearth | 4 wood, 4 stone, 3 clay | Bigger, longer-burning fire |
+| Copper axe | 2 wood, 3 copper ore | 2 wood per chop |
+| Iron pickaxe | 2 wood, 3 iron ore (needs a stone pickaxe) | 2 ore per swing |
+
+Copper ore is on the hill, iron ore near the rocky top. Every tree, palm and bush
+has its own full-grown size; felled trees come back as saplings and grow.
+
+When you log off, your castaway leaves the island and everything is frozen until you
+come back. If you die, you wake up on the beach: you keep your tools but lose what
+you were carrying.
 
 ## Changing the rules
 
-All the survival numbers (day length, how fast hunger drops, fire costs, regrowth)
-are in one place: the `RULES` list at the top of `server/shared/world-gen.js`.
-Change a number, push, and Render redeploys.
+All the survival numbers (day length, hunger, sprinting, regrowth, plant sizes), the
+recipes and the fire types are at the top of `server/shared/world-gen.js` (`RULES`,
+`RECIPES`, `FIRES`). Change a number, push, and Render redeploys. New recipes show
+up in the recipe book automatically; a new kind of item also needs a line in `ITEMS`.
 
 ## Trying it on your own computer (optional)
 
@@ -95,7 +115,7 @@ server/store.js           Database access (Neon), or in-memory for testing
 server/shared/world-gen.js Island shape, object placement, survival rules
                           (used by both the server and the browser)
 public/index.html         Login screens, HUD and styles
-public/game.js            Drawing the island, watercolor effect, controls
+public/game.js            Drawing the island, controls, recipe book, settings
 public/net.js             Connection to the server, smoothing other players
 db/schema.sql             Database tables (already created on Neon)
 render.yaml               Render setup

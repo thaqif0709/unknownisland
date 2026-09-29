@@ -1,6 +1,6 @@
 // The island: authoritative simulation, catch-up after quiet periods, and persistence.
 const WG = require('./shared/world-gen');
-const { RULES, heightAt, SPRING, SPAWN, isNight } = WG;
+const { RULES, FIRES, ITEMS, heightAt, SPRING, SPAWN, isNight } = WG;
 
 const TICK_MS = 80;           // simulation + position broadcast (~12.5 Hz)
 const ME_EVERY = 3;           // personal stats every 3 ticks (~4 Hz)
@@ -11,6 +11,8 @@ const REACH_SLACK = 0.9;      // tolerance for latency when checking distances
 
 const r2 = v => Math.round(v * 100) / 100;
 const num = v => typeof v === 'number' && Number.isFinite(v);
+const hasCost = (p, cost) => Object.entries(cost).every(([k, n]) => (p.inv[k] || 0) >= n);
+const costText = cost => Object.entries(cost).map(([k, n]) => `${n} ${ITEMS[k].toLowerCase()}`).join(', ');
 
 class Island {
   constructor(store, data) {
@@ -26,7 +28,7 @@ class Island {
       const o = this.objects[saved.id];
       if (o) o.state = Object.assign(WG.defaultState(o.type), saved.state);
     }
-    this.fires = data.fires.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel }));
+    this.fires = data.fires.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: FIRES[f.kind] ? f.kind : 'campfire' }));
     this.players = new Map();   // playerId -> live player
     this.dirty = new Set();     // object ids changed since the last save
     this.timer = null;
@@ -50,7 +52,7 @@ class Island {
     const before = this.time, after = before + sec / RULES.DAY_LEN;
     const sunrises = Math.floor(after - 0.25) - Math.floor(before - 0.25);
     this.time = after - Math.floor(after);
-    for (const f of this.fires) if (f.fuel > 0) f.fuel = Math.max(0, f.fuel - sec);
+    for (const f of this.fires) if (f.fuel > 0) f.fuel = Math.max(0, f.fuel - sec * FIRES[f.kind].burn);
     if (sunrises > 0) {
       this.day += sunrises;
       return this.dawn();
@@ -61,11 +63,21 @@ class Island {
   dawn() {
     const changed = [];
     for (const o of this.objects) {
-      const s = o.state, was = JSON.stringify(s);
-      if (o.type === 'palm' && !s.gone) s.coconuts = RULES.COCONUTS;
-      if (o.type === 'bush') s.berries = true;
-      if ((o.type === 'tree' || o.type === 'palm') && s.gone && this.day - s.felledDay >= RULES.TREE_REGROW_DAYS) o.state = WG.defaultState(o.type);
-      if (o.type === 'rock' && s.gone && this.day - s.goneDay >= RULES.ROCK_REGROW_DAYS) o.state = WG.defaultState(o.type);
+      const was = JSON.stringify(o.state);
+      let s = o.state;
+      // Felled trees and palms come back as saplings. They sprouted on the
+      // morning they were due, which matters after a long catch-up.
+      if ((o.type === 'tree' || o.type === 'palm') && s.gone && this.day - s.felledDay >= RULES.TREE_REGROW_DAYS) {
+        s = o.state = { ...WG.defaultState(o.type), planted: s.felledDay + RULES.TREE_REGROW_DAYS };
+        if (o.type === 'palm') s.coconuts = 0;
+      }
+      if (o.type === 'rock' && s.gone && this.day - s.goneDay >= RULES.ROCK_REGROW_DAYS) s = o.state = WG.defaultState(o.type);
+      if (o.type === 'ore' && s.gone && this.day - s.goneDay >= RULES.ORE_REGROW_DAYS) s = o.state = WG.defaultState(o.type);
+      if (o.type === 'dig' && s.dug) s = o.state = WG.defaultState(o.type);
+      const g = WG.growth(o.type, s, this.day, 0.25);
+      if (o.type === 'palm' && !s.gone && g >= 1) s.coconuts = RULES.COCONUTS;
+      if (o.type === 'bush' && g >= RULES.FRUIT_AT) s.berries = true;
+      if (s.planted != null && g >= 1) delete s.planted;
       if (JSON.stringify(o.state) !== was) { changed.push(o); this.dirty.add(o.id); }
     }
     return changed;
@@ -93,11 +105,16 @@ class Island {
 
     if (this.players.size === 0) this.start();
 
+    const saved = m.inventory || {};
+    const inv = { wood: m.wood, stone: m.stone };
+    for (const k of Object.keys(ITEMS)) if (!(k in inv)) inv[k] = Math.max(0, saved[k] | 0);
     const p = {
       id: account.id, name: account.username, ws,
       x: m.x ?? SPAWN.x, z: m.z ?? SPAWN.z, face: m.face,
-      health: m.health, hunger: m.hunger, thirst: m.thirst, wood: m.wood, stone: m.stone,
+      health: m.health, hunger: m.hunger, thirst: m.thirst, inv,
+      tools: (Array.isArray(saved.tools) ? saved.tools : []).filter(t => WG.recipeById(t)),
       dead: m.health <= 0, cause: '', moving: false, warm: false,
+      energy: 100, exhausted: false, rest: 0, wantSprint: false, running: false,
       lastPosAt: Date.now(), nextActAt: 0,
     };
     this.players.set(p.id, p);
@@ -106,8 +123,9 @@ class Island {
       t: 'welcome',
       you: this.selfView(p),
       island: { id: this.id, name: this.name, day: this.day, time: this.time },
-      objects: this.objects.map(o => ({ id: o.id, type: o.type, x: o.x, z: o.z, r: o.r, s: o.s, state: o.state })),
-      fires: this.fires.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel })),
+      objects: this.objects.map(o => ({ id: o.id, type: o.type, x: o.x, z: o.z, r: o.r, s: o.s, maxScale: o.maxScale,
+        species: o.species, ore: o.ore, state: o.state })),
+      fires: this.fires.map(f => this.fireView(f)),
       players: [...this.players.values()].filter(q => q !== p).map(q => this.publicView(q)),
       rules: RULES,
     });
@@ -128,9 +146,10 @@ class Island {
 
   selfView(p) {
     return { id: p.id, name: p.name, x: p.x, z: p.z, face: p.face, health: p.health, hunger: p.hunger,
-      thirst: p.thirst, wood: p.wood, stone: p.stone, dead: p.dead };
+      thirst: p.thirst, inv: p.inv, tools: p.tools, energy: p.energy, exhausted: p.exhausted, dead: p.dead };
   }
   publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), face: r2(p.face), dead: p.dead }; }
+  fireView(f) { return { id: f.id, x: f.x, z: f.z, fuel: r2(f.fuel), kind: f.kind }; }
 
   // ================= Loop =================
   start() {
@@ -161,8 +180,9 @@ class Island {
     const night = isNight(this.time);
     for (const p of this.players.values()) {
       if (p.dead) continue;
-      p.warm = this.fires.some(f => f.fuel > 0 && Math.hypot(f.x - p.x, f.z - p.z) < RULES.WARM_RADIUS);
-      p.hunger = Math.max(0, p.hunger - RULES.HUNGER_DRAIN * dt);
+      p.warm = this.fires.some(f => f.fuel > 0 && Math.hypot(f.x - p.x, f.z - p.z) < FIRES[f.kind].warm);
+      p.running = WG.stepEnergy(p, dt, p.wantSprint && p.moving);
+      p.hunger = Math.max(0, p.hunger - (RULES.HUNGER_DRAIN + (p.running ? RULES.SPRINT_HUNGER : 0)) * dt);
       p.thirst = Math.max(0, p.thirst - RULES.THIRST_DRAIN * dt);
       let hurt = 0;
       if (p.hunger <= 0) { hurt += RULES.STARVE_DMG; p.cause = 'hunger'; }
@@ -179,20 +199,20 @@ class Island {
     // Everyone's position, in one shared message.
     const snap = JSON.stringify({
       t: 'snap', time: this.time, day: this.day,
-      p: [...this.players.values()].map(p => [p.id, r2(p.x), r2(p.z), r2(p.face), p.moving ? 1 : 0, p.dead ? 1 : 0]),
+      p: [...this.players.values()].map(p => [p.id, r2(p.x), r2(p.z), r2(p.face), p.moving ? (p.running ? 2 : 1) : 0, p.dead ? 1 : 0]),
     });
     for (const p of this.players.values()) this.sendRaw(p, snap);
 
-    if (this.tickN % ME_EVERY === 0) {
-      for (const p of this.players.values()) {
-        this.send(p, { t: 'me', health: r2(p.health), hunger: r2(p.hunger), thirst: r2(p.thirst),
-          wood: p.wood, stone: p.stone, warm: p.warm, dead: p.dead });
-      }
-    }
+    if (this.tickN % ME_EVERY === 0) for (const p of this.players.values()) this.sendMe(p);
     if (this.tickN % FIRES_EVERY === 0 && this.fires.length) {
       this.broadcast({ t: 'fires', list: this.fires.map(f => [f.id, r2(f.fuel)]) });
     }
     if (now - this.lastSave > SAVE_MS) this.save();
+  }
+
+  sendMe(p) {
+    this.send(p, { t: 'me', health: r2(p.health), hunger: r2(p.hunger), thirst: r2(p.thirst), inv: p.inv, tools: p.tools,
+      energy: r2(p.energy), exhausted: p.exhausted, warm: p.warm, dead: p.dead });
   }
 
   // ================= Messages =================
@@ -207,12 +227,15 @@ class Island {
     }
   }
 
-  onPos(p, { x, z, face, moving }) {
+  onPos(p, { x, z, face, moving, sprint }) {
     if (p.dead || !num(x) || !num(z) || !num(face)) return;
     const now = Date.now();
     const dt = (now - p.lastPosAt) / 1000;
     p.lastPosAt = now;
-    const maxStep = RULES.WALK_SPEED * 1.4 * Math.min(dt, 1) + 0.6;
+    p.wantSprint = !!sprint;
+    // Allow sprint speed only while the server agrees you have energy.
+    const speed = RULES.WALK_SPEED * (p.wantSprint && !p.exhausted ? RULES.SPRINT_MULT : 1);
+    const maxStep = speed * 1.4 * Math.min(dt, 1) + 0.6;
     const d = Math.hypot(x - p.x, z - p.z);
     if (heightAt(x, z) <= -1) { this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }
     if (d > maxStep) {
@@ -230,6 +253,7 @@ class Island {
     if (now < p.nextActAt) return;
     p.nextActAt = now + ACT_COOLDOWN;
     const say = msg => this.send(p, { t: 'toast', msg });
+    const has = tool => p.tools.includes(tool);
 
     if (target === 'spring') {
       if (Math.hypot(p.x - SPRING.x, p.z - SPRING.z) > RULES.SPRING_REACH + REACH_SLACK) return;
@@ -247,23 +271,28 @@ class Island {
     if (m[1] === 'f') {
       const f = this.fires.find(f => f.id === +m[2]);
       if (!f || Math.hypot(f.x - p.x, f.z - p.z) - 0.6 > RULES.REACH + REACH_SLACK) return;
-      if (p.wood <= 0) return say('You need wood for the fire.');
-      p.wood--;
-      f.fuel = Math.min(f.fuel + RULES.FIRE_ADD_FUEL, RULES.FIRE_MAX_FUEL);
+      if (p.inv.wood <= 0) return say('You need wood for the fire.');
+      const k = FIRES[f.kind];
+      p.inv.wood--;
+      f.fuel = Math.min(f.fuel + k.add, k.max);
       this.broadcast({ t: 'fires', list: [[f.id, r2(f.fuel)]] });
       this.fx(p, 'swing');
+      this.sendMe(p);
       return say('The fire flares up.');
     }
 
     const o = this.objects[+m[2]];
-    if (!o || o.state.gone || Math.hypot(o.x - p.x, o.z - p.z) - o.r > RULES.REACH + REACH_SLACK) return;
+    if (!o || o.state.gone) return;
+    const size = WG.sizeOf(o, o.state, this.day, this.time);
+    if (Math.hypot(o.x - p.x, o.z - p.z) - o.r * Math.max(size, 1) > RULES.REACH + REACH_SLACK) return;
     const s = o.state;
-    const changed = () => { this.dirty.add(o.id); this.broadcast({ t: 'objs', list: [[o.id, o.state]] }); };
+    const changed = () => { this.dirty.add(o.id); this.broadcast({ t: 'objs', list: [[o.id, o.state]] }); this.sendMe(p); };
     const chop = () => {
-      s.hits++; p.wood++;
+      const got = has('axe') ? 2 : 1;
+      s.hits++; p.inv.wood += got;
       this.fx(p, 'swing', o.id);
-      if (s.hits >= RULES.CHOPS) { s.gone = true; s.felledDay = this.day; say('+1 wood. The tree comes down.'); }
-      else say('+1 wood');
+      if (s.hits >= WG.chopsFor(o, s, this.day, this.time)) { s.gone = true; s.felledDay = this.day; say(`+${got} wood. The tree comes down.`); }
+      else say(`+${got} wood`);
       changed();
     };
     switch (o.type) {
@@ -282,47 +311,84 @@ class Island {
         if (s.berries) {
           s.berries = false;
           p.hunger = Math.min(100, p.hunger + RULES.BERRY_FOOD);
-          say('Berries. Tart, but filling.');
+          say(o.species === 'blueberry' ? 'Blueberries. Sweet!' : 'Berries. Tart, but filling.');
           changed();
         } else say('Nothing left. It’ll grow back by morning.');
         break;
-      case 'rock':
-        s.left--; p.stone++;
+      case 'rock': {
+        const got = has('pickaxe') ? 2 : 1;
+        s.left--; p.inv.stone += got;
         if (s.left <= 0) { s.gone = true; s.goneDay = this.day; }
-        this.fx(p, 'swing');
-        say('+1 stone');
+        this.fx(p, 'swing', o.id);
+        say(`+${got} stone`);
+        changed();
+        break;
+      }
+      case 'ore': {
+        if (!has('pickaxe')) return say('Too hard to break by hand. You need a pickaxe.');
+        const got = has('ironpick') ? 2 : 1;
+        s.left--; p.inv[o.ore] += got;
+        if (s.left <= 0) { s.gone = true; s.goneDay = this.day; }
+        this.fx(p, 'swing', o.id);
+        say(`+${got} ${ITEMS[o.ore].toLowerCase()}`);
+        changed();
+        break;
+      }
+      case 'dig':
+        if (s.dug) return say('Already dug up. It’ll settle again by morning.');
+        if (!has('shovel')) return say('The soil is soft here. With a shovel you could dig.');
+        s.dug = true; p.inv.clay += RULES.DIG_CLAY;
+        this.fx(p, 'swing', o.id);
+        say(`+${RULES.DIG_CLAY} clay`);
         changed();
         break;
     }
   }
 
-  async onBuild(p, { x, z }) {
-    if (p.dead || !num(x) || !num(z)) return;
+  async onBuild(p, { recipe, x, z }) {
+    if (p.dead) return;
+    const r = WG.recipeById(recipe || 'campfire');
+    if (!r) return;
     const say = msg => this.send(p, { t: 'toast', msg });
-    if (p.wood < RULES.FIRE_WOOD || p.stone < RULES.FIRE_STONE) {
-      return say(`A fire needs ${RULES.FIRE_WOOD} wood and ${RULES.FIRE_STONE} stone. You have ${p.wood} and ${p.stone}.`);
+    if (r.kind === 'tool' && p.tools.includes(r.id)) return say(`You already have a ${r.name.toLowerCase()}.`);
+    if (r.needs && !p.tools.includes(r.needs)) return say(`You need a ${WG.recipeById(r.needs).name.toLowerCase()} first.`);
+    if (!hasCost(p, r.cost)) return say(`A ${r.name.toLowerCase()} needs ${costText(r.cost)}.`);
+
+    if (r.kind === 'tool') {
+      for (const [k, n] of Object.entries(r.cost)) p.inv[k] -= n;
+      p.tools.push(r.id);
+      this.fx(p, 'swing');
+      this.sendMe(p);
+      return say(`You made a ${r.name.toLowerCase()}!`);
     }
-    if (Math.hypot(x - p.x, z - p.z) > 2.6) return;
+
+    // A fire, placed in front of you.
+    if (!num(x) || !num(z) || Math.hypot(x - p.x, z - p.z) > 2.6) return;
     if (heightAt(x, z) < 0.35) return say('Too wet here. Build it on dry ground.');
     if (this.fires.some(f => Math.hypot(f.x - x, f.z - z) < 1.4)) return say('There’s already a fire right there.');
-    p.wood -= RULES.FIRE_WOOD; p.stone -= RULES.FIRE_STONE;
+    for (const [k, n] of Object.entries(r.cost)) p.inv[k] -= n;
+    const kind = FIRES[r.id];
     try {
-      const id = await this.store.insertFire(this.id, r2(x), r2(z), RULES.FIRE_START_FUEL, p.id);
-      const f = { id, x: r2(x), z: r2(z), fuel: RULES.FIRE_START_FUEL };
+      const id = await this.store.insertFire(this.id, r2(x), r2(z), kind.start, p.id, r.id);
+      const f = { id, x: r2(x), z: r2(z), fuel: kind.start, kind: r.id };
       this.fires.push(f);
-      this.broadcast({ t: 'fire', fire: f });
+      this.broadcast({ t: 'fire', fire: this.fireView(f) });
       this.fx(p, 'swing');
-      say('A fire. Stay close to it at night.');
+      this.sendMe(p);
+      say(r.id === 'hearth' ? 'A clay hearth. It’ll burn long and warm.' : 'A fire. Stay close to it at night.');
     } catch (e) {
       console.error('[island] could not save fire', e.message);
-      p.wood += RULES.FIRE_WOOD; p.stone += RULES.FIRE_STONE;
+      for (const [k, n] of Object.entries(r.cost)) p.inv[k] += n;
       say('The fire wouldn’t catch. Try again.');
     }
   }
 
   onRespawn(p) {
     if (!p.dead) return;
-    Object.assign(p, RULES.START, { wood: 0, stone: 0, x: SPAWN.x, z: SPAWN.z, face: Math.PI, dead: false, cause: '', lastPosAt: Date.now() });
+    // You keep your tools; what you were carrying is lost.
+    for (const k of Object.keys(p.inv)) p.inv[k] = 0;
+    Object.assign(p, RULES.START, { x: SPAWN.x, z: SPAWN.z, face: Math.PI, dead: false, cause: '', lastPosAt: Date.now(),
+      energy: 100, exhausted: false, rest: 0 });
     this.send(p, { t: 'respawned', you: this.selfView(p) });
   }
 
@@ -340,10 +406,13 @@ class Island {
   // Saves are queued so two never run at the same time.
   save(extraMembers = []) {
     this.lastSave = Date.now();
-    const members = [...this.players.values(), ...extraMembers].map(p => ({
-      playerId: p.id, x: r2(p.x), z: r2(p.z), face: r2(p.face), health: r2(p.health), hunger: r2(p.hunger),
-      thirst: r2(p.thirst), wood: p.wood, stone: p.stone,
-    }));
+    const members = [...this.players.values(), ...extraMembers].map(p => {
+      const { wood, stone, ...rest } = p.inv;
+      return {
+        playerId: p.id, x: r2(p.x), z: r2(p.z), face: r2(p.face), health: r2(p.health), hunger: r2(p.hunger),
+        thirst: r2(p.thirst), wood, stone, inventory: { ...rest, tools: [...p.tools] },
+      };
+    });
     const objects = [...this.dirty].map(id => {
       const o = this.objects[id];
       return { id, state: WG.isDefaultState(o.type, o.state) ? null : { ...o.state } };
