@@ -12,7 +12,7 @@
       { flag: 'bigworld', html: '<b>A first look:</b> the new lands are bare for now. Their creatures and stories come later.' },
       { flag: 'farview', html: '<b>You can see for kilometres</b>, out to the mountains.' },
       { flag: 'bigworld', html: '<b>The map</b> (M) fills in wherever anyone walks. Drag it and zoom it.' },
-      { flag: 'slots', html: '<b>A proper bag.</b> 8 slots along the bottom, 30 more in your bag (I). Drag things between them. Berries and coconuts go in the bag now: hold E with one in hand to eat it.' },
+      { flag: 'slots', html: '<b>A proper bag.</b> 8 slots along the bottom, 30 more in your bag (I, or Bag on a phone). Drag things between them. Berries and coconuts are carried now, to eat later: hold E with one in hand to eat it.' },
       { flag: 'mouselook', html: '<b>Mouse-look:</b> click the island and the mouse turns the camera, with a crosshair on what E would use. Esc frees the mouse. The wheel picks your item.' },
       { flag: 'travel', html: '<b>Climb and glide.</b> Walk into a tall palm or a cliff to climb it; jump off something high and hold Space to glide on your cloak.' },
       { html: '<b>Call out</b> (C, or Call on a phone): friends hear you from your direction and see where on the map.' },
