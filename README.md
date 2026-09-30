@@ -60,8 +60,8 @@ Environment*). Existing players aren't affected.
   to look around, scroll to zoom, **E** to use whatever you're next to, **B** for the
   recipe book, **J** for the journal, **T** to put your hood up or down, **V** to sit, **1-8** (or **Q** to cycle) to hold an item and **G** to drop one (Shift+G drops the whole stack, in a sack anyone can pick up with E; that's how you give things to friends), **M** for the map, **F** to quickly build a
   campfire, **Esc** for settings.
-  With mouse-look switched on (the `mouselook` flag), click the island and the mouse turns the
-  camera (**Esc** frees it), the wheel picks your item, and **Ctrl + wheel** zooms.
+  Click the island and the mouse turns the camera (**Esc** frees it), the wheel picks your item,
+  and **Ctrl + wheel** zooms (mouse-look, the `mouselook` flag, on).
   Walk into a tall palm or a cliff to climb it (**W**/**S**, **Space** lets go), and hold
   **Space** while falling from high up to glide with your cloak (the `travel` flag, on).
   **I** opens your 30-slot bag (phones: **Bag**): drag stacks between it and the hotbar.

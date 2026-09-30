@@ -451,7 +451,7 @@ plays a panned, distance-faded call (muffled through a cave), a bubble, a compas
 far players, and a fading ring on the map (a `UI.mapLayers` entry).
 On joining, `island.safeSpot(x, z)` (players.js) puts anyone whose saved
 spot is sea, behind the Veil or a cave mouth back on the beach, so flags can be switched off.
-With the `mouselook` flag (P1), `305-mouse-look.js` locks the pointer on a click on the island
+With the `mouselook` flag (P1, on since 30 Sept), `305-mouse-look.js` locks the pointer on a click on the island
 (desktop mice only, `(any-pointer: fine)`) and turns `yaw`/`pitch` from `movementX/Y` with the
 same sensitivity and invert settings as dragging. A frame hook frees the pointer whenever
 `state !== 'play'` or `panelOpen()` (panels, chat, the intro), and after the last panel closes
