@@ -220,7 +220,25 @@
     });
   }
 
+  // Climbing (arms reaching up in turn, legs pushing) and gliding (arms and cloak spread
+  // wide, leaning into the air), task P9. Runs after poseCastaway and applyHop.
+  function poseTravel(av, kind, t, moving) {
+    av._travel = kind;
+    if (kind === 'climb') {
+      const s = Math.sin(t * (moving ? 7 : 1.2));
+      av.armL.rotation.x = -2.7 + s * .35; av.armR.rotation.x = -2.7 - s * .35;
+      av.armL.rotation.z = -.3; av.armR.rotation.z = .3;
+      av.legL.rotation.x = -.6 + s * .45; av.legR.rotation.x = -.6 - s * .45;
+    } else {
+      const flap = Math.sin(t * 2.2) * .06;
+      av.armL.rotation.x = av.armR.rotation.x = -.25;
+      av.armL.rotation.z = -1.35 - flap; av.armR.rotation.z = 1.35 + flap;
+      av.legL.rotation.x = .45; av.legR.rotation.x = .6;
+      av.body.rotation.x = .35;
+    }
+  }
   function poseCastaway(av, x, z, face, moving, dead, dt, elapsed) {
+    if (av._travel) { av.armL.rotation.z = -.18; av.armR.rotation.z = .18; av.body.rotation.x = 0; av._travel = null; }   // back from climbing or gliding
     const gh = av.under ? caveFloorAt(av.under, x, z) : groundAt(x, z), y = av.under ? gh : Math.max(gh, -.75);   // in a cave: its floor (W9)
     av.root.position.set(x, y, z);
     av.root.rotation.y = face; av.root.rotation.z = 0;
