@@ -458,8 +458,9 @@ to a flag, read from `/api/hiddenpages` since it shows before the welcome; a new
 again for everyone). With the `checkpoints` flag (P4), sitting by a lit clay hearth for 3 s saves it as where you
 wake (`server/systems/checkpoints.js`, `respawnPoint`; browser `145-hearth-checkpoints.js`:
 the pennant, the map flag). The sleep look is in `120-castaways.js` `poseCastaway`: `sleepK`
-eases in over about half a second, then the blanket (`av.blanket`, cloak colour), shut eyes
-(`av.eyesShut`) and drifting z sprites (`sleepZs`). Details: CONTRACTS.md section 11.
+eases in over about half a second, then the shut eyes (`av.eyesShut`), the z sprites from the top of
+the head (`sleepZs`) and the blanket (`sleepBlanket`/`buildBlanket`: once the pose settles,
+rays straight down measure the frog, the cloth sags from it to the ground, cloak colour). Details: CONTRACTS.md section 11.
 Calling out (P11, no flag): `call` message, rate-limited in `server/systems/chat.js`
 (`RULES.CALL`), broadcast as `{ t: 'call', id, name, x, z, under }`; `285-calling-out.js`
 plays a panned, distance-faded call (muffled through a cave), a bubble, a compass note for

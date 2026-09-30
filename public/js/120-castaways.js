@@ -201,19 +201,14 @@
     }
     const armL = arm(-.27), armR = arm(.27);
 
-    // asleep (P4): a blanket in the cloak's colour, pulled up to the neck, with a turned-down edge
-    const blanket = new THREE.Group(); body.add(blanket); blanket.visible = false;
-    add(new THREE.Mesh(new THREE.SphereGeometry(.5, 20, 14), cloakM), 0, .6, .14, blanket).scale.set(.92, 1.14, 1.12);
-    const edge = add(new THREE.Mesh(new THREE.TorusGeometry(.34, .05, 8, 24), patchM), 0, 1.1, .1, blanket); edge.rotation.x = Math.PI / 2 - .15; edge.scale.set(1.05, 1, 1);
-
-    const av = { root, body, head, legL, legR, armL, armR, walk: 0, swingT: 0, hoodUp, hoodDown, sit: 0, eyesOpen, eyesShut, blanket };
+    const av = { root, body, head, legL, legR, armL, armR, walk: 0, swingT: 0, hoodUp, hoodDown, sit: 0, eyesOpen, eyesShut, cloak };
     av.armL.rotation.z = -.18; av.armR.rotation.z = .18;
     av.armR.rotation.order = 'YXZ';   // yaw applies after the pitch, so a chop can sweep sideways (same pose as before while y is 0)
     shadows(root);
     scene.add(root);
     return av;
   }
-  function removeCastaway(av) { scene.remove(av.root); sleepZs(av, 0, 0); }
+  function removeCastaway(av) { scene.remove(av.root); sleepZs(av, 0, 0); sleepBlanket(av, 0, 0); }
   // Cloak patches: small stitched squares in the colour of what they were made from.
   const PATCH_COL = { moon_wing: 0xF3EAD6, violet_charm: 0xA88BD8, firefly_jar: 0xE8F27A, silverfin_scale: 0xB9C3C6, conch_charm: 0xE3A89A };
   // [angle round the robe from the front, height]; placed on the robe's surface
@@ -310,8 +305,6 @@
     av.sleepK = (av.sleepK || 0) + ((av.sleeping && !moving ? 1 : 0) - (av.sleepK || 0)) * Math.min(1, dt * 7);   // settled in about half a second
     const q = av.sleepK, shut = q > .5;
     if (av.eyesShut && av.eyesShut[0].visible !== shut) { av.eyesShut.forEach(m => { m.visible = shut; }); av.eyesOpen.forEach(m => { m.visible = !shut; }); }
-    if (av.blanket) { av.blanket.visible = q > .05; if (av.blanket.visible) av.blanket.scale.setScalar(.6 + .4 * q); }
-    sleepZs(av, q, dt);
     if (q > .01) {
       av.root.rotation.z = -1.3 * q;
       av.root.position.y += .3 * q;
@@ -319,7 +312,95 @@
       av.armL.rotation.x = -.45 * q; if (!av.held) av.armR.rotation.x = -.45 * q;   // hands tucked in under the blanket
       av.body.position.y += Math.sin(elapsed * 1.4) * .01 * q;   // slow breathing
     }
-  }  // A few small z's drifting up from a sleeper's head, fading as they rise.
+    sleepBlanket(av, q, dt);   // (after the pose, so they fit the frog lying down)
+    sleepZs(av, q, dt);
+  }  // Asleep (P4): a thick blanket in the cloak's colour, draped over the curled-up frog up to the
+  // neck and spilling onto the ground round it in soft folds, like a cartoon bedspread. Its
+  // shape is measured from the frog's own pose once it has settled: rays straight down give
+  // the height of the body under each point, the cloth sags from there to the ground, and the
+  // hem wobbles. It sits in the world (not on the tilted body), facing the way the frog faces.
+  const drapeRay = new THREE.Raycaster(), rayFrom = new THREE.Vector3(), rayDown = new THREE.Vector3(0, -1, 0), hp = new THREE.Vector3();
+  function buildBlanket(av) {
+    av.root.updateMatrixWorld(true);
+    const yaw = av.root.rotation.y, cy = Math.cos(yaw), sy = Math.sin(yaw), ox = av.root.position.x, oz = av.root.position.z;
+    const g0 = groundAt(ox, oz);
+    const toWorld = (u, w) => [ox + u * cy + w * sy, oz - u * sy + w * cy];   // (u along the lying body, w across it)
+    const parts = [];
+    av.body.traverse(m => { if (m.isMesh && !isIn(m, av.head)) parts.push(m); });
+    av.head.getWorldPosition(hp);
+    const headU = (hp.x - ox) * cy - (hp.z - oz) * sy;   // how far along the body the head is
+    const U0 = -.55, U1 = headU - .2, W0 = -.9, W1 = .9, NU = 30, NW = 24;
+    // the body's height under each point of a grid
+    const H = [];
+    for (let i = 0; i <= NU; i++) {
+      H.push([]);
+      for (let j = 0; j <= NW; j++) {
+        const u = U0 + (U1 - U0) * i / NU, w = W0 + (W1 - W0) * j / NW, [x, z] = toWorld(u, w);
+        rayFrom.set(x, g0 + 4, z); drapeRay.set(rayFrom, rayDown);
+        const hit = drapeRay.intersectObjects(parts, false)[0];
+        H[i].push(hit ? Math.max(0, hit.point.y - groundAt(x, z)) : 0);
+      }
+    }
+    // cloth: laid over the body, falling away at a slope, never lower than the ground
+    const du = (U1 - U0) / NU, dw = (W1 - W0) / NW, SLOPE = 1.35, R = 7;
+    const pos = [], top = [];
+    for (let i = 0; i <= NU; i++) for (let j = 0; j <= NW; j++) {
+      let h = 0;
+      for (let a = -R; a <= R; a++) for (let b = -R; b <= R; b++) {
+        const hn = (H[i + a] || [])[j + b]; if (!hn) continue;
+        h = Math.max(h, hn - SLOPE * Math.hypot(a * du, b * dw));
+      }
+      const edge = Math.min(i, NU - i, j, NW - j);
+      let u = U0 + du * i, w = W0 + dw * j;
+      // the hem: wavy, and pushed in and out a little, so it isn't a rectangle
+      const along = i === 0 || i === NU ? j / NW : i / NU;          // how far along this edge (0-1)
+      const wave = Math.sin(along * Math.PI * 5 + (j === 0 ? 0 : 2)) * .06 + Math.sin(along * Math.PI * 2 + 1) * .04;
+      if (edge === 0) { if (i === 0 || i === NU) u += (i === 0 ? -1 : 1) * wave * .7; else w += (j === 0 ? -1 : 1) * wave; }
+      const sag = h > .05 ? .07 : .025;                              // thick where it lies over the frog
+      const folds = h > .03 && h < .4 ? Math.sin(u * 7 + w * 1.5) * .03 * Math.min(1, h * 6) : 0;   // soft creases down the sides
+      const [x, z] = toWorld(u, w);
+      pos.push(u, Math.max(groundAt(x, z) - g0 + .03 + (edge === 0 ? .02 + wave * .15 : 0), groundAt(x, z) - g0 + h + sag + folds), w);
+      top.push(h);
+    }
+    const idx = [];
+    for (let i = 0; i < NU; i++) for (let j = 0; j < NW; j++) {
+      const a = i * (NW + 1) + j, b = a + 1, c = a + NW + 1, d = c + 1;
+      idx.push(a, c, b, b, c, d);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+    const g = new THREE.Group();
+    const cloth = new THREE.Mesh(geo, soft(av.cloak, { side: THREE.DoubleSide })); g.add(cloth);
+    // the top edge, turned down under the chin: a fat soft roll in a paler shade, for thickness
+    const rollPts = [];
+    for (let j = 0; j <= NW; j++) { const n = NU * (NW + 1) + j; rollPts.push(new THREE.Vector3(pos[n * 3] - .02, pos[n * 3 + 1] + .02, pos[n * 3 + 2])); }
+    const roll = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rollPts), 40, .065, 8, false),
+      soft(new THREE.Color(av.cloak).lerp(new THREE.Color(0xE9D7AE), .35).getHex()));
+    g.add(roll);
+    // and the hem all round the other three sides, rolled a little so the cloth looks thick
+    const ring = [];
+    for (let i = NU; i >= 0; i--) ring.push([i, 0]);          // down one side ...
+    for (let j = 1; j <= NW; j++) ring.push([0, j]);          // ... across the foot ...
+    for (let i = 1; i <= NU; i++) ring.push([i, NW]);         // ... and up the other side
+    const hem = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ring.map(([i, j]) => { const n = i * (NW + 1) + j; return new THREE.Vector3(pos[n * 3], pos[n * 3 + 1], pos[n * 3 + 2]); })), 120, .03, 6, false), cloth.material);
+    g.add(hem);
+    g.position.set(ox, g0, oz); g.rotation.y = yaw;
+    shadows(g);
+    return g;
+  }
+  const isIn = (m, group) => { for (let o = m; o; o = o.parent) if (o === group) return true; return false; };
+  function sleepBlanket(av, q, dt) {
+    if (q < .5 || !av.cloak) {
+      if (av.drape) { scene.remove(av.drape); av.drape.traverse(m => { if (m.geometry) m.geometry.dispose(); if (m.material && m.material.dispose) m.material.dispose(); }); av.drape = null; }
+      return;
+    }
+    if (!av.drape && q > .97) { av.drape = buildBlanket(av); av.drape.userData.k = 0; scene.add(av.drape); }   // settled: lay it over
+    if (av.drape) {
+      const k = av.drape.userData.k = Math.min(1, av.drape.userData.k + dt * 4);   // floats down onto the frog
+      av.drape.scale.set(1, .4 + .6 * k, 1); av.drape.position.y = groundAt(av.drape.position.x, av.drape.position.z) + (1 - k) * .5;
+    }
+  }
+  // A few small z's drifting up from a sleeper's head, fading as they rise.
   let zTex = null;
   function zTexture() {
     if (zTex) return zTex;
@@ -340,12 +421,12 @@
         z.userData.t = i / 3; scene.add(z); noInk.add(z); return z;
       });
     }
-    av.head.getWorldPosition(zPos);
+    av.head.localToWorld(zPos.set(0, .32, 0));   // the top of the head (on its side, that's to one side)
     for (const z of av.zs) {
-      const t = z.userData.t = (z.userData.t + dt / 2.4) % 1;   // each one rises for 2.4 s
-      z.position.set(zPos.x + Math.sin(t * 5 + z.id) * .15 + t * .3, zPos.y + .45 + t * 1.3, zPos.z);
-      z.scale.setScalar(.3 + t * .3);
-      z.material.opacity = Math.min(1, t * 5) * (1 - t);
+      const t = z.userData.t = (z.userData.t + dt / 2.4) % 1;   // each one rises for 2.4 s, out of the head
+      z.position.set(zPos.x + Math.sin(t * 5 + z.id) * .12 * t, zPos.y + .05 + t * 1.3, zPos.z + t * .15);
+      z.scale.setScalar(.12 + t * .4);
+      z.material.opacity = Math.min(1, t * 8) * (1 - t * t);
     }
   }
 
