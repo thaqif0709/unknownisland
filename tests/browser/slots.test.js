@@ -1,6 +1,6 @@
 // The bag in the browser (P2, flag slots): I opens it, a stack drags from the hotbar into the
-// bag, tap-then-tap moves one too, and holding E with food in hand eats it.
-// Needs Chromium like smoke.test.js.
+// bag, tap-then-tap moves one too, an empty slot can't be picked, and holding E with food in
+// hand eats it. Needs Chromium like smoke.test.js.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
@@ -63,10 +63,19 @@ test('tap a stack, then tap where it goes', async () => {
   assert.equal(await page.locator('#invList [data-slot="2"] b').textContent(), '12', 'the hotbar shows the stack');
 });
 
-test('hold E with berries in hand to eat one', async () => {
+test('an empty hotbar slot is not picked', async () => {
+  const empty = await page.evaluate(() => window.__dbg.stats.slots.slice(0, 8).findIndex(s => !s));
+  await page.keyboard.press(`Digit${empty + 1}`);
+  await page.waitForTimeout(300);
+  assert.equal(await page.locator('#invList .slot.sel').count(), 0);
+});
+
+test('hold E with berries in hand to eat one, fed while still holding it', async () => {
   await page.keyboard.press(`Digit${(await slotOf('berries')) + 1}`);
+  const hunger = await page.evaluate(() => window.__dbg.stats.hunger);
   await page.keyboard.down('KeyE');
   await page.waitForFunction(() => window.__dbg.stats.inv.berries === 2, null, { timeout: 10000 });
+  assert.ok(await page.evaluate(h => window.__dbg.stats.hunger > h || window.__dbg.stats.hunger >= 100, hunger), 'fed before letting go');
   await page.keyboard.up('KeyE');
   assert.deepEqual(errors, []);
 });

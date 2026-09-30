@@ -33,10 +33,10 @@ after(async () => {
 const locked = () => page.evaluate(() => !!document.pointerLockElement);
 const shown = sel => page.evaluate(s => !document.querySelector(s).classList.contains('hidden'), sel);
 
-test('on the island: the crosshair, the ink cursor and a pill asking for a click', async () => {
+test('on the island: the ink cursor and a pill asking for a click, but no crosshair', async () => {
   await page.waitForFunction(() => !document.getElementById('lockPill').classList.contains('hidden'), null, { timeout: 10000 });
   assert.equal(await page.textContent('#lockPill'), 'Click to look around');
-  assert.ok(await shown('#xhair'), 'crosshair shown');
+  assert.ok(!(await shown('#xhair')), 'the crosshair stays hidden until something you can hit is aimed at');
   assert.ok(await page.evaluate(() => document.documentElement.classList.contains('inkcursor')));
 });
 
@@ -79,7 +79,7 @@ test('UI.panels.open and close work by name', async () => {
   await page.waitForFunction(() => !!document.pointerLockElement, null, { timeout: 5000 });
 });
 
-test('the crosshair rings what E would use', async () => {
+test('the (hidden) crosshair still follows what E would use', async () => {
   const tree = await page.evaluate(() => {
     const p = window.__dbg.pos();
     return window.__dbg.objects().filter(o => o.type === 'tree' && !o.state.gone)

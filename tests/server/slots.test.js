@@ -153,6 +153,14 @@ test('berries are carried, to eat later', async () => {
   await ate; await c.settle();
   assert.equal(c.me.inv.berries, 0);
   assert.ok(c.me.hunger >= 40 + WG.RULES.BERRY_FOOD - 1, `hunger ${c.me.hunger}`);
+  // full up: nothing is wasted
+  await c.test('give', { inv: { berries: 1 } });
+  await c.test('set', { hunger: 100 });
+  await sleep(WG.RULES.SLOTS.EAT_GAP * 1000); await c.settle();
+  const full = c.next(m => m.t === 'toast' && /full/.test(m.msg));
+  c.send({ t: 'eat', slot: c.me.slots.findIndex(s => s && s.k === 'berries') });
+  await full; await c.settle();
+  assert.equal(c.me.inv.berries, 1);
   // wood isn't food
   await c.test('give', { inv: { wood: 2 } });
   await c.settle();

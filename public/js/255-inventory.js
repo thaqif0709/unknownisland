@@ -134,24 +134,29 @@
   eatRing.innerHTML = '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="19"/><circle cx="24" cy="24" r="19" class="fg" pathLength="100"/></svg>';
   document.body.appendChild(eatRing);
   const eatArc = eatRing.querySelector('.fg');
-  let eatT = -1, eatSlot = -1;
+  // timed by the clock, not by frames: frame time is capped, so on a slow frame rate a bite
+  // took two or three times as long as it should and seemed to happen only on letting go
+  let eatFrom = -1, eatSlot = -1;
   const heldFood = () => slotsOn() && selSlot >= 0 && isFood(bagSlot(selSlot));
-  function eatStart() { if (heldFood() && state === 'play' && !blocksInput()) { eatT = 0; eatSlot = selSlot; } }
-  function eatStop() { eatT = -1; eatRing.classList.add('hidden'); }
+  // full up: holding E does nothing (the server says so once)
+  const full = () => { const s = bagSlot(selSlot), w = s && WG.itemInfo(s.k).water; return stats.hunger >= 99.5 && (!w || stats.thirst >= 99.5); };
+  function eatStart() { if (heldFood() && state === 'play' && !blocksInput()) { eatFrom = performance.now(); eatSlot = selSlot; } }
+  function eatStop() { eatFrom = -1; eatRing.classList.add('hidden'); }
   window.addEventListener('keydown', e => { if (e.code === prefs.binds.act && !e.repeat) eatStart(); });
   window.addEventListener('keyup', e => { if (e.code === prefs.binds.act) eatStop(); });
   $('btnAct').addEventListener('pointerdown', eatStart);
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => $('btnAct').addEventListener(t, eatStop));
-  UI.onFrame(dt => {
-    if (eatT < 0) return;
+  UI.onFrame(() => {
+    if (eatFrom < 0) return;
     if (!heldFood() || selSlot !== eatSlot || state !== 'play' || knockT > 0) { eatStop(); return; }
-    eatT += dt;
+    const now = performance.now(), eatT = (now - eatFrom) / 1000;
     const f = Math.min(1, eatT / RULES.SLOTS.EAT_TIME);
     eatRing.classList.toggle('hidden', eatT < .15);
     eatArc.style.strokeDasharray = `${(f * 100).toFixed(1)} 100`;
     if (f >= 1) {   // a bite; keep holding for the next
       if (net) net.send({ t: 'eat', slot: selSlot });
+      if (full()) { eatStop(); return; }
       startSwing(hero, null, .5);
-      eatT = 0;
+      eatFrom = now;
     }
   });

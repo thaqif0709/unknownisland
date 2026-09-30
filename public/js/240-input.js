@@ -120,7 +120,8 @@
   }
   function selectSlot(i) {
     if (state !== 'play') return;
-    selSlot = selSlot === i ? -1 : i;   // same number again: put it away
+    syncSlots();
+    selSlot = selSlot === i || !slotKeys[i] ? -1 : i;   // same number again, or an empty slot: empty hands
     if (slotsOn() && net) net.send({ t: 'select', slot: selSlot });
     lastInv = ''; renderInventory();
     const k = heldKey(), hb = heldBucket();
@@ -212,6 +213,8 @@
   }
   function renderInventory() {
     syncSlots();
+    // the thing in your hand ran out (eaten, dropped, used): your hands are empty again
+    if (selSlot >= 0 && !slotKeys[selSlot]) { selSlot = -1; if (slotsOn() && net) net.send({ t: 'select', slot: -1 }); }
     const key = JSON.stringify([stats.inv, stats.tools, stats.buckets, stats.slots, prefs.binds.book, slotKeys, selSlot]);
     if (key === lastInv) return;
     lastInv = key;

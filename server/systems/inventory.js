@@ -253,6 +253,7 @@ const messages = {
     const s = Number.isInteger(msg.slot) ? p.slots[msg.slot] : null;
     const info = s && !isBucket(s) ? WG.itemInfo(s.k) : null;
     if (!info || info.kind !== 'food') return;
+    if (p.hunger >= 99.5 && (!info.water || p.thirst >= 99.5)) return this.send(p, { t: 'toast', msg: 'You’re full.' });
     p.lastEatAt = now;
     this.takeFromSlot(p, msg.slot, 1);
     p.hunger = Math.min(100, p.hunger + (info.food || 0));

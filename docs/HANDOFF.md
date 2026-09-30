@@ -197,7 +197,8 @@ planned separately by Thaqif):
   + 30 bag; `{ k, n }`, `{ b: bucketId }` or null) and still recounts `p.inv` as totals, so
   nothing outside it changed except drops (drop by slot; picking up a sack takes what fits
   and leaves the rest) and gathering (coconuts and berries go into the bag as items, eaten
-  with `eat {slot}`). Moves are `move {from,to,count}`, checked on the server: into an empty
+  with `eat {slot}`). Picking an empty hotbar slot (or the held stack running out) leaves
+  your hands empty; eating is timed by the clock (frame time is capped). Moves are `move {from,to,count}`, checked on the server: into an empty
   slot, onto the same item up to its stack, or a whole stack swaps; everything else is
   refused, and the answer is always a fresh `me`. Loading always rebuilds the slots from the
   counts over the saved arrangement, so the counts win, switching the flag off and on loses
@@ -458,8 +459,9 @@ tries to lock again; browsers refuse that without a click (always right after Es
 "Click to continue" pill (`#lockPill`) shows instead. Esc while locked never reaches the page:
 `pointerlockchange` sees an unlock we didn't ask for (`freeingByUs`) and opens settings, and
 `lookFreedAt` keeps a late Esc keydown from closing it again. The ink crosshair (`#xhair`) is
-projected each frame onto `target` (what E would use), or 2.2 m in front of you, with
-`UI.crosshair.hittable` for P6. `html.inkcursor` swaps every cursor for an inked one. The wheel
+projected each frame onto `target` (what E would use), or 2.2 m in front of you, but stays
+hidden (players found it in the way) unless a `UI.crosshair.hittable` function says something
+you can hit is aimed at (P6). `html.inkcursor` swaps every cursor for an inked one. The wheel
 cycles the hotbar (`wheelSlot`, 40 units per step) and Ctrl + wheel zooms. Tests:
 `tests/browser/mouselook.test.js` (runs its server with `FEATURES=mouselook`).
 
