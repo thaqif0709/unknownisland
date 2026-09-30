@@ -110,7 +110,7 @@
       checkpoints: false, // P4: sleep by a lit hearth to wake there after a knockdown or dying
       travel: true,      // P9 climbing (palm trunks, cliffs) and gliding with the cloak
       fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
-      mouselook: false,  // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
+      mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
       slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
       'region-stair': false,   // C3: the Stairs' own things (flint, herbs, flax, ruins, standing stones, tin), bugs, the Leaning, the old mine, its request chain
     },
