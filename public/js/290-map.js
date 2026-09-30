@@ -13,7 +13,6 @@
   const mapView = { cx: 0, cz: 0, half: WG.ISL * 1.15, set: false };
   const MINI_HALF_BIG = 170, MAP_MIN_HALF = 40;
   const mapMaxHalf = () => (bigMap() ? 2700 : MAP_HALF);
-  UI.mapLayers = [];
   UI.net.on('welcome', m => {
     const big = bigMap(), half = big ? 2600 : WG.ISL * 1.15, cz = big ? -1900 : 0;
     if (half !== MAP_HALF || cz !== MAP_CZ) { MAP_HALF = half; MAP_CZ = cz; }
@@ -87,6 +86,7 @@
     lantern: { name: 'Lantern, cold', col: '#8A8171' }, carving: { name: 'Carving stone', col: '#7A5E8A' },
     board: { name: 'Driftwood board', col: '#A07A4A' }, fire: { name: 'Fire, burning', col: '#E2742C' },
     fireOut: { name: 'Fire, gone out', col: '#6E6862' }, sack: { name: 'Dropped sack', col: '#FFF6DC' },
+    checkpoint: { name: 'Where you wake (your hearth; friends\u2019 fainter)', col: '#C4574F', flag: 'checkpoints' },
   };
   // Each marker is a small pictogram (not just a coloured blob in a different
   // silhouette): a lantern has a bronze cage with a glowing dot, a fire has
@@ -118,6 +118,9 @@
     } else if (kind === 'sack') {
       shape(() => { g.moveTo(-3.4, -.8); g.quadraticCurveTo(-4.2, 4.6, 0, 5); g.quadraticCurveTo(4.2, 4.6, 3.4, -.8); g.quadraticCurveTo(1.7, -2.4, 0, -2.4); g.quadraticCurveTo(-1.7, -2.4, -3.4, -.8); }, fill || MARK.sack.col);
       stroke(() => { g.moveTo(-1.7, -2.4); g.lineTo(0, -5); g.lineTo(1.7, -2.4); }, '#2B211F', 1.3);   // drawstring tie
+    } else if (kind === 'checkpoint') {   // a flag on a pole
+      stroke(() => { g.moveTo(-3, 6); g.lineTo(-3, -6); }, '#2B211F', 1.6);
+      shape(() => { g.moveTo(-3, -6); g.lineTo(5, -3.5); g.lineTo(-3, -.5); g.closePath(); }, fill || MARK.checkpoint.col);
     } else shape(() => g.arc(0, 0, 4, 0, Math.PI * 2), fill || (MARK[kind] && MARK[kind].col) || '#8A8171');
     g.restore();
   }
@@ -165,7 +168,7 @@
   function renderMapLegend() {
     const li = (src, text) => `<li><img src="${src}" alt="">${esc(text)}</li>`;
     const people = [li(iconFor('you', mapCol(me.id)), 'You')].concat([...remotes].map(([id, r]) => li(iconFor('player', mapCol(id)), r.name)));
-    const places = Object.keys(MARK).map(k => li(iconFor(k), MARK[k].name));
+    const places = Object.keys(MARK).filter(k => !MARK[k].flag || WG.feature(MARK[k].flag)).map(k => li(iconFor(k), MARK[k].name));
     const land = [['beach', 'Beach'], ['meadow', 'Meadow'], ['forest', 'Forest'], ['highland', 'Hills'], ['peak', 'Peak'], ['spring', 'Spring pool'], ['sea', 'Sea']]
       .map(([k, n]) => li(iconFor('land', BIOME_COL[k]), n));
     if (bigMap()) land.push(li(iconFor('land', 'rgb(210,204,196)'), 'Behind the Veil'), li(iconFor('land', `rgb(${PARCHMENT})`), 'Not explored yet'));

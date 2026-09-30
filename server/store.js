@@ -120,7 +120,7 @@ function createPgStore(url) {
     },
     async getMember(islandId, playerId) {
       await q(`INSERT INTO island_members (island_id, player_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [islandId, playerId]);
-      const r = await q(`SELECT m.x, m.z, m.face, m.health, m.hunger, m.thirst, m.wood, m.stone, m.inventory, m.dread, p.seen_intro
+      const r = await q(`SELECT m.x, m.z, m.face, m.health, m.hunger, m.thirst, m.wood, m.stone, m.inventory, m.dread, m.checkpoint, p.seen_intro
                          FROM island_members m JOIN players p ON p.id = m.player_id WHERE m.island_id = $1 AND m.player_id = $2`, [islandId, playerId]);
       return r.rows[0];
     },
@@ -156,8 +156,8 @@ function createPgStore(url) {
         }
         for (const m of snap.members) {
           await c.query(`UPDATE island_members SET x = $3, z = $4, face = $5, health = $6, hunger = $7, thirst = $8,
-                           wood = $9, stone = $10, inventory = $11, dread = $12, last_seen = now() WHERE island_id = $1 AND player_id = $2`,
-            [snap.id, m.playerId, m.x, m.z, m.face, m.health, m.hunger, m.thirst, m.wood, m.stone, m.inventory, m.dread]);
+                           wood = $9, stone = $10, inventory = $11, dread = $12, checkpoint = $13, last_seen = now() WHERE island_id = $1 AND player_id = $2`,
+            [snap.id, m.playerId, m.x, m.z, m.face, m.health, m.hunger, m.thirst, m.wood, m.stone, m.inventory, m.dread, m.checkpoint ?? null]);
         }
         await c.query('COMMIT');
       } catch (e) {

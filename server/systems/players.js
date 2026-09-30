@@ -33,7 +33,7 @@ const methods = {
       dead: m.health <= 0, cause: '', moving: false, warm: false,
       energy: 100, exhausted: false, rest: 0, wantSprint: false, running: false,
       dread: m.dread || 0, fog: 0, knockedUntil: 0, camYaw: null, lastKnockAt: 0, patches, hoodDown: !!saved.hoodDown,
-      lastPosAt: Date.now(), nextActAt: 0,
+      lastPosAt: Date.now(), nextActAt: 0, checkpoint: m.checkpoint ?? null,
     };
     this.players.set(p.id, p);
 
@@ -85,7 +85,7 @@ const methods = {
     return { id: p.id, name: p.name, x: p.x, z: p.z, face: p.face, health: p.health, hunger: p.hunger,
       thirst: p.thirst, ...this.inventoryView(p), energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches, hoodDown: p.hoodDown };
   },
-  publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), under: p.under || 0, face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown, hold: p.hold || null, sit: !!p.sitting }; },
+  publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), under: p.under || 0, sleep: !!p.sleeping, face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown, hold: p.hold || null, sit: !!p.sitting }; },
 
   sendMe(p) {
     this.send(p, { t: 'me', health: r2(p.health), hunger: r2(p.hunger), thirst: r2(p.thirst), ...this.inventoryView(p),
@@ -139,8 +139,9 @@ const methods = {
     const at = this.respawnPoint(p);
     p.under = null;
     Object.assign(p, RULES.START, { x: at.x, z: at.z, face: Math.PI, dead: false, cause: '', lastPosAt: Date.now(),
-      energy: 100, exhausted: false, rest: 0, dread: 10, knockedUntil: 0 });
+      energy: 100, exhausted: false, rest: 0, dread: 10 + (at.dread || 0), knockedUntil: 0 });
     this.send(p, { t: 'respawned', you: this.selfView(p) });
+    if (at.say) this.send(p, { t: 'toast', msg: at.say });   // where you woke, and how (P4)
   },
 
   // Survival and dread for everyone, once per tick.

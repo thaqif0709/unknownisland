@@ -380,7 +380,10 @@ Dark, torches and muffled chat, and `135-caves.js` draws the tunnel, cuts the gr
 mouth and keeps you (and the camera) inside it. Details: CONTRACTS.md section 18.
 The start screen's "What's new" box is `215-whats-new.js` (`NEWS`: lines, each optionally tied
 to a flag, read from `/api/hiddenpages` since it shows before the welcome; a new `id` opens it
-again for everyone). On joining, `island.safeSpot(x, z)` (players.js) puts anyone whose saved
+again for everyone). With the `checkpoints` flag (P4), sitting by a lit clay hearth for 3 s saves it as where you
+wake (`server/systems/checkpoints.js`, `respawnPoint`; browser `145-hearth-checkpoints.js`:
+the sleep pose, the pennant, the map flag). Details: CONTRACTS.md section 11.
+On joining, `island.safeSpot(x, z)` (players.js) puts anyone whose saved
 spot is sea, behind the Veil or a cave mouth back on the beach, so flags can be switched off.
 With the `mouselook` flag (P1), `305-mouse-look.js` locks the pointer on a click on the island
 (desktop mice only, `(any-pointer: fine)`) and turns `yaw`/`pitch` from `movementX/Y` with the

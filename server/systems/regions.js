@@ -2,10 +2,9 @@
 // starts behind the Veil, a wall of fog you can't walk through: step onto a locked region's
 // land and you're turned around. A region is opened (openRegion) when its way is earned
 // (the previous region's boss, C0), and the Veil lifts at the next dawn. Opened stays open.
-// Also where knocked-down frogs wake (P4 makes it the hearth) and the boss placeholder (C0).
+// Also the boss placeholder (C0). Where frogs wake is P4's, in checkpoints.js.
 // See docs/roadmap/CONTRACTS.md sections 6, 10 and 11.
 const WG = require('../shared/world-gen');
-const { SPAWN } = WG;
 
 const VEIL_DREAD = 6;          // dread each time the Veil turns you around
 const VEIL_COOLDOWN = 1500;    // ms between turn-arounds that count
@@ -51,8 +50,6 @@ const methods = {
     this.store.insertEvent(this.id, 'boss_summoned', { region: regionId, day: this.day })
       .catch(e => console.error('[island] boss event not saved', e.message));
   },
-  // Where a frog wakes after being knocked out: the island's start for now (P4 adds hearths).
-  respawnPoint(p) { return { x: SPAWN.x, z: SPAWN.z }; },
 };
 
 // Messages from the client this system answers (msg.t -> handler; `this` is the Island).

@@ -13,6 +13,7 @@
       { flag: 'farview', html: '<b>You can see for kilometres</b>, out to the mountains.' },
       { flag: 'bigworld', html: '<b>The map</b> (M) fills in wherever anyone walks. Drag it and zoom it.' },
       { flag: 'caves', html: '<b>Caves.</b> There’s one somewhere on the Landing, open only at low tide. It’s dark in there: make a <b>torch</b> (wood and seeds).' },
+      { flag: 'checkpoints', html: '<b>Camp out:</b> sit (V) by a lit clay hearth to sleep there. You wake beside it after a knockdown.' },
       { html: '<b>A day is 20 minutes:</b> 15 of daylight and 5 of night.' },
       { html: '<b>Chopping and mining look different:</b> an axe sweeps into trees, a pickaxe comes down on stone.' },
     ],

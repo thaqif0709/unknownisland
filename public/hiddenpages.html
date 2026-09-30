@@ -118,7 +118,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td><kbd>Q</kbd> / <kbd>Shift</kbd>+<kbd>Q</kbd></td><td>Next / previous item slot</td></tr>
         <tr><td><kbd>G</kbd> / <kbd>Shift</kbd>+<kbd>G</kbd></td><td>Drop one / all of the held item</td></tr>
         <tr><td><kbd>F</kbd></td><td>Quick-build a campfire</td></tr>
-        <tr><td><kbd>V</kbd></td><td>Sit down / get up</td></tr>
+        <tr><td><kbd>V</kbd></td><td>Sit down / get up<span data-feature="checkpoints">. By a lit clay hearth: sleep there, and wake there</span></td></tr>
         <tr><td><kbd>T</kbd></td><td>Hood up / down</td></tr>
         <tr><td><kbd>B</kbd></td><td>Recipe book</td></tr>
         <tr><td><kbd>J</kbd></td><td>Journal (and cloak patches)</td></tr>
@@ -237,6 +237,17 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <p>Fires keep you warm at night, keep the fog and the Stilled away, calm your dread, and boil buckets. Feed them wood with <kbd>E</kbd>.</p>
       <table id="firetable"><tr><th>Fire</th><th>Warms within</th><th>Starts with</th><th>Each wood adds</th><th>Holds at most</th></tr></table>
       <p class="muted">Times are real minutes of burning. Rain shrinks the warm circle.</p>
+      <div data-feature="checkpoints">
+      <h3>Sleeping by a hearth</h3>
+      <p>Sit down (<kbd>V</kbd>) beside a lit <b>clay hearth</b>, yours or a friend's, and after a few seconds your frog curls up to sleep with its hood over its face: <i>"The fire will remember you."</i> Sleeping refills your energy twice as fast.</p>
+      <ul>
+        <li>From then on, when you're <b>knocked down</b> or you <b>collapse</b>, you wake beside that hearth instead of on the beach.</li>
+        <li>If it has gone out, you still wake there, but cold and uneasy. Keep it fed.</li>
+        <li>If it's gone altogether (the fog can take a fire), you're back on the beach where you first arrived.</li>
+        <li>Your hearth shows on the map as a flag in your colour; friends' flags are fainter. A small pennant flies on the hearth itself. Friends can all sleep at one hearth and make it a camp.</li>
+        <li>Without a hearth, being knocked down leaves you where you fell, as before.</li>
+      </ul>
+      </div>
     </section>
 
     <section id="items"><h2>Inventory, holding and giving</h2>
@@ -386,7 +397,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="death"><h2>Getting hurt and dying</h2>
       <ul>
         <li>Hunger, thirst, the cold and the Stilled all hurt you. The screen edges glow red below half health.</li>
-        <li>If your health hits zero you collapse. You wake up back on the beach with fresh stats: <b>you keep your tools, but lose everything you were carrying.</b></li>
+        <li>If your health hits zero you collapse. You wake up back on the beach<span data-feature="checkpoints"> (or by the hearth you last slept at)</span> with fresh stats: <b>you keep your tools, but lose everything you were carrying.</b></li>
       </ul>
     </section>
 
@@ -397,6 +408,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="checkpoints"><b>Hearth checkpoints:</b> sleep by a lit clay hearth and you wake there after being knocked down or collapsing.</li>
         <li><b>What's new</b> on the start screen: a short list of what's changed, above "Go to the island". And if the spot you left is somewhere you can't stand any more, you come back on the beach.</li>
         <li data-feature="caves"><b>Caves:</b> a sea cave on the Landing, torches to carry, and the Dark.</li>
         <li data-feature="mouselook"><b>Mouse-look:</b> click the island and the mouse turns the camera, with a crosshair on what you can use. The wheel picks your item; Ctrl + wheel zooms.</li>

@@ -64,6 +64,17 @@ const COMMANDS = {
   },
   // Set the time of day (0-1), e.g. for the tide in a sea cave.
   time(p, { at }) { this.time = at % 1; return { time: this.time }; },
+  // Knock the player down, as the Stilled do.
+  async knock(p) { await this.knock(p); return { until: p.knockedUntil }; },
+  // Change a fire: { fire: id, fuel } sets its fuel; { fire: id, remove: true } takes it away
+  // (as the fog does when it reclaims a clearing).
+  fire(p, { fire, fuel, remove }) {
+    const f = this.fires.find(x => x.id === fire);
+    if (!f) return { error: `no fire ${fire}` };
+    if (remove) { this.fires = this.fires.filter(x => x !== f); this.broadcast({ t: 'unfire', id: f.id }); return { removed: true }; }
+    if (typeof fuel === 'number') f.fuel = fuel;
+    return { fuel: f.fuel };
+  },
   state() {
     return { day: this.day, time: this.time, weather: this.weather, env: this.env, stilled: this.stilled.length };
   },

@@ -239,12 +239,26 @@ says while the boss waits). A region's chain is `requests: ['key1', ...]` in the
 each key is a `sleeper_requests` row, written in `server/content/sleeper.js` with
 `pool: false` so it's never picked at random.
 
-## 11. Checkpoints (P4)
+## 11. Checkpoints (P4, done, flag `checkpoints`)
 
 ```js
-p.checkpoint        // hearth id or null (players.checkpoint column)
-island.respawnPoint(p)   // -> { x, z } used by knockdowns, bosses, caves. Stub (F5): the island's start
+p.checkpoint             // the fire id (a clay hearth) p wakes at, or null. island_members.checkpoint (migration 0007)
+island.respawnPoint(p)   // -> { x, z, say?, dread? }: beside their hearth (each player at their own spot round it);
+                         //    cold (dread) if it's out; the Landing's beach if it's gone (and the checkpoint is cleared)
+                         //    or they have none. Used by dying (onRespawn) and knockdowns; bosses can use it too.
+island.checkpointFire(p) / island.wake(p)   // their hearth or null; stop sleeping
 ```
+
+- `server/systems/checkpoints.js`. The browser (`145-hearth-checkpoints.js`) sends
+  `{ t: 'sleep', on, fire }` once you've sat down (`sit`) within 3 m of a lit hearth; the
+  server checks it and broadcasts `{ t: 'sleep', id, on }`; after 3 s asleep it saves the
+  checkpoint and broadcasts `{ t: 'checkpoint', id, fire }` (fire null when cleared).
+  Standing up, moving or being knocked down wakes you. `welcome.checkpoints` is
+  `{ playerId: fireId }` for everyone on the island, `publicView(p).sleep` whether they're asleep.
+- Knockdowns: when `p.knockedUntil` passes, a player with a checkpoint is moved to
+  `respawnPoint(p)` (a `correct` and a toast). Without one they get up where they fell.
+  Anything that knocks players down just sets `knockedUntil` (as `island.knock(p)` does).
+- Test commands (tests/helpers/test-hooks.js): `knock`, `fire { fire, fuel | remove }`.
 
 ## 12. Climbing surfaces (P9)
 

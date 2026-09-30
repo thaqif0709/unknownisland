@@ -113,6 +113,11 @@ and a river, Hollow (200, -2350) a crater, Teeth (350, -3150) up to about 600 m,
 - Map shows your checkpoint as a flag in your colour (legend entry); friends' flags fainter.
   A small pennant on the hearth in the world.
 - Friends can share one hearth as a group camp.
+- As built (P4): *sit* (`V`, which already sits you down) beside any lit clay hearth, yours or
+  a friend's, rather than holding `V` by your own; after 3 s asleep it saves. Sleeping
+  doubles energy regeneration. With no checkpoint, a knockdown leaves you where you fell (as
+  before) and dying takes you to the Landing's beach. Friends reviving you (P6) comes first
+  when it's built: this is where you go when nobody does.
 
 ## 7. Getting around
 

@@ -223,7 +223,7 @@
   function poseCastaway(av, x, z, face, moving, dead, dt, elapsed) {
     const gh = av.under ? caveFloorAt(av.under, x, z) : groundAt(x, z), y = av.under ? gh : Math.max(gh, -.75);   // in a cave: its floor (W9)
     av.root.position.set(x, y, z);
-    av.root.rotation.y = face;
+    av.root.rotation.y = face; av.root.rotation.z = 0;
     if (dead) { av.root.rotation.x = Math.max(-1.45, av.root.rotation.x - dt * 3); return; }
     av.root.rotation.x = 0;
     if (moving) av.walk += dt * (moving === 2 ? 15 : 10); else av.walk *= .9;
@@ -277,6 +277,16 @@
       if (!(av.swingT > 0)) { av.armL.rotation.x = -1.05 * k; if (!av.held) av.armR.rotation.x = -1.05 * k; }
       av.armL.rotation.z = -.18 + .06 * k; av.armR.rotation.z = .18 - .06 * k;
       av.head.rotation.x = .25 * k;
+    }
+    // asleep by a hearth (P4): curled up on your side, knees tucked, head down
+    av.sleepK = (av.sleepK || 0) + ((av.sleeping && !moving ? 1 : 0) - (av.sleepK || 0)) * Math.min(1, dt * 3);
+    const q = av.sleepK;
+    if (q > .01) {
+      av.root.rotation.z = -1.3 * q;
+      av.root.position.y += .3 * q;
+      av.head.rotation.x = .25 * k + .35 * q;
+      av.armL.rotation.x = -1.3 * q; if (!av.held) av.armR.rotation.x = -1.3 * q;
+      av.body.position.y += Math.sin(elapsed * 1.4) * .01 * q;   // slow breathing
     }
   }
 

@@ -146,6 +146,9 @@ The big world is behind three flags that go together: `FEATURES=streaming,bigwor
 Caves (the Landing's sea cave, torches and the Dark) are their own flag: `caves`. It works
 with or without the big world.
 
+Hearth checkpoints are the `checkpoints` flag: sit by a lit clay hearth to wake there after a
+knockdown or collapsing.
+
 When you switch something on for players, put a few lines about it in `NEWS` at the top of
 `public/js/215-whats-new.js`: they show in a "What's new" box on the start screen (each line
 can name a flag, so it only shows while that's on). Change its `id` and it opens by itself

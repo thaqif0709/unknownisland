@@ -13,6 +13,7 @@
   //   UI.onFrame(dt => ...)              runs every frame, before drawing
   //   UI.panels.register('inventory', { el, onOpen })   Esc, closing and "a panel is open" include it
   // (call panels.register from a file numbered after 240-input.js, or from inside a function)
+  //   UI.mapLayers.push({ draw(g, at, dotScale, full) })   markers on the map (290-map.js); from any part
   const UI = window.UI = {
     net: {
       handlers: new Map(),
@@ -21,5 +22,6 @@
     },
     frameFns: [],
     onFrame(fn) { this.frameFns.push(fn); },
+    mapLayers: [],
   };
 
