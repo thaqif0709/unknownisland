@@ -14,7 +14,11 @@
   }
   function closePanels() {
     waitingBind = null;
-    PANELS.forEach(k => ui[k].classList.add('gone'));
+    PANELS.forEach(k => {
+      if (ui[k].classList.contains('gone')) return;
+      ui[k].classList.add('gone');
+      if (panelHooks[k] && panelHooks[k].onClose) panelHooks[k].onClose();
+    });
     if (chatOpen()) closeChat();
   }
   document.querySelectorAll('.panel').forEach(p => p.addEventListener('click', e => {
@@ -54,6 +58,7 @@
     $('dropKeyLbl').textContent = keyLabel(prefs.binds.drop);
     $('sens').value = prefs.sens;
     $('invertY').checked = prefs.invertY;
+    $('mouseNote').hidden = !mouseLookOn();
     $('quality').value = prefs.quality;
     $('sounds').checked = prefs.sounds !== false;
   }
@@ -82,6 +87,7 @@
   const joy = { id: null, sx: 0, sy: 0, x: 0, y: 0 };
   const orb = { id: null, lx: 0, ly: 0 };
   stage.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && mouseLookOn()) { lockPointer(); return; }   // mouse-look: a click locks the pointer instead of dragging
     if (e.pointerType !== 'mouse' && e.clientX < window.innerWidth * .45 && joy.id === null) {
       joy.id = e.pointerId; joy.sx = e.clientX; joy.sy = e.clientY; joy.x = joy.y = 0;
       joyEl.style.left = e.clientX + 'px'; joyEl.style.top = e.clientY + 'px'; joyEl.style.display = 'block';
@@ -105,5 +111,10 @@
     if (e.pointerId === orb.id) orb.id = null;
   };
   stage.addEventListener('pointerup', endPtr); stage.addEventListener('pointercancel', endPtr);
-  stage.addEventListener('wheel', e => { camDist = clamp(camDist + e.deltaY * .01, 5, 16); }, { passive: true });
+  stage.addEventListener('wheel', e => {
+    if (!mouseLookOn()) { camDist = clamp(camDist + e.deltaY * .01, 5, 16); return; }
+    e.preventDefault();   // no page zoom or scrolling
+    if (e.ctrlKey) camDist = clamp(camDist + e.deltaY * .03, 5, 16);   // Ctrl+wheel, or a trackpad pinch: zoom
+    else wheelSlot(e.deltaY);
+  }, { passive: false });
 
