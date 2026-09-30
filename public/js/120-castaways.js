@@ -62,6 +62,7 @@
     return g;
   }
 
+  const torchFlameM = new THREE.MeshBasicMaterial({ color: 0xFFB347 });
   // The item in your right hand: a small model of whatever is selected.
   function heldModel(key) {
     if (key.startsWith('bucket:')) { const [, mat, water] = key.split(':'), b = bucketModel(mat, water, .8); b.position.y = -.22; const g0 = new THREE.Group(); g0.add(b); return g0; }
@@ -73,6 +74,13 @@
       case 'copper': case 'iron': add(new THREE.DodecahedronGeometry(.1, 0), rockM[1], 0, 0, 0);
         add(new THREE.SphereGeometry(.035, 6, 4), softShared(key === 'copper' ? 0xD9803A : 0xC9D2DA), .06, .04, .05); break;
       case 'seeds': for (const [x, z] of [[-.03, 0], [.03, .02], [0, -.03]]) add(new THREE.SphereGeometry(.03, 6, 4), softShared(0xC8A860), x, 0, z).scale.set(.8, .6, 1.3); break;
+      case 'torch': {   // held out in front, the flame up top (it lights the way underground, W9)
+        const d = new THREE.Vector3(0, .5, .87).normalize(), q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d);
+        add(new THREE.CylinderGeometry(.022, .028, .42, 6), logM, d.x * .12, d.y * .12, d.z * .12).quaternion.copy(q);
+        add(new THREE.SphereGeometry(.055, 8, 6), softShared(0x8A6A52), d.x * .33, d.y * .33, d.z * .33).scale.set(1, 1.3, 1);
+        const fl = add(new THREE.ConeGeometry(.06, .2, 7), torchFlameM, d.x * .33, d.y * .33 + .12, d.z * .33);
+        g.userData.flame = fl;
+        break; }
       case 'oil': add(new THREE.SphereGeometry(.07, 10, 8), softShared(0xE0A33A), 0, 0, 0); add(new THREE.CylinderGeometry(.025, .03, .07, 8), logM, 0, .09, 0); break;
       // Swung tools: a handle hanging from the fist with the head at the tip. The axe
       // blade's edge faces -x, the way the sideways chop sweeps (the right arm sits at +x);
@@ -213,7 +221,7 @@
   }
 
   function poseCastaway(av, x, z, face, moving, dead, dt, elapsed) {
-    const gh = groundAt(x, z), y = Math.max(gh, -.75);
+    const gh = av.under ? caveFloorAt(av.under, x, z) : groundAt(x, z), y = av.under ? gh : Math.max(gh, -.75);   // in a cave: its floor (W9)
     av.root.position.set(x, y, z);
     av.root.rotation.y = face;
     if (dead) { av.root.rotation.x = Math.max(-1.45, av.root.rotation.x - dt * 3); return; }

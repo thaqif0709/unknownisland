@@ -15,6 +15,7 @@ module.exports = {
 
   // Once a tick for all of them: fade the ones whose fog has gone, and spawn new ones.
   tick(island, dt, { lights, players }) {
+    players = players.filter(p => !p.under);   // they don't follow anyone into a cave (W9)
     const S = RULES.STILLED, mobs = island.mobs, st = mobs.stateOf('stilled');
     // fade: gone when their spot clears (dawn, a fire) or nobody is near
     for (const s of mobs.of('stilled')) {
@@ -50,6 +51,7 @@ module.exports = {
   states: {
     // move while unwatched towards the player it has noticed
     stalk(s, island, dt, { lights, players, now }) {
+      players = players.filter(p => !p.under);   // nor reach anyone in one
       const S = RULES.STILLED;
       if (s.lingering || island.watched(s)) return;
       let best = null, bestScore = -1e9;

@@ -1,5 +1,6 @@
   // ================= Actions =================
   function findTarget() {
+    if (myCave) return null;   // in a cave (W9): nothing up on the ground is in reach
     let bestO = null, bd = 1e9;
     const check = o => {
       if (o.state.gone) return;
@@ -13,7 +14,7 @@
     if (bestO) return bestO;
     const sn = WG.nearestSpring(px, pz);
     if (Math.hypot(px - sn.x, pz - sn.z) < RULES.SPRING_REACH) return { type: 'spring' };
-    if (heightAt(px, pz) < .25) return { type: 'sea' };
+    if (!myCave && heightAt(px, pz) < .25) return { type: 'sea' };
     return null;
   }
   function label(o) {
@@ -67,7 +68,7 @@
     fires.forEach(f => { const d = Math.hypot(f.x - px, f.z - pz) - f.r; if (d < RULES.REACH && d < fd) { fd = d; fire = f; } });
     if (b.water === 'clean') return { action: 'drink', label: `Drink clean water (${b.drinks} left)` };   // a full clean bucket: E always drinks
     if (fire && fire.pot) return { fireAct: fire, label: label(fire) };   // take it / feed it
-    if (b.water === 'none' && heightAt(px, pz) < .25) return { action: 'fill', label: `Fill the ${bucketName(b).toLowerCase()} with seawater` };
+    if (b.water === 'none' && !myCave && heightAt(px, pz) < .25) return { action: 'fill', label: `Fill the ${bucketName(b).toLowerCase()} with seawater` };
     if (b.water === 'sea' && fire) return { action: 'place', fire: fire.id, label: `Set the bucket on the fire to boil (${RULES.BUCKET[b.mat].boil} s)` };
     if (b.water === 'clean') return { action: 'drink', label: `Drink clean water (${b.drinks} left)` };
     if (!target) return { hint: b.water === 'sea' ? 'Seawater: take it to a fire and press E to boil it.' : 'Wade into the sea to fill the bucket.' };
@@ -97,6 +98,7 @@
     if (!r) return;
     if (r.kind !== 'fire') { net.send({ t: 'build', recipe: id }); return; }   // made in your hands, not placed
     const fx = px + Math.sin(face) * 1.6, fz = pz + Math.cos(face) * 1.6;
+    if (myCave) { toast('There’s no air to keep a fire going down here.'); return; }
     if (heightAt(fx, fz) < .35) { toast('Too wet here. Build it on dry ground.'); return; }
     net.send({ t: 'build', recipe: id, x: fx, z: fz });
   }

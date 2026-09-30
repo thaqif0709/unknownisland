@@ -45,7 +45,7 @@
       for (let i = 0; i < sp.n * 2 && spots.length < sp.n; i++) {
         const x = cx * CH + r() * CH, z = cz * CH + r() * CH, h = heightAt(x, z);
         const sn = WG.nearestSpring(x, z);
-        if (Math.hypot(x - sn.x, z - sn.z) < 2.9) continue;
+        if (Math.hypot(x - sn.x, z - sn.z) < 2.9 || (caveList.length && Caves.groundCut(caveList, x, z, h))) continue;
         if (sp.biomes.includes(WG.biomeAt(x, z, h))) spots.push([x, groundAt(x, z), z, .75 + r() * .5, r() * 6.28, r()]);
       }
       if (!spots.length) return;

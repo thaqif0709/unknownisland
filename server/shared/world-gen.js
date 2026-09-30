@@ -65,7 +65,9 @@
       FRIENDS: -1.5,     // a friend nearby
       EAT: -6,           // each time you eat
       FRIEND_RADIUS: 12,
+      CAVE_DARK: 2.2,    // the Dark: deep in a cave with no light (yours or a friend's)
     },
+    TORCH: { BURN: 300 },  // seconds a torch burns in your hand underground
     KNOCK: { HEALTH: 20, DREAD: 25, DROP: .5, DOWN_MS: 3000 },
     // Old stone lanterns. Oil keeps them lit; lit, they clear the fog around them.
     LANTERN: {
@@ -103,6 +105,7 @@
       streaming: false,  // W2: send and run only the chunks of new land near players
       bigworld: false,   // W4: the 5 km world around the Landing (needs streaming on too)
       farview: false,    // W3: see out to about 2 km (1 km on phones)
+      caves: false,      // W9: caves you walk into (the Landing's sea cave), torches and the Dark
       mouselook: false,  // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
     },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
@@ -120,7 +123,7 @@
   };
 
   // Things you can carry (inventory keys and their names).
-  const ITEMS = { wood: 'Wood', stone: 'Stone', clay: 'Clay', copper: 'Copper ore', iron: 'Iron ore', seeds: 'Seeds', oil: 'Lamp oil' };
+  const ITEMS = { wood: 'Wood', stone: 'Stone', clay: 'Clay', copper: 'Copper ore', iron: 'Iron ore', seeds: 'Seeds', oil: 'Lamp oil', torch: 'Torch' };
 
   // Things you can build. Add new entries here; the recipe book lists them all.
   // kind 'fire' places a fire of that type in front of you; kind 'tool' is kept forever.
@@ -143,6 +146,8 @@
       desc: 'Like the wooden one, but lasts 20 boils and heats faster (about 45 seconds).' },
     { id: 'oil', kind: 'item', name: 'Lamp oil', cost: { seeds: 3 }, gives: { oil: 1 },
       desc: 'Pressed from seeds. An offering for the old stone lanterns: one lights a lantern for about two days.' },
+    { id: 'torch', kind: 'item', name: 'Torch', cost: { wood: 2, seeds: 1 }, gives: { torch: 1 }, flag: 'caves',
+      desc: 'A stick wrapped in seed-oil rags. Hold it for light underground, where it burns for about five minutes.' },
   ];
 
   // Cloak patches: stitched from things you have found. Each helps, and costs.

@@ -132,6 +132,11 @@ round 1. Confirm.
   without light or friends) instead of fog, ropes for shafts (stay for everyone), caves that
   change overnight when the Sleeper stirs, echoes (chat from underground is muffled outside).
 - Sea caves only open at low tide and flood as it rises.
+- As built (W9): the Landing's sea cave is under the low hill on the east shore. It dips below
+  the sea on the way in, so it's shut at high tide and opens for a few minutes around each of
+  the two low tides a day; the rising water pushes you back out onto the sand. Torches (wood
+  and seeds) are the light you carry; they burn about five minutes underground. No fires
+  underground. The Stilled don't follow you down; the Crawler (C2) will.
 - **The Crawler** (cave creature): like the Stilled but 3× the size, long arms and legs,
   crawls on floors, walls and ceilings. Its scream bursts dread for everyone who hears it,
   shakes the screen and gives away where it is. Hunts by sound (running, chat, fighting).

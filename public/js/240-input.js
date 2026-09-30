@@ -162,6 +162,10 @@
       case 'oil':   // a little stoppered flask
         fill('#E0A33A', () => { g.moveTo(24, 22); g.lineTo(40, 22); g.lineTo(40, 28); g.quadraticCurveTo(52, 34, 50, 46); g.quadraticCurveTo(48, 56, 32, 56); g.quadraticCurveTo(16, 56, 14, 46); g.quadraticCurveTo(12, 34, 24, 28); g.closePath(); });
         fill('#8A6A52', () => g.rect(26, 12, 12, 10)); g.fillStyle = 'rgba(255,245,210,.6)'; g.beginPath(); g.ellipse(24, 42, 3, 6, .3, 0, 7); g.fill(); break;
+      case 'torch':   // a stick with a rag head and a flame
+        g.lineWidth = 6; g.beginPath(); g.moveTo(20, 56); g.lineTo(38, 24); g.stroke(); g.lineWidth = 3.5; g.strokeStyle = '#A57A55'; g.beginPath(); g.moveTo(20, 56); g.lineTo(38, 24); g.stroke(); g.strokeStyle = INK; g.lineWidth = 3;
+        fill('#8A6A52', () => g.ellipse(39, 22, 7, 5, -1, 0, 7));
+        fill('#F2A541', () => { g.moveTo(34, 18); g.quadraticCurveTo(34, 6, 44, 2); g.quadraticCurveTo(42, 10, 48, 14); g.quadraticCurveTo(48, 22, 40, 22); g.closePath(); }); break;
       default:
         if (key.startsWith('bucket:')) {
           const [, mat, water] = key.split(':'), body = mat === 'iron' ? '#8E96A0' : '#A57A55';
@@ -207,7 +211,7 @@
     $('toolList').innerHTML = stats.tools.length ? '<span class="toolsLabel">Tools</span>' + stats.tools.map(t =>
       `<div class="slot tool" title="${esc(WG.recipeById(t).name)}"><img src="${itemIcon(t)}" alt="${esc(WG.recipeById(t).name)}"></div>`).join('') : '';
     document.documentElement.style.setProperty('--invH', ui.inv.offsetHeight + 'px');
-    const ready = WG.RECIPES.filter(r => canAfford(r) && !(r.kind === 'tool' && has(r.id)) && !(r.needs && !has(r.needs))).length;
+    const ready = WG.RECIPES.filter(r => !(r.flag && !WG.feature(r.flag)) && canAfford(r) && !(r.kind === 'tool' && has(r.id)) && !(r.needs && !has(r.needs))).length;
     $('craftHint').textContent = ready
       ? `You can make ${ready} thing${ready > 1 ? 's' : ''}. Press ${keyLabel(prefs.binds.book)} for recipes.`
       : `Press ${keyLabel(prefs.binds.book)} for the recipe book.`;

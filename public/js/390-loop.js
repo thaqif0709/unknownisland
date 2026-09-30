@@ -148,13 +148,17 @@
         const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
         const dx = rx * ix + fx * iz, dz = rz * ix + fz * iz;
         // a bit slower through the air, so you can land on the rock you jumped at instead of sailing past it
-        const spd = (heightAt(px, pz) < .1 ? RULES.WADE_SPEED : RULES.WALK_SPEED) * WG.speedMult(running, nrg.exhausted) * Math.min(1, l) * (hop.air ? .6 : 1);
+        const spd = ((myCave ? caveDepth() > CAVE.WADE : heightAt(px, pz) < .1) ? RULES.WADE_SPEED : RULES.WALK_SPEED) * WG.speedMult(running, nrg.exhausted) * Math.min(1, l) * (hop.air ? .6 : 1);
         let nx = px + dx * spd * dt, nz = pz + dz * spd * dt;
         if (leaping) { nx += hop.fx * hop.fwd * dt; nz += hop.fz * hop.fwd * dt; }   // a charged jump carries you forward
+        // caves (W9): their walls, and the way in and out at the mouth; slide along walls
+        let cs = caveStep(nx, nz);
+        if (cs.k === 'block') { if (caveStep(nx, pz).k !== 'block') nz = pz; else if (caveStep(px, nz).k !== 'block') nx = px; cs = caveStep(nx, nz); }
         // the Veil: you can't walk into land that isn't open yet; it turns you around
-        const veiled = veilBlocks(nx, nz) && !veilBlocks(px, pz);
+        const veiled = cs.k === 'surface' && veilBlocks(nx, nz) && !veilBlocks(px, pz);
         if (veiled) veilTurn();
-        if (heightAt(nx, nz) > -1 && !veiled) {
+        if (cs.k !== 'block' && (cs.k === 'in' || heightAt(nx, nz) > -1) && !veiled) {
+          const under = cs.k === 'in';   // in a cave, the things up on the ground aren't in your way
           const push = o => {
             if (o.state.gone || o.type === 'dig') return;
             if (hop.y > 0 && hop.y >= topOf(o) - .05) return;   // high enough (or standing on top): pass over it
@@ -168,14 +172,15 @@
             const ox = nx - o.x, oz = nz - o.z, d = Math.hypot(ox, oz), min = radius(o) + .3;
             if (d < min && d > 0) { nx = o.x + ox / d * min; nz = o.z + oz / d * min; }
           };
-          nearbyObjects(nx, nz, push); fires.forEach(push); lanterns.forEach(push); carvings.forEach(push); if (board) push(board);
+          if (!under) { nearbyObjects(nx, nz, push); fires.forEach(push); lanterns.forEach(push); carvings.forEach(push); if (board) push(board); }
           // other frogs are solid too (unless you jump clean over one)
           if (hop.y < 1.5) remotes.forEach(r => {
-            if (r.dead) return;
+            if (r.dead || (r.av.under || 0) !== (under ? cs.cave.id : 0)) return;
             const q = r.remote.sample(), ox = nx - q.x, oz = nz - q.z, d = Math.hypot(ox, oz), min = .7;
             if (d < min && d > 0) { nx = q.x + ox / d * min; nz = q.z + oz / d * min; }
           });
           px = nx; pz = nz;
+          caveCommit(cs);
         }
         if (l > .08) {
           const tf = Math.atan2(dx, dz);
@@ -190,7 +195,7 @@
       const changed = Math.abs(px - lastSent.x) > .01 || Math.abs(pz - lastSent.z) > .01 || Math.abs(face - lastSent.face) > .02
         || moving !== lastSent.moving || wantSprint !== lastSent.sprint || Math.abs(cam - lastSent.cam) > .04 || Math.abs((hop.floor || 0) - (lastSent.stand || 0)) > .05;
       if (net && net.open && !(window.__dbg && __dbg.noSend) && ((changed && now - lastSent.at > 66) || now - lastSent.at > 1000)) {
-        net.send({ t: 'pos', x: px, z: pz, face, moving, sprint: wantSprint, cam, stand: +(hop.floor || 0).toFixed(2) });
+        net.send({ t: 'pos', x: px, z: pz, face, moving, sprint: wantSprint, cam, stand: +(hop.floor || 0).toFixed(2), under: myCave ? myCave.id : undefined });
         lastSent = { at: now, x: px, z: pz, face, moving, sprint: wantSprint, cam, stand: hop.floor || 0 };
       }
     }
@@ -214,7 +219,7 @@
       r.av.root.position.y += r.standS;
       if (r.chargeAt && !r.hop) applyHop(r.av, 0, false, 0, Math.min(1, (performance.now() - r.chargeAt) / 1000 / CHARGE_FULL));   // crouching to jump
       if (r.hop) { r.chargeAt = 0; const A = airTime(r.hop.mul); r.hop.t += dt; const air = r.hop.t < A; applyHop(r.av, air ? hopHeight(r.hop.t, r.hop.mul) : 0, air, air ? 0 : .18 - (r.hop.t - A)); if (r.hop.t > A + .18) r.hop = null; }
-      tagV.set(s.x, Math.max(groundAt(s.x, s.z), -.75) + 2.05, s.z).project(camera);
+      tagV.set(s.x, r.av.root.position.y - r.standS + 2.05, s.z).project(camera);
       const dist = Math.hypot(s.x - camera.position.x, s.z - camera.position.z);
       if (tagV.z > 1 || dist > 45) r.tag.style.display = 'none';
       else {
@@ -278,7 +283,7 @@
       // Past the lowest orbit angle the camera stops sinking, comes in closer
       // behind the frog and tilts up, so you can look at the sky and treetops.
       camLift += ((hop.floor || 0) - camLift) * Math.min(1, dt * 6);   // follow you up onto a rock, smoothly
-      const py = Math.max(heightAt(px, pz), -.75) + camLift, LOW = .18;
+      const py = (myCave ? myFloor() : Math.max(heightAt(px, pz), -.75)) + camLift, LOW = .18;   // in a cave: its floor (W9)
       const up = Math.max(0, LOW - pitch), orbit = Math.max(pitch, LOW - up * .12);
       const dist = camDist * (1 - Math.min(up, 1) * .45);
       const cx = px + Math.sin(yaw) * Math.cos(orbit) * dist;

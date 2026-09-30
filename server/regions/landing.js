@@ -12,5 +12,15 @@ module.exports = {
   requests: ['landing_watch', 'landing_weight', 'landing_together', 'landing_east', 'landing_call'],
   // While the boss is waiting to be met, this stone says when and where.
   bossHint: { stone: 'shore', text: 'At the lowest tide. The east sand.' },
-  cave: null,      // its cave (W9)
+  // Its cave (W9): the sea cave under the low hill on the east shore. It dips below the sea
+  // on the way in, so it floods at high tide and only opens at low tide. The shape is
+  // described here and built by Caves.generateCave (server/shared/caves.js, CONTRACTS.md
+  // section 18); s is metres in from the mouth.
+  cave: {
+    id: 'seacave', sea: true, x: 114.94, z: 24.4, dir: -1.762, length: 40, wander: 1.5,
+    floor: [[0, .52], [3, .02], [11, -3], [17, -3], [25, -2], [40, -1.8]],   // down under the sea, then up a little into the chamber
+    width: [[0, 1.7], [18, 1.4], [24, 2.6], [30, 5], [37, 4.5], [40, 2.2]],   // half-widths: a narrow way in, a wide chamber
+    height: [[0, 2.6], [16, 2.3], [24, 3.2], [31, 4.3], [40, 3]],
+    branch: { at: 31, dir: 1, length: 11, floor: [[0, -1.9], [11, -1.2]], width: [[0, 1.5], [9, 1.3], [11, 1.8]], height: [[0, 2.4], [11, 2.2]], wander: .8 },
+  },
 };

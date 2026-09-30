@@ -82,6 +82,8 @@ const COMMANDS = {
     return { dmg, hp: m.hp, gone: !!m.gone };
   },
   mobs() { return { mobs: this.mobs.list.map(m => ({ id: m.id, kind: m.kind, x: m.x, z: m.z, state: m.state, hp: m.hp })) }; },
+  // Set the time of day (0-1), e.g. for the tide in a sea cave.
+  time(p, { at }) { this.time = at % 1; return { time: this.time }; },
   state() {
     return { day: this.day, time: this.time, weather: this.weather, env: this.env, stilled: this.mobs.of('stilled').length };
   },

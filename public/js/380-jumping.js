@@ -49,7 +49,7 @@
   const CHARGE_FULL = .55, LEAP_SPEED = 4.2;   // forward speed of a full-charge leap (walking is 4.6)
   let jumpBtnHeld = false; let camLift = 0;
   const hop = { y: 0, v: 0, air: false, land: 0, charge: -1 };
-  const canJump = () => !(state !== 'play' || hop.air || knockT > 0 || stats.down || nrg.exhausted || panelOpen() || heightAt(px, pz) < .1);   // not while wading
+  const canJump = () => !(state !== 'play' || hop.air || knockT > 0 || stats.down || nrg.exhausted || panelOpen() || (myCave ? caveDepth() > CAVE.WADE : heightAt(px, pz) < .1));   // not while wading
   function startCharge() { if (canJump() && hop.charge < 0) { if (sitting) setSitting(false); hop.charge = 0; } }
   // Sitting (V): moving, jumping or getting knocked down stands you up again.
   let sitting = false, sentCharge = false;

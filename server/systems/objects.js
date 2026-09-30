@@ -77,7 +77,8 @@ const methods = {
     if (this.chunks.has(key)) return this.chunks.get(key);
     if (this.chunkLoads.has(key)) return this.chunkLoads.get(key);   // already on its way
     const load = (async () => {
-      const objects = WG.generateChunk(this.seed, cx, cz, SPAWN_TABLES).map(o => ({ ...o, state: WG.defaultState(o.type) }));
+      const objects = WG.generateChunk(this.seed, cx, cz, SPAWN_TABLES).filter(o => !this.caveCut(o.x, o.z))   // not where a cave mouth cuts the ground (W9)
+        .map(o => ({ ...o, state: WG.defaultState(o.type) }));
       const byId = new Map(objects.map(o => [o.id, o]));
       for (const saved of await this.store.loadChunkStates(this.id, key)) {
         const o = byId.get(saved.id);

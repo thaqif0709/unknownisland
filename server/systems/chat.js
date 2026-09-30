@@ -52,7 +52,10 @@ const methods = {
     }
     const msg = { t: 'chat', kind: 'all', from: p.name, id: p.id, text: clean, at: now };
     this.chatLog = [...(this.chatLog || []), msg].slice(-30);
-    this.broadcast(msg);
+    if (!p.under) return this.broadcast(msg);
+    // from underground (W9): clear to whoever is in the same cave, muffled to everyone else
+    const muffled = JSON.stringify({ ...msg, text: this.muffle(clean), muffled: true }), clear = JSON.stringify(msg);
+    for (const q of this.players.values()) this.sendRaw(q, q.under === p.under ? clear : muffled);
   },
   // A name (any case) or a number (with or without #).
   findPlayer(who) {
