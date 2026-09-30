@@ -311,6 +311,27 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
 /* minigames (P8): a sheet sitting just above the hotbar, big tap targets */
 .mg{place-items:end center;padding-bottom:calc(var(--invH,80px) + 24px);background:rgba(43,33,31,.18)}
 .mg .sheet{width:min(560px,100%);max-height:calc(100vh - var(--invH,80px) - 48px)}
+/* the bag (P2, flag slots) */
+.bag .sheet{width:min(560px,100%)}
+.bagGrid{display:grid;grid-template-columns:repeat(10,var(--bs));gap:6px;--bs:44px;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none}
+.bagGrid.hot{grid-template-columns:repeat(8,var(--bs))}
+.bagGrid .slot{--slot:var(--bs)}
+.bagGrid .slot.sel{transform:none}
+.bagGrid .slot.picked{border-color:var(--ochre);box-shadow:0 0 0 3px var(--ochre)}
+.bagLabel{margin:14px 0 6px;font-size:15px}
+.bagLabel span{font-weight:400;font-size:13px;color:var(--soft)}
+.bagActs{display:none;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:14px}
+.bagActs.on{display:flex}
+.bagActs button{font-family:var(--hand);font-weight:600;font-size:14px;border:2px solid var(--ink);color:var(--ink);background:#F5ECD7;border-radius:12px;padding:4px 12px;cursor:pointer;min-height:34px}
+.bagActs button:hover{background:#EBDDBE}
+.bagActs button[hidden]{display:none}
+.bagHint{margin-top:10px}
+.bagGhost{position:fixed;z-index:30;pointer-events:none;--slot:44px;transform:translate(-50%,-50%) rotate(-4deg);opacity:.9}
+.eatring{position:fixed;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;pointer-events:none;z-index:4}
+.eatring.hidden{display:none}
+.eatring circle{fill:none;stroke:rgba(43,33,31,.25);stroke-width:5}
+.eatring circle.fg{stroke:var(--ochre);stroke-linecap:round;stroke-dasharray:0 100;transform:rotate(-90deg);transform-origin:center}
+@media (max-width:600px){ .bagGrid{grid-template-columns:repeat(6,var(--bs));--bs:40px} .bagGrid.hot{grid-template-columns:repeat(4,var(--bs))} }
 .mgtime{height:8px;border:2px solid var(--ink);border-radius:6px;background:var(--field);margin:8px 0 10px;overflow:hidden}
 .mgtime i{display:block;height:100%;background:var(--leaf);transform-origin:left}
 .mgtime i.low{background:var(--rose)}

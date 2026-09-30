@@ -64,8 +64,10 @@ const COMMANDS = {
     for (const f of this.fires) if (f.pot) f.pot.left = 0;
     return { pots: this.fires.filter(f => f.pot).map(f => f.id) };
   },
-  // Set the clock (0 = midnight, .5 = noon; night is before .22 and from .8) and/or the weather.
-  set(p, { time, weather }) {
+  // Set the clock (0 = midnight, .5 = noon; night is before .22 and from .8), the weather,
+  // and/or the player's hunger.
+  set(p, { time, weather, hunger }) {
+    if (typeof hunger === 'number') { p.hunger = hunger; this.sendMe(p); }
     if (typeof time === 'number') this.time = time;
     if (weather) this.weather = weather;
     this.updateEnv();

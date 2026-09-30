@@ -54,15 +54,16 @@ test('ore needs a pickaxe', async () => {
 
 test('berries and coconuts feed you and give seeds', async () => {
   const bush = await besideA('bush', x => x.state.berries);
-  const before = bush.c.me.hunger;
+  const before = bush.c.me.hunger, bag = !!bush.c.welcome.features.slots;   // with the slot inventory (P2) they go in the bag
   assert.match((await bush.c.act('o' + bush.o.id)).msg, /berries/i);
-  assert.ok(bush.c.me.hunger > before);
+  if (bag) assert.equal(bush.c.me.inv.berries, 1); else assert.ok(bush.c.me.hunger > before);
   assert.equal(bush.c.me.inv.seeds, 1);
   assert.match((await bush.c.act('o' + bush.o.id)).msg, /Nothing left/);
 
   const palm = await besideA('palm', x => x.state.coconuts > 0);
   assert.match((await palm.c.act('o' + palm.o.id)).msg, /coconut/i);
   assert.equal(palm.c.me.inv.seeds, 1);
+  if (bag) assert.equal(palm.c.me.inv.coconut, 1);
 });
 
 test('the spring quenches thirst, the sea makes it worse', async () => {

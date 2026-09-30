@@ -116,6 +116,33 @@ ITEMS.trout = { name: 'Mountain trout', kind: 'food', stack: 10, food: 22, cook:
 
 Stub (F5): same functions over today's `p.inv` counts, so W and C lanes can use them now.
 
+As built (P2, flag `slots`):
+
+- `p.slots` is 38 entries: 0-7 the hotbar, 8-37 the bag. Each is `null`, `{ k, n }` (n of item k,
+  1 to its stack size) or `{ b: id }` (one of `p.buckets`). `p.sel` is the hotbar slot in hand
+  (-1 for none). `p.inv` is still there, as the totals (recounted after every change), so
+  `count` and anything reading `stats.inv` in the browser keep working. Without the flag
+  `p.slots` is undefined and everything works on the counts, as before.
+- Buckets stay in `p.buckets` (buckets.js, crafting.js and drops.js change that list);
+  `inventoryView` gives any new bucket a slot and clears the slots of ones that are gone.
+- `give(p, key, n, { sack })` fills stacks of that item first, then empty bag slots, then the
+  hotbar (items with `hand: true`, like torches, the other way round). What doesn't fit goes in
+  a sack at the player's feet with a toast, unless `sack: false` (then the caller keeps it, as
+  picking up a sack does). It returns how many went into the slots.
+- `take` empties the bag's last slots first and the one in hand last.
+- `held(p)` is `{ key }` or `{ key: 'bucket', bucket: id }` from `p.slots[p.sel]`.
+- New: `roomFor(p, key)`, `takeFromSlot(p, i, n)`, `moveSlots(p, from, to, count)`.
+- Item details are `WG.ITEM_INFO` (with `WG.itemInfo(key)` filling in the stack size), not
+  fields on `ITEMS`, whose values stay plain names: `{ kind: 'food', food, water, stack, hand }`.
+  Stacks default to `RULES.SLOTS.STACK` (50), food to `RULES.SLOTS.FOOD_STACK` (10).
+- Messages: `move { from, to, count }` (to -1: across, bag <-> hotbar; always answered with
+  `me`), `select { slot }`, `eat { slot }` (food only, at most every `RULES.SLOTS.EAT_GAP` s),
+  and `dropitem { slot, count }` alongside the old `{ key, count }` / `{ bucket }`.
+- `me` and `welcome.you` carry `slots` and `sel`. The saved inventory JSON gains `slots`.
+  Loading lays the counts out again over the saved arrangement (so the counts always win, and
+  switching the flag off and on loses nothing); anything that no longer fits goes in a sack at
+  the player's feet when they join.
+
 ## 5. Things you use with E (F5 done)
 
 What E does to each kind of world object is registered by the system that owns it,

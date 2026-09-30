@@ -12,12 +12,21 @@ const methods = {
 
   // Drop some of what you carry at your feet, in a sack anyone can pick up
   // (that's how you give things to a friend). Drops next to a sack go into it.
-  async onDropItem(p, { key, count, bucket }) {
+  async onDropItem(p, { key, count, bucket, slot }) {
     const now = Date.now();
     if (p.dead || p.knockedUntil > now) return;
     if (now - (p.lastDropAt || 0) < 150) return;
     let items, n = 0;
-    if (bucket != null) {   // a whole bucket, water and all
+    if (slot != null && p.slots) {   // from one slot (the slot inventory, P2)
+      const got = this.takeFromSlot(p, slot, count);
+      if (!got) return;
+      if (got.bucket != null) {
+        const b = (p.buckets || []).find(b => b.id === got.bucket);
+        if (!b) return;
+        p.buckets = p.buckets.filter(x => x !== b);
+        items = { buckets: [b] };
+      } else { key = got.key; n = got.n; items = { [key]: n }; }
+    } else if (bucket != null) {   // a whole bucket, water and all
       const b = (p.buckets || []).find(b => b.id === bucket);
       if (!b) return;
       p.buckets = p.buckets.filter(x => x !== b);
@@ -54,14 +63,27 @@ const methods = {
   async pickUp(p, id) {
     const d = this.drops.find(d => d.id === id);
     if (!d || Math.hypot(d.x - p.x, d.z - p.z) > RULES.REACH + 1 + REACH_SLACK) return;
-    this.drops = this.drops.filter(x => x !== d);
-    const got = [];
-    for (const [k, n] of Object.entries(d.items)) if (n > 0 && this.give(p, k, n) > 0) { got.push(`${n} ${ITEMS[k].toLowerCase()}`); }
+    const got = [], rest = {};
+    // with the slot inventory, only what fits: the rest stays in the sack
+    for (const [k, n] of Object.entries(d.items)) {
+      if (k === 'buckets' || !(n > 0)) continue;
+      const g = this.give(p, k, n, { sack: false });
+      if (g > 0) got.push(`${g} ${ITEMS[k].toLowerCase()}`);
+      if (g < n && k in ITEMS) rest[k] = n - g;
+    }
     const bs = cleanBuckets(d.items.buckets);
     if (bs.length) { p.buckets.push(...bs); got.push(bs.length > 1 ? `${bs.length} buckets` : 'a bucket'); }
+    this.sendMe(p);
+    if (Object.keys(rest).length) {
+      d.items = rest;
+      this.broadcast({ t: 'dropitems', id: d.id, items: d.items });
+      this.send(p, { t: 'toast', msg: got.length ? `You take what fits in your bag: ${got.join(', ')}. The rest stays in the sack.` : 'Your bag is full.' });
+      this.store.updateDrop(d.id, d.items).catch(e => console.error('[island] could not update drop', e.message));
+      return;
+    }
+    this.drops = this.drops.filter(x => x !== d);
     this.broadcast({ t: 'undrop', id });
     this.send(p, { t: 'toast', msg: got.length ? `You pick up the sack: ${got.join(', ')}.` : 'An empty sack.' });
-    this.sendMe(p);
     try { await this.store.deleteDrop(id); } catch (e) { console.error('[island] could not delete drop', e.message); }
   },
 };

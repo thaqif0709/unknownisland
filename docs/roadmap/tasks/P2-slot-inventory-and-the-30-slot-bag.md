@@ -3,7 +3,7 @@ id: P2
 title: Slot inventory and the 30-slot bag
 lane: player
 owner: edvin
-status: todo
+status: review
 depends: [F2, F3, F5]
 flag: slots
 size: 2 sessions
@@ -29,12 +29,13 @@ Contract §4 real
 
 ## Done when
 
-- [ ] No item can be copied by sending odd `move` messages (tests).
-- [ ] Existing players keep everything.
-- [ ] Hidden Pages: inventory and controls updated.
-- [ ] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
+- [x] No item can be copied by sending odd `move` messages (tests).
+- [x] Existing players keep everything.
+- [x] Hidden Pages: inventory and controls updated.
+- [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
 - [ ] This file's `status` set to `done` in the PR that finishes it.
 
 ## Log
 
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->
+2026-09-30 edvin: built behind `slots` (server slots and moves, the bag panel, gathering into the bag, hold E to eat, tests). No SQL migration was needed: the slots are saved in the inventory JSON and rebuilt from the counts on every join. Waiting on a try by hand (phones especially) before the flag goes on.
