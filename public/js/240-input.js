@@ -120,24 +120,19 @@
   }
   function selectSlot(i) {
     if (state !== 'play') return;
-    syncSlots();
-    selSlot = selSlot === i || !slotKeys[i] ? -1 : i;   // same number again, or an empty slot: empty hands
+    selSlot = selSlot === i ? -1 : i;   // same number again: put it away (an empty slot: empty hands)
     if (slotsOn() && net) net.send({ t: 'select', slot: selSlot });
     lastInv = ''; renderInventory();
     const k = heldKey(), hb = heldBucket();
-    if (hb) toast(`${bucketName(hb)} in hand. ${hb.water === 'none' ? 'Wade into the sea and press E to fill it.' : hb.water === 'sea' ? 'Seawater: press E at a fire to boil it.' : 'Clean water: press E to drink.'}`);
+    if (hb) toast(`${bucketName(hb)} in hand. ${hb.water === 'none' ? 'Wade into the sea and press E to fill it.' : hb.water === 'sea' ? 'Seawater: press E at a fire to boil it.' : `Clean water: hold ${keyLabel(prefs.binds.act)} to drink.`}`);
     else if (k && slotsOn() && WG.itemInfo(k).kind === 'food') toast(`${WG.ITEMS[k]} in hand. Hold ${keyLabel(prefs.binds.act)} to eat.`);
     else if (k) toast(`${WG.ITEMS[k]} in hand. ${keyLabel(prefs.binds.drop)} drops one, Shift+${keyLabel(prefs.binds.drop)} drops them all.`);
   }
-  // Q: the next slot that has something in it (wrapping round); Shift+Q goes back.
+  // Q (and the wheel): the next slot, empty ones too (wrapping round); Shift+Q goes back.
   function cycleSlot(dir) {
     if (state !== 'play') return;
-    syncSlots();
-    for (let step = 1; step <= 8; step++) {
-      const i = (((selSlot < 0 ? (dir > 0 ? -1 : 8) : selSlot) + dir * step) % 8 + 8) % 8;
-      if (slotKeys[i]) { selSlot = -1; selectSlot(i); return; }
-    }
-    toast('Nothing to hold yet.');
+    const i = (((selSlot < 0 ? (dir > 0 ? -1 : 8) : selSlot) + dir) % 8 + 8) % 8;
+    selSlot = -1; selectSlot(i);
   }
   function dropHeld(all) {
     const k = heldKey();
@@ -213,8 +208,6 @@
   }
   function renderInventory() {
     syncSlots();
-    // the thing in your hand ran out (eaten, dropped, used): your hands are empty again
-    if (selSlot >= 0 && !slotKeys[selSlot]) { selSlot = -1; if (slotsOn() && net) net.send({ t: 'select', slot: -1 }); }
     const key = JSON.stringify([stats.inv, stats.tools, stats.buckets, stats.slots, prefs.binds.book, slotKeys, selSlot]);
     if (key === lastInv) return;
     lastInv = key;

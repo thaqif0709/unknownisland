@@ -90,7 +90,7 @@ const methods = {
   sendMe(p) {
     this.send(p, { t: 'me', health: r2(p.health), hunger: r2(p.hunger), thirst: r2(p.thirst), ...this.inventoryView(p),
       energy: r2(p.energy), exhausted: p.exhausted, warm: p.warm, dead: p.dead, dread: r2(p.dread), fog: r2(p.fog),
-      down: p.knockedUntil > Date.now() });
+      down: p.knockedUntil > Date.now(), bites: p.bites || 0 });
   },
 
   onPos(p, { x, z, face, moving, sprint, cam, stand, under, pose }) {

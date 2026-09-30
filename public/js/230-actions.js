@@ -66,11 +66,10 @@
     // with a bucket in hand, a fire in reach (and the sea you're standing in) win over trees and rocks
     let fire = null, fd = 1e9;
     fires.forEach(f => { const d = Math.hypot(f.x - px, f.z - pz) - f.r; if (d < RULES.REACH && d < fd) { fd = d; fire = f; } });
-    if (b.water === 'clean') return { action: 'drink', label: `Drink clean water (${b.drinks} left)` };   // a full clean bucket: E always drinks
+    if (b.water === 'clean') return { action: 'drink', label: `Hold to drink clean water (${b.drinks} left)` };   // a full clean bucket: holding E drinks (255-inventory.js)
     if (fire && fire.pot) return { fireAct: fire, label: label(fire) };   // take it / feed it
     if (b.water === 'none' && !myCave && heightAt(px, pz) < .25) return { action: 'fill', label: `Fill the ${bucketName(b).toLowerCase()} with seawater` };
     if (b.water === 'sea' && fire) return { action: 'place', fire: fire.id, label: `Set the bucket on the fire to boil (${RULES.BUCKET[b.mat].boil} s)` };
-    if (b.water === 'clean') return { action: 'drink', label: `Drink clean water (${b.drinks} left)` };
     if (!target) return { hint: b.water === 'sea' ? 'Seawater: take it to a fire and press E to boil it.' : 'Wade into the sea to fill the bucket.' };
     return null;
   }
@@ -79,6 +78,7 @@
     if (ba) {
       cooldown = .45;
       if (ba.hint) { toast(ba.hint); return; }
+      if (ba.action === 'drink') return;   // drinking is a hold, like eating (255-inventory.js)
       startSwing(hero);
       if (ba.fireAct) { net.send({ t: 'act', target: 'f' + ba.fireAct.id }); return; }
       net.send({ t: 'bucket', id: heldBucket().id, action: ba.action, fire: ba.fire });

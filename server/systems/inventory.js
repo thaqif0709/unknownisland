@@ -246,14 +246,17 @@ const messages = {
     if (!p.slots) return;
     p.sel = Number.isInteger(msg.slot) && msg.slot >= 0 && msg.slot < S().HOTBAR ? msg.slot : -1;
   },
-  // eat one of the food in a slot (the client waits RULES.SLOTS.EAT_TIME holding E first)
+  // eat one of the food in a slot (the client waits RULES.SLOTS.EAT_TIME holding E first, and
+  // shows the bite straight away; a refusal sends the real state back so it's put right)
   eat(p, msg) {
     const now = Date.now();
-    if (!p.slots || p.dead || p.knockedUntil > now || now - (p.lastEatAt || 0) < S().EAT_GAP * 1000) return;
+    if (!p.slots) return;
+    p.bites = (p.bites || 0) + 1;   // every bite or sip asked for, done or not (sendMe tells the browser)
+    if (p.dead || p.knockedUntil > now || now - (p.lastEatAt || 0) < S().EAT_GAP * 1000) return this.sendMe(p);
     const s = Number.isInteger(msg.slot) ? p.slots[msg.slot] : null;
     const info = s && !isBucket(s) ? WG.itemInfo(s.k) : null;
-    if (!info || info.kind !== 'food') return;
-    if (p.hunger >= 99.5 && (!info.water || p.thirst >= 99.5)) return this.send(p, { t: 'toast', msg: 'You’re full.' });
+    if (!info || info.kind !== 'food') return this.sendMe(p);
+    if (p.hunger >= 99.5 && (!info.water || p.thirst >= 99.5)) { this.send(p, { t: 'toast', msg: 'You’re full.' }); return this.sendMe(p); }
     p.lastEatAt = now;
     this.takeFromSlot(p, msg.slot, 1);
     p.hunger = Math.min(100, p.hunger + (info.food || 0));

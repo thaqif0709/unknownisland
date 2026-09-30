@@ -36,6 +36,11 @@ after(async () => {
 });
 
 const slotOf = key => page.evaluate(k => window.__dbg.stats.slots.findIndex(s => s && s.k === k), key);
+// hold what's in hotbar slot i (pressing its number again would put it away)
+async function hold(i) {
+  if (await page.evaluate(i => { const s = document.querySelector('#invList .slot.sel'); return !!s && s.dataset.slot === String(i); }, i)) return;
+  await page.keyboard.press(`Digit${i + 1}`);
+}
 async function center(sel) { const b = await page.locator(sel).boundingBox(); return [b.x + b.width / 2, b.y + b.height / 2]; }
 
 test('I opens the bag, and a stack drags from the hotbar into the bag', async () => {
@@ -63,19 +68,45 @@ test('tap a stack, then tap where it goes', async () => {
   assert.equal(await page.locator('#invList [data-slot="2"] b').textContent(), '12', 'the hotbar shows the stack');
 });
 
-test('an empty hotbar slot is not picked', async () => {
+test('an empty hotbar slot can be picked (empty hands), and Q steps onto empty slots too', async () => {
   const empty = await page.evaluate(() => window.__dbg.stats.slots.slice(0, 8).findIndex(s => !s));
   await page.keyboard.press(`Digit${empty + 1}`);
-  await page.waitForTimeout(300);
-  assert.equal(await page.locator('#invList .slot.sel').count(), 0);
+  await page.waitForFunction(i => { const s = document.querySelector('#invList .slot.sel'); return s && s.dataset.slot === String(i) && s.classList.contains('empty'); }, empty, { timeout: 5000 });
+  await page.keyboard.press('KeyQ');
+  await page.waitForFunction(i => { const s = document.querySelector('#invList .slot.sel'); return s && s.dataset.slot === String((i + 1) % 8); }, empty, { timeout: 5000 });
 });
 
-test('hold E with berries in hand to eat one, fed while still holding it', async () => {
-  await page.keyboard.press(`Digit${(await slotOf('berries')) + 1}`);
-  const hunger = await page.evaluate(() => window.__dbg.stats.hunger);
+// Eating and drinking: when the ring fills, the count and the meter change there and then
+// (the page shows it before the server answers), and holding on has the next one.
+test('hold E with berries in hand: each full ring eats one and feeds you, while you hold on', async () => {
+  await page.evaluate(() => window.__dbg.send({ t: 'test', do: 'set', hunger: 40 }));
+  await page.waitForFunction(() => window.__dbg.stats.hunger === 40, null, { timeout: 5000 });
+  await hold(await slotOf('berries'));
   await page.keyboard.down('KeyE');
-  await page.waitForFunction(() => window.__dbg.stats.inv.berries === 2, null, { timeout: 10000 });
-  assert.ok(await page.evaluate(h => window.__dbg.stats.hunger > h || window.__dbg.stats.hunger >= 100, hunger), 'fed before letting go');
+  await page.waitForFunction(() => window.__dbg.stats.inv.berries <= 2, null, { timeout: 10000 });
+  assert.ok(await page.evaluate(() => window.__dbg.stats.hunger > 40), 'fed with the bite');
+  await page.waitForFunction(() => window.__dbg.stats.inv.berries <= 1, null, { timeout: 10000 });
   await page.keyboard.up('KeyE');
+  const left = await page.evaluate(() => window.__dbg.stats.inv.berries);
+  await page.waitForTimeout(1500);
+  assert.equal(await page.evaluate(() => window.__dbg.stats.inv.berries), left, 'the server agrees');
+});
+
+test('hold E with a bucket of clean water in hand: each full ring is a drink', async () => {
+  await page.evaluate(() => window.__dbg.send({ t: 'test', do: 'set', thirst: 40 }));
+  await page.evaluate(() => window.__dbg.send({ t: 'test', do: 'give', buckets: [{ water: 'clean' }] }));
+  await page.waitForFunction(() => (window.__dbg.stats.buckets || []).length === 1, null, { timeout: 5000 });
+  const at = await page.evaluate(() => window.__dbg.stats.slots.findIndex(s => s && s.b != null));
+  assert.ok(at >= 0 && at < 8, 'the bucket is in the hotbar');
+  await hold(at);
+  const drinks = await page.evaluate(() => window.__dbg.stats.buckets[0].drinks);
+  await page.keyboard.press('KeyE');   // a tap does nothing
+  await page.waitForTimeout(1200);
+  assert.equal(await page.evaluate(() => window.__dbg.stats.buckets[0].drinks), drinks, 'a tap does not drink');
+  await page.keyboard.down('KeyE');
+  await page.waitForFunction(d => window.__dbg.stats.buckets[0].drinks === d - 1, drinks, { timeout: 10000 });
+  await page.keyboard.up('KeyE');
+  await page.waitForTimeout(1500);
+  assert.equal(await page.evaluate(() => window.__dbg.stats.buckets[0].drinks), drinks - 1, 'the server agrees');
   assert.deepEqual(errors, []);
 });
