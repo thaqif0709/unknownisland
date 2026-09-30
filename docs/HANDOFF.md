@@ -274,6 +274,25 @@ planned separately by Thaqif):
 - **Energy:** 0-100, not persisted. `stepEnergy` in world-gen is shared by the
   server (authoritative: hunger cost, speed check) and the client (prediction).
 - **Decorative flowers** are client-only instanced meshes, not in the database.
+- **Chop/mine animation (client-only).** `swingToolFor(o)` decides whether an axe or
+  pickaxe shows in hand for the swing at a tree/palm/rock/ore: it's optional for
+  chopping and rock (a tool just yields more, per the existing server rule) so it
+  only shows one you actually own, but ore always shows a pickaxe since mining it
+  requires one. `setSwingTool` attaches `heldModel('axe'|'pickaxe')` to the swinging
+  arm for the swing's 0.35s (hiding whatever hotbar item was in hand) and
+  `poseCastaway` puts it away the instant `swingT` reaches 0. The server's `fx`
+  broadcast (already carrying the object id for these hits) now also triggers a
+  small burst of wood/stone/ore-coloured debris cubes (`spawnChips`/`updateChips`,
+  a small reused pool like the smoke puffs) on every player's hit, not just your
+  own. One gotcha for anyone testing with `?debug`: these debris cubes must not be
+  added to the `noInk` set - that set is for opacity-managed things (like the smoke
+  puffs) which the two-pass renderer force-`visible=true`s after its normal pass,
+  which fights a pool that manages on/off purely via `.visible`. Also: the debug
+  `teleport(x,z)` now also sends a `pos` update, since `onPos`'s per-message
+  distance clamp (speed * 1.4 * min(dt,1) + 0.6, so at most roughly 7 units
+  regardless of how long you wait) otherwise makes a single big instant test-jump
+  get silently reverted server-side - real walking never notices this since it's
+  many small legitimate steps.
 
 ## Survival rules
 
