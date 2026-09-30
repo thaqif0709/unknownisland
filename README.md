@@ -146,6 +146,12 @@ The big world is behind three flags that go together: `FEATURES=streaming,bigwor
 Caves (the Landing's sea cave, torches and the Dark) are their own flag: `caves`. It works
 with or without the big world.
 
+When you switch something on for players, put a few lines about it in `NEWS` at the top of
+`public/js/215-whats-new.js`: they show in a "What's new" box on the start screen (each line
+can name a flag, so it only shows while that's on). Change its `id` and it opens by itself
+again for everyone. Switching a flag off again is safe: anyone whose saved spot isn't
+walkable any more (the sea where the big world was, say) comes back on the Landing's beach.
+
 ## Trying it on your own computer (optional)
 
 You need [Node.js](https://nodejs.org) 20 or newer.

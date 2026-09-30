@@ -378,6 +378,10 @@ builds each region's cave (described in `server/regions/<id>.js`) for both sides
 `server/systems/caves.js` tracks who is underground (`p.under`), the tide in sea caves, the
 Dark, torches and muffled chat, and `135-caves.js` draws the tunnel, cuts the ground at the
 mouth and keeps you (and the camera) inside it. Details: CONTRACTS.md section 18.
+The start screen's "What's new" box is `215-whats-new.js` (`NEWS`: lines, each optionally tied
+to a flag, read from `/api/hiddenpages` since it shows before the welcome; a new `id` opens it
+again for everyone). On joining, `island.safeSpot(x, z)` (players.js) puts anyone whose saved
+spot is sea, behind the Veil or a cave mouth back on the beach, so flags can be switched off.
 With the `mouselook` flag (P1), `305-mouse-look.js` locks the pointer on a click on the island
 (desktop mice only, `(any-pointer: fine)`) and turns `yaw`/`pitch` from `movementX/Y` with the
 same sensitivity and invert settings as dragging. A frame hook frees the pointer whenever

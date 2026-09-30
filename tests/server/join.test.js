@@ -76,3 +76,19 @@ test('logging in again elsewhere kicks the old connection', async () => {
   assert.match((await kicked).reason, /somewhere else/);
   again.close();
 });
+
+test("coming back to a spot you can't stand on any more puts you on the beach", async () => {
+  const { WG } = require('../helpers/world');
+  const acct = await server.signup('back');
+  const connect = async () => { const c = new TestClient(`ws://127.0.0.1:${server.port}/ws`, acct); await c.open(); await c.hello(); return c; };
+  const a = await connect();
+  // out at sea, as if the big world had been switched off while you were out in it
+  const sea = { x: WG.ISL * 3, z: WG.ISL * 3 };
+  assert.ok(WG.heightAt(sea.x, sea.z) <= -1);
+  await a.test('place', sea);
+  a.close();
+  await new Promise(r => setTimeout(r, 400));   // leaving saves where you are
+  const b = await connect();
+  assert.ok(Math.hypot(b.welcome.you.x - WG.SPAWN.x, b.welcome.you.z - WG.SPAWN.z) < .01, `back on the beach, not at ${b.welcome.you.x}, ${b.welcome.you.z}`);
+  b.close();
+});

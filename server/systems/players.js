@@ -24,9 +24,10 @@ const methods = {
 
     const saved = m.inventory || {};
     const { inv, tools, buckets } = this.loadInventory(m);
+    const at = this.safeSpot(m.x ?? SPAWN.x, m.z ?? SPAWN.z);
     const p = {
       id: account.id, name: account.username, ws,
-      x: m.x ?? SPAWN.x, z: m.z ?? SPAWN.z, face: m.face,
+      x: at.x, z: at.z, face: m.face,
       health: m.health, hunger: m.hunger, thirst: m.thirst, inv,
       tools, buckets,
       dead: m.health <= 0, cause: '', moving: false, warm: false,
@@ -69,6 +70,15 @@ const methods = {
     console.log(`[island ${this.id}] ${p.name} left (${this.players.size} online)`);
     await this.save([p]);
     if (this.players.size === 0) this.stop();
+  },
+
+  // Where you come back: where you left, unless that isn't somewhere you can stand any more
+  // (a feature was switched off, e.g. the big world, and it's open sea now; or it's behind the
+  // Veil, or a cave's mouth). Then the Landing's beach, where everyone first arrives.
+  safeSpot(x, z) {
+    if (heightAt(x, z) > -1 && !this.veilAt(x, z) && !this.caveCut(x, z)) return { x, z };
+    console.log(`[island ${this.id}] a saved spot (${r2(x)}, ${r2(z)}) is no longer walkable: back to the beach`);
+    return { x: SPAWN.x, z: SPAWN.z };
   },
 
   selfView(p) {
