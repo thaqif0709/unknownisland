@@ -37,7 +37,7 @@ const methods = {
 
   dawn() {
     const changed = [];
-    for (const o of this.objects) {
+    for (const o of this.eachObject()) {
       const was = JSON.stringify(o.state);
       let s = o.state;
       // Felled trees and palms come back as saplings. They sprouted on the

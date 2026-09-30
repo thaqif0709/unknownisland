@@ -17,6 +17,10 @@ Each player receives only nearby chunks, and only chunks near someone are simula
 - Area of interest: the client asks for chunks as it moves, the server sends objects, fires, lanterns, sacks and mobs for those chunks and updates only to players who have them.
 - Chunk sleep and wake with catch-up (regrowth, fire burn-down, lantern fuel) using the existing `advance` logic.
 - The Stilled and other mobs only run near players.
+- Build on W1 (CONTRACTS.md section 16): `loadChunk`/`unloadChunk` already exist. The client
+  keys objects by id today as array indexes; chunk ids are 10,000,000+, so it needs a Map,
+  and it can build chunks itself with `WG.generateChunk` from spawn tables sent on join.
+- Add the `streaming` flag here (W1 needed none: nothing loads chunks automatically yet).
 
 ## Files it touches
 

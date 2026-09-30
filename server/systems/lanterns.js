@@ -50,7 +50,7 @@ const methods = {
   // sacks are dragged deeper into the fog. Inventories are never touched.
   reclaimed(l) {
     const R = this.lanternRadius(l), chance = RULES.LANTERN.SWALLOW_CHANCE, changed = [];
-    for (const o of this.objects) {
+    for (const o of this.eachObject()) {
       if (Math.hypot(o.x - l.x, o.z - l.z) > R || Math.random() > chance) continue;
       const s = o.state;
       if (s.gone || s.dug) continue;

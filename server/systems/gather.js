@@ -35,7 +35,7 @@ const methods = {
     if (m[1] === 'l') return this.tendLantern(p, +m[2]);
     if (m[1] === 'f') return this.tendFire(p, +m[2]);
 
-    const o = this.objects[+m[2]];
+    const o = this.obj(+m[2]);
     if (!o || o.state.gone) return;
     const u = this.useFor(o.type);
     if (!u) return;

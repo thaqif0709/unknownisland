@@ -40,7 +40,8 @@ const methods = {
       t: 'welcome',
       you: this.selfView(p),
       island: { id: this.id, name: this.name, day: this.day, time: this.time },
-      // the layout comes from /api/world; here only what differs from default
+      // the layout comes from /api/world; here only what differs from default (the Landing's
+      // objects; chunks of new land are sent as they load, task W2)
       states: this.objects.filter(o => !WG.isDefaultState(o.type, o.state)).map(o => [o.id, o.state]),
       fires: this.fires.map(f => this.fireView(f)),
       drops: this.drops.map(d => ({ id: d.id, x: d.x, z: d.z, items: d.items })),

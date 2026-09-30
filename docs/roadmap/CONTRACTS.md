@@ -234,3 +234,28 @@ Default content (journal, tide, Sleeper requests) is not a migration: `seedConte
 
 `server/content.js` is split into `server/content/<topic>.js` (journal, tide, bugs, sleeper,
 fish, trivia...). Each still seeds its DB table once.
+
+## 16. World objects and chunks (W1, done)
+
+Trees, palms, bushes, rocks, ore and dig patches. Only `server/systems/objects.js` knows
+where they're kept:
+
+```js
+this.obj(id)             // one object, or undefined (also when its chunk isn't loaded)
+this.eachObject()        // every object in memory: the Landing's, then each loaded chunk's
+await this.loadChunk(cx, cz)   // make it from the seed + apply saved changes; safe to repeat
+this.unloadChunk(cx, cz) // false while it has unsaved changes
+WG.generateChunk(seed, cx, cz, tables)   // the same result on the server and in the browser
+WG.chunkOf(x, z) / WG.chunkKey(cx, cz) / WG.chunkOfId(id)   // chunks are WG.CHUNK = 32 m
+```
+
+- The Landing's objects are today's `generateObjects` list: ids 0, 1, 2 ..., always loaded.
+- Chunk objects have ids from `WG.CHUNK_ID_BASE` (10,000,000) up; the id encodes the chunk.
+  Anything that stores or sends object ids must treat them as sparse numbers, not array
+  indexes (the client does today; W2 changes that).
+- Spawn tables are plain data in each region file (`spawn: [rule]`), so they can be sent to
+  the browser: `{ type, per, biomes?, minH?, maxH?, pad?, extra? }` where `per` is the
+  expected count in a whole 32 m chunk of that region.
+- Saved changes are `world_objects` rows tagged with their `chunk`; an object back to how
+  the seed made it has no row.
+

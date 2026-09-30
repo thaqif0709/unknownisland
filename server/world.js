@@ -14,7 +14,7 @@ const { r2 } = require('./systems/util');
 // optional hooks onTick(dt), onDawn(sunrises) and onJoin(p) (extra welcome fields) run
 // alongside the core loop. See docs/roadmap/CONTRACTS.md section 2.
 const SYSTEMS = ['journal', 'tides', 'bugs', 'weather', 'time', 'chat', 'board', 'patches', 'players',
-  'inventory', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions'];
+  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions'];
 
 class Island {
   constructor(store, data) {
@@ -179,8 +179,8 @@ class Island {
       };
     });
     const objects = [...this.dirty].map(id => {
-      const o = this.objects[id];
-      return { id, state: WG.isDefaultState(o.type, o.state) ? null : { ...o.state } };
+      const o = this.obj(id);
+      return { id, chunk: this.objectChunk(o), state: WG.isDefaultState(o.type, o.state) ? null : { ...o.state } };
     });
     this.dirty.clear();
     const lanterns = [...this.lanternsDirty].map(id => { const l = this.lanterns[id]; return { id, lit: l.lit, fuel: r2(l.fuel), offerings: [...l.offerings], litBy: l.litBy, clearedSince: l.clearedSince, reclaim: r2(l.reclaim) }; });

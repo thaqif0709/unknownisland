@@ -331,6 +331,11 @@ Default content is in `server/content/<topic>.js`.
   else calls `give/take/count/held/hasTool/...` (CONTRACTS.md section 4).
 - **E on world objects:** each system exports `uses: { kind: { reach?, use(p, obj, { say, changed }) } }`;
   palm, tree, bush, rock, ore and dig are in `systems/gather.js` (section 5).
+- **World objects:** only `systems/objects.js` knows where objects are kept (`obj(id)`,
+  `eachObject()`, `loadChunk`, `unloadChunk`). The Landing's objects (ids 0..N) are always
+  loaded; new land comes in 32 m chunks from `WG.generateChunk` and each region's `spawn`
+  table, with ids from 10,000,000 up. `world_objects` rows carry their `chunk` (migration
+  0003). Nothing loads chunks automatically yet (W2). CONTRACTS.md section 16.
 - **Placeholders for later work:** `WG.REGIONS`, `WG.regionAt`, `WG.climbAt`,
   `isRegionOpen/openRegion`, `summonBoss`, `respawnPoint` (`systems/regions.js`), and one file
   per region in `server/regions/<id>.js` for region packs to fill in.

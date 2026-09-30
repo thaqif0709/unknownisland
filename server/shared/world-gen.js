@@ -495,12 +495,63 @@
   // A climbable surface at this spot, or null (section 12). Placeholder until task P9.
   const climbAt = (x, y, z) => null;
 
+  // ================= Chunks (task W1) =================
+  // The Landing's objects come from generateObjects (ids 0, 1, 2 ...), unchanged. All new
+  // land is made per 32 m chunk by generateChunk, from its region's spawn table, the same
+  // way every time on the server and in the browser. Chunk objects get ids from
+  // CHUNK_ID_BASE up, which encode their chunk, so they never collide with the Landing's.
+  const CHUNK = 32;
+  const CHUNK_ID_BASE = 10000000, CHUNK_SPAN = 256, CHUNK_OFF = 128, CHUNK_MAX = 512;   // chunks -128..127 each way (±4 km)
+  const chunkOf = (x, z) => ({ cx: Math.floor(x / CHUNK), cz: Math.floor(z / CHUNK) });
+  const chunkKey = (cx, cz) => cx + ',' + cz;
+  const chunkObjectId = (cx, cz, i) => CHUNK_ID_BASE + ((cx + CHUNK_OFF) * CHUNK_SPAN + (cz + CHUNK_OFF)) * CHUNK_MAX + i;
+  function chunkOfId(id) {
+    if (id < CHUNK_ID_BASE) return null;
+    const k = Math.floor((id - CHUNK_ID_BASE) / CHUNK_MAX);
+    return { cx: Math.floor(k / CHUNK_SPAN) - CHUNK_OFF, cz: (k % CHUNK_SPAN) - CHUNK_OFF };
+  }
+  // tables: { region: [rule] }, a rule being plain data (so it can be sent to the browser):
+  //   { type, per,              expected number in a whole 32 m chunk of that region
+  //     biomes?, minH?, maxH?,  where it may stand
+  //     pad?, extra? }          spacing (like generateObjects) and fields copied onto it
+  // opts.regionAt replaces the world's regionAt (tests).
+  function generateChunk(seed, cx, cz, tables, opts = {}) {
+    const regionOf = opts.regionAt || regionAt;
+    const rng = mulberry32((seed * 2654435761) ^ ((cx + CHUNK_OFF) * 40503) ^ ((cz + CHUNK_OFF) * 69069) ^ 0x5bd1e995);
+    const out = [], x0 = cx * CHUNK, z0 = cz * CHUNK, EDGE = .6;
+    const clear = (x, z, pad) => !out.some(o => Math.hypot(o.x - x, o.z - z) < o.r + pad + .6);
+    for (const [region, rules] of Object.entries(tables || {})) {
+      for (const rule of rules || []) {
+        let n = Math.floor(rule.per) + (rng() < rule.per % 1 ? 1 : 0), tries = 0;
+        while (n > 0 && tries++ < 20 + n * 20 && out.length < CHUNK_MAX) {
+          const x = x0 + EDGE + rng() * (CHUNK - 2 * EDGE), z = z0 + EDGE + rng() * (CHUNK - 2 * EDGE), h = heightAt(x, z);
+          if (regionOf(x, z) !== region) continue;
+          if (rule.biomes && !rule.biomes.includes(biomeAt(x, z, h))) continue;
+          if ((rule.minH != null && h < rule.minH) || (rule.maxH != null && h > rule.maxH)) continue;
+          if (!clear(x, z, rule.pad ?? .8)) continue;
+          const o = { id: chunkObjectId(cx, cz, out.length), type: rule.type, x: +x.toFixed(2), z: +z.toFixed(2), r: .5 };
+          if (o.type === 'palm') o.r = .35;
+          else if (o.type === 'bush') o.r = .6;
+          else if (o.type === 'rock') { o.s = +(.8 + rng() * .9).toFixed(3); o.r = +(.55 * o.s).toFixed(3); }
+          else if (o.type === 'ore') { o.s = +(1 + rng() * .5).toFixed(3); o.r = +(.6 * o.s).toFixed(3); }
+          else if (o.type === 'dig') o.r = .45;
+          Object.assign(o, rule.extra);
+          if (RULES.FLORA[o.type]) o.maxScale = maxScaleFor(seed, o);
+          o.species = speciesOf(seed, o);
+          out.push(o); n--;
+        }
+      }
+    }
+    return out;
+  }
+
   const WorldGen = {
     RULES, ITEMS, RECIPES, FIRES, PATCHES, MOON_NAMES, moonPhase, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
     generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
     feature, features, setFeatures, resolveFeatures,
     REGIONS, regionAt, climbAt,
+    CHUNK, CHUNK_ID_BASE, chunkOf, chunkKey, chunkObjectId, chunkOfId, generateChunk,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;
   else root.WorldGen = WorldGen;
