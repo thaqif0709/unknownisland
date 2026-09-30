@@ -221,7 +221,7 @@
     // eight slots, numbered 1-8
     $('invList').innerHTML = slotKeys.map((k, i) => {
       const sel = i === selSlot ? ' sel' : '', num = `<i>${i + 1}</i>`;
-      if (!k) return `<div class="slot empty${sel}" data-slot="${i}">${num}</div>`;
+      if (!k) return `<div class="slot empty${sel}" data-slot="${i}" title="Empty">${num}</div>`;
       const bk = bucketOf(k);
       if (bk) {
         const max = RULES.BUCKET[bk.mat].uses, wear = Math.max(0, bk.uses) / max;

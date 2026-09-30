@@ -18,7 +18,7 @@ const methods = {
     const k = FIRES[f.kind];
     this.take(p, 'wood');
     f.fuel = Math.min(f.fuel + k.add, k.max);
-    this.broadcast({ t: 'fires', list: [[f.id, r2(f.fuel)]] });
+    this.broadcast({ t: 'fires', list: [[f.id, r2(f.fuel), f.pot ? r2(f.pot.left) : null]] });   // with the pot, or the browser takes the bucket away
     this.fx(p, 'swing');
     this.sendMe(p);
     return say('The fire flares up.');

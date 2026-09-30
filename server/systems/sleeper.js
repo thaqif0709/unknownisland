@@ -178,7 +178,7 @@ const methods = {
         break;
       case 'douse': {
         for (const f of this.fires) f.fuel = 0;
-        if (this.fires.length && this.players.size) this.broadcast({ t: 'fires', list: this.fires.map(f => [f.id, 0]) });
+        if (this.fires.length && this.players.size) this.broadcast({ t: 'fires', list: this.fires.map(f => [f.id, 0, f.pot ? r2(f.pot.left) : null]) });
         const l = near(this.lanterns, l => l.lit);
         if (l) { l.fuel = 0; this.burnLantern(l, 0); }
         break;
