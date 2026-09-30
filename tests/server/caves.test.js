@@ -84,11 +84,17 @@ test("the Stilled don't reach you in a cave", async () => {
   const a = await server.join('cvs');
   await a.test('time', { at: T.PHASE });   // the night-time low tide
   await a.test('place', cave.out);
+  // the Crawler (C2) lives in this cave and would knock you down itself: out of the way
+  // (killed, it's back the next day), so this is only about the Stilled
+  let crawlers = [];
+  for (let i = 0; i < 20 && !crawlers.length; i++) { await sleep(100); crawlers = (await a.test('mobs')).mobs.filter(m => m.kind === 'crawler'); }   // it turns up on the next tick
+  for (const m of crawlers) assert.ok((await a.test('mobHit', { mob: m.id, amount: 1e6 })).gone, 'the Crawler is gone');
   const end = await walkIn(a, N.slice(0, 13));
   await a.test('set', { time: T.PHASE, weather: 'fogstorm' });   // fog over the hill above
   await a.test('spawn', { kind: 'stilled', x: end.x + 1.5, z: end.z });
   await sleep(2500);
-  assert.ok(!a.messages.some(m => m.t === 'knocked' && m.id === a.id), 'it never reaches you (with nobody up top, it fades away)');
+  assert.ok(!a.messages.some(m => m.t === 'knocked' && m.id === a.id),
+    `it never reaches you (with nobody up top, it fades away); told: ${a.messages.filter(m => m.t === 'toast').map(m => m.msg).join(' | ')}`);
   await a.test('set', { time: .5, weather: 'clear' });
   assert.equal(snapOf(a, a.id)[7], 'seacave', 'still in the cave');
 });

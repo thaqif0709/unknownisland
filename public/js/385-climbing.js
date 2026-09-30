@@ -15,7 +15,7 @@
 
   // Energy use this frame (sprinting is counted separately, in stepEnergy).
   const travelDrain = () => glide ? T().GLIDE_ENERGY : climb ? (climbMoving ? T().CLIMB_ENERGY : T().HANG_ENERGY) : 0;
-  const travelPose = () => (climb ? 'climb' : glide ? 'glide' : null);
+  const travelPose = () => (flying ? 'fly' : climb ? 'climb' : glide ? 'glide' : null);   // (flying: creative mode, 387)
 
   function climbableNear(x, z) {
     const list = [];

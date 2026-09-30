@@ -193,6 +193,14 @@ planned separately by Thaqif):
   holding it on the way down glides. Tests: `tests/server/travel.test.js`,
   `tests/browser/travel.test.js` (runs the page small and on Low graphics: the server spends
   climbing energy by the clock, so a slow headless page would run out halfway up).
+- **Creative mode (admins, for testing; no flag, `/creative` in chat).** `setCreative` in
+  `players.js` sets `p.creative` (not saved) and sends `mode`; `/normal` puts you back on land
+  (`safeSpot`) if you're over the sea or the Veil. With it on, `pos` may carry `pose: 'fly'`: up
+  to `RULES.CREATIVE.FLY_SPEED`, over deep sea and the Veil, shown to others as pose 3 (drawn
+  like a glide) up to `CREATIVE.MAX_HEIGHT`, and no energy cost. `public/js/387-creative.js`:
+  double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
+  instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
+  Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
 - **The bag (P2, flag `slots`, on since 30 Sept).** `server/systems/inventory.js` keeps `p.slots` (8 hotbar
   + 30 bag; `{ k, n }`, `{ b: bucketId }` or null) and still recounts `p.inv` as totals, so
   nothing outside it changed except drops (drop by slot; picking up a sack takes what fits

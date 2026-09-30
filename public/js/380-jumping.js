@@ -49,7 +49,7 @@
   const CHARGE_FULL = .55, LEAP_SPEED = 4.2;   // forward speed of a full-charge leap (walking is 4.6)
   let jumpBtnHeld = false; let camLift = 0;
   const hop = { y: 0, v: 0, air: false, land: 0, charge: -1 };
-  const canJump = () => !(state !== 'play' || hop.air || climb || knockT > 0 || stats.down || nrg.exhausted || panelOpen() || (myCave ? caveDepth() > CAVE.WADE : heightAt(px, pz) < .1));   // not while wading
+  const canJump = () => !(state !== 'play' || hop.air || climb || flying || knockT > 0 || stats.down || nrg.exhausted || panelOpen() || (myCave ? caveDepth() > CAVE.WADE : heightAt(px, pz) < .1));   // not while wading
   function startCharge() {
     if (climb) { letGo(); return; }   // on a trunk or a cliff, Space lets go (385-climbing.js)
     if (canJump() && hop.charge < 0) { if (sitting) setSitting(false); hop.charge = 0; }
@@ -88,6 +88,7 @@
     return f;
   }
   function stepHop(h, dt) {   // own frog: simple physics
+    if (flying) { h.floor = 0; h.air = true; h.charge = -1; h.land = 0; return; }   // flying moves you (387-creative.js)
     if (climb) { h.floor = 0; h.air = false; h.charge = -1; h.abs = null; glide = false; return; }   // climbing moves you (385-climbing.js)
     if (h.charge >= 0) { h.charge += dt; if (!canJump()) h.charge = -1; }
     else if ((keys[prefs.binds.jump] || jumpBtnHeld) && canJump()) h.charge = 0;   // pressed just before landing: start charging now
