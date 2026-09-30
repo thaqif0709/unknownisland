@@ -243,6 +243,12 @@ planned separately by Thaqif):
   biome colour underneath; each player's marker and halo use their own
   cloak colour (`colorFor(id)`), same as their name tag and online-list dot.
   Client-only; nothing new from the server.
+  (Since then, `markerShape`/`MARK` replaced plain coloured dots with small
+  pictograms — a lantern is a bronze cage with a glowing dot, a fire has
+  crossed logs under the flame, the board shows plank seams, a carving
+  stone has a scratched rune — so markers read as the thing they represent
+  rather than just a colour-coded shape; `iconFor` reuses the same drawing
+  code for the legend.)
 - **Intro cutscene (done).** In-engine, about 73 s, skippable (button, Esc,
   Enter, Space): the chart inks itself, a storm with the reed boat and
   lightning, something vast passes under the boat, the grey beach, PELL in the

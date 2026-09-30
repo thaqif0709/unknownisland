@@ -2558,17 +2558,37 @@
     board: { name: 'Driftwood board', col: '#A07A4A' }, fire: { name: 'Fire, burning', col: '#E2742C' },
     fireOut: { name: 'Fire, gone out', col: '#6E6862' }, sack: { name: 'Dropped sack', col: '#FFF6DC' },
   };
+  // Each marker is a small pictogram (not just a coloured blob in a different
+  // silhouette): a lantern has a bronze cage with a glowing dot, a fire has
+  // crossed logs under the flame, a board shows plank seams, a carving stone
+  // has a scratched rune. `fill` carries the part that changes with state
+  // (lit/unlit, burning/out); everything else uses a fixed thematic colour.
   function markerShape(g, kind, cx, cy, s, fill) {
-    g.save(); g.translate(cx, cy); g.scale(s, s);
-    g.beginPath();
-    if (kind === 'spring') { g.moveTo(0, -6); g.bezierCurveTo(4, -1, 5, 2, 0, 5); g.bezierCurveTo(-5, 2, -4, -1, 0, -6); }   // droplet
-    else if (kind === 'lantern' || kind === 'lanternLit') { g.moveTo(0, -5.5); g.lineTo(4.5, 0); g.lineTo(0, 5.5); g.lineTo(-4.5, 0); g.closePath(); }   // diamond
-    else if (kind === 'carving') { g.moveTo(-3.5, 5); g.lineTo(-3.5, -2); g.arc(0, -2, 3.5, Math.PI, 0); g.lineTo(3.5, 5); g.closePath(); }   // standing stone
-    else if (kind === 'board') g.rect(-4, -3.5, 8, 7);
-    else if (kind === 'fire' || kind === 'fireOut') { g.moveTo(0, -6); g.quadraticCurveTo(5, 0, 3.5, 4); g.lineTo(-3.5, 4); g.quadraticCurveTo(-5, 0, 0, -6); }   // flame
-    else if (kind === 'sack') { g.arc(0, 1, 3.6, 0, Math.PI * 2); g.moveTo(-1.8, -2.4); g.lineTo(0, -5); g.lineTo(1.8, -2.4); }
-    else g.arc(0, 0, 4, 0, Math.PI * 2);
-    g.fillStyle = fill || MARK[kind].col; g.fill(); g.lineWidth = 1.4; g.strokeStyle = '#2B211F'; g.lineJoin = 'round'; g.stroke();
+    g.save(); g.translate(cx, cy); g.scale(s, s); g.lineJoin = 'round';
+    const shape = (draw, col, lw = 1.4) => { g.beginPath(); draw(); g.fillStyle = col; g.fill(); g.lineWidth = lw; g.strokeStyle = '#2B211F'; g.stroke(); };
+    const stroke = (draw, col, lw = 1) => { g.beginPath(); draw(); g.strokeStyle = col; g.lineWidth = lw; g.lineCap = 'round'; g.stroke(); };
+    if (kind === 'spring') {
+      shape(() => { g.moveTo(0, -6); g.bezierCurveTo(4, -1, 5, 2, 0, 5); g.bezierCurveTo(-5, 2, -4, -1, 0, -6); }, fill || MARK.spring.col);   // droplet
+    } else if (kind === 'lantern' || kind === 'lanternLit') {
+      shape(() => g.rect(-2.6, 4, 5.2, 1.6), '#5E4632');    // stepped base
+      shape(() => g.rect(-3.2, -1.6, 6.4, 5.4), '#8C6B4A');   // lamp box
+      shape(() => { g.moveTo(-5, -1.6); g.lineTo(5, -1.6); g.lineTo(0, -6.5); g.closePath(); }, '#6B4A35');   // wide roof
+      shape(() => g.arc(0, 1, 2, 0, Math.PI * 2), fill || MARK[kind].col, 1);   // the light itself
+    } else if (kind === 'carving') {
+      shape(() => { g.moveTo(-3.5, 5); g.lineTo(-3.5, -2); g.arc(0, -2, 3.5, Math.PI, 0); g.lineTo(3.5, 5); g.closePath(); }, fill || MARK.carving.col);
+      stroke(() => { g.moveTo(-1.3, .2); g.lineTo(1.3, 2.6); g.moveTo(1.3, .2); g.lineTo(-1.3, 2.6); }, 'rgba(255,251,240,.6)', .9);   // a scratched rune
+    } else if (kind === 'board') {
+      shape(() => g.rect(-4.5, -3.5, 9, 7), fill || MARK.board.col);
+      stroke(() => { g.moveTo(-4.5, -1.2); g.lineTo(4.5, -1.2); }, 'rgba(43,33,31,.5)', .9);   // plank seams
+      stroke(() => { g.moveTo(-4.5, 1.2); g.lineTo(4.5, 1.2); }, 'rgba(43,33,31,.5)', .9);
+    } else if (kind === 'fire' || kind === 'fireOut') {
+      stroke(() => { g.moveTo(-4, 5); g.lineTo(3, 1.5); }, '#6B4A35', 1.6);   // crossed logs
+      stroke(() => { g.moveTo(4, 5); g.lineTo(-3, 1.5); }, '#6B4A35', 1.6);
+      shape(() => { g.moveTo(0, -6); g.quadraticCurveTo(5, 0, 3.5, 4); g.lineTo(-3.5, 4); g.quadraticCurveTo(-5, 0, 0, -6); }, fill || MARK[kind].col);
+    } else if (kind === 'sack') {
+      shape(() => { g.moveTo(-3.4, -.8); g.quadraticCurveTo(-4.2, 4.6, 0, 5); g.quadraticCurveTo(4.2, 4.6, 3.4, -.8); g.quadraticCurveTo(1.7, -2.4, 0, -2.4); g.quadraticCurveTo(-1.7, -2.4, -3.4, -.8); }, fill || MARK.sack.col);
+      stroke(() => { g.moveTo(-1.7, -2.4); g.lineTo(0, -5); g.lineTo(1.7, -2.4); }, '#2B211F', 1.3);   // drawstring tie
+    } else shape(() => g.arc(0, 0, 4, 0, Math.PI * 2), fill || (MARK[kind] && MARK[kind].col) || '#8A8171');
     g.restore();
   }
   // Players on the map use a brighter version of their cloak colour so they pop.
