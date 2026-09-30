@@ -81,7 +81,7 @@
         }
         break;
       case 'me':
-        Object.assign(stats, { health: m.health, hunger: m.hunger, thirst: m.thirst, inv: m.inv, tools: m.tools, buckets: m.buckets || [], warm: m.warm,
+        Object.assign(stats, { health: m.health, hunger: m.hunger, thirst: m.thirst, inv: m.inv, tools: m.tools, buckets: m.buckets || [], slots: m.slots, warm: m.warm,
           dread: m.dread, fog: m.fog, down: m.down });
         // Energy runs locally for a snappy feel; follow the server if we drift.
         if (Math.abs(nrg.energy - m.energy) > 12 || nrg.exhausted !== m.exhausted) { nrg.energy = m.energy; nrg.exhausted = m.exhausted; }
@@ -190,7 +190,7 @@
 
   function applySelf(you) {
     px = you.x; pz = you.z; face = you.face;
-    Object.assign(stats, { health: you.health, hunger: you.hunger, thirst: you.thirst, inv: you.inv, tools: you.tools, buckets: you.buckets || [], dread: you.dread || 0 });
+    Object.assign(stats, { health: you.health, hunger: you.hunger, thirst: you.thirst, inv: you.inv, tools: you.tools, buckets: you.buckets || [], slots: you.slots, dread: you.dread || 0 });
     Object.assign(nrg, { energy: you.energy, exhausted: you.exhausted, rest: 0 });
   }
 

@@ -193,6 +193,22 @@ planned separately by Thaqif):
   holding it on the way down glides. Tests: `tests/server/travel.test.js`,
   `tests/browser/travel.test.js` (runs the page small and on Low graphics: the server spends
   climbing energy by the clock, so a slow headless page would run out halfway up).
+- **The bag (P2, flag `slots`).** `server/systems/inventory.js` keeps `p.slots` (8 hotbar
+  + 30 bag; `{ k, n }`, `{ b: bucketId }` or null) and still recounts `p.inv` as totals, so
+  nothing outside it changed except drops (drop by slot; picking up a sack takes what fits
+  and leaves the rest) and gathering (coconuts and berries go into the bag as items, eaten
+  with `eat {slot}`). Moves are `move {from,to,count}`, checked on the server: into an empty
+  slot, onto the same item up to its stack, or a whole stack swaps; everything else is
+  refused, and the answer is always a fresh `me`. Loading always rebuilds the slots from the
+  counts over the saved arrangement, so the counts win, switching the flag off and on loses
+  nothing, and what no longer fits (a hoard bigger than 38 stacks) goes in a sack at their
+  feet on join. Stack sizes: `WG.itemInfo(key).stack` (`ITEM_INFO` in world-gen; `ITEMS`
+  stays names only). Browser: `240-input.js` mirrors slots 0-7 as the hotbar when the flag
+  is on and sends `select`; `255-inventory.js` is the bag panel (I; drag, right-drag half,
+  Shift-click across, drag off to drop, tap-then-tap on phones) and hold-E-to-eat with a ring.
+  Silverfin and bugs are still eaten on the spot. Tests: `tests/server/slots.test.js` (with
+  400 random and malformed moves that must leave the same totals),
+  `tests/browser/slots.test.js`.
 - **Phase 3, stone lanterns (done; light only, no map gating).** 26 lanterns from
   `generateLanterns(seed)` (one near the spawn beach, one by the main spring; the
   4 highest others are great lanterns needing lamp oil from 3 different frogs).
@@ -473,7 +489,7 @@ Client → server: `hello {token}` (first message), `pos {x,z,face,moving,sprint
 (≈15 Hz while moving, 1 Hz idle), `act {target}` where target is `o<id>`, `f<id>`
 (fire), `d<id>` (sack), `l<id>` (lantern), `w<id>` (wash-up), `b<id>` (bug),
 `c<id>` (carving stone offering), `spring` or `sea`, `build {recipe,x,z}`,
-`respawn`, `pin {text}`, `patch {key,on}`, `intro` / `intro-seen`, `hold {key}` (item in hand, shown to others), `dropitem {key,count}` (into a sack at your feet; merges into a sack within 1.5), `bucket {id, action: fill|place|drink, fire}`, `chat {text}`
+`respawn`, `pin {text}`, `patch {key,on}`, `intro` / `intro-seen`, `hold {key}` (item in hand, shown to others), `dropitem {key,count}` (into a sack at your feet; merges into a sack within 1.5), with `slots`: `dropitem {slot,count}`, `move {from,to,count}`, `select {slot}`, `eat {slot}`, `bucket {id, action: fill|place|drink, fire}`, `chat {text}`
 (the server parses `/w`, `/whisper`, `/tell`, `/msg`, `/r`, `/who`, `/help`; plain
 text is global; max 240 characters, 6 messages per 8 s; the last 30 global
 messages are kept in memory and sent in `welcome.chat`; nothing is saved).

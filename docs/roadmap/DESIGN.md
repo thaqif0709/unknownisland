@@ -77,7 +77,8 @@ and a river, Hollow (200, -2350) a crater, Teeth (350, -3150) up to about 600 m,
 - Phones keep drag-to-look and touch buttons.
 - **Slots:** 8 hotbar + 30 bag. Stacks: materials 50, food 10, tools/weapons 1.
   Drag to move/merge/swap, Shift-click jumps bag↔hotbar, right-click takes half,
-  drag out of the panel drops a sack. Phones: tap to pick up, tap to place, hold to split.
+  drag out of the panel drops a sack. Phones: tap to pick up, tap to place; a **Half** button
+  under the bag splits (P2 built buttons rather than hold-to-split: a long press fought with taps).
   Full bag: new items drop in a sack at your feet.
 - **Tools and weapons are items** that take a slot. The selected tool is what you use;
   without the right one you use bare hands (slow, or can't). **Durability:** stone pickaxe
@@ -86,6 +87,8 @@ and a river, Hollow (200, -2350) a crater, Teeth (350, -3150) up to about 600 m,
   its materials.
 - **E collects** berries, coconuts and everything else into the bag (no eating on the
   spot). **Hold E ~1 s** on a food slot to eat; a ring fills round the crosshair.
+  (P2: silverfin from the tide and bugs are still eaten on the spot for now; they're journal
+  finds as well, and fishing (P7) will bring food of its own into the bag.)
 - Existing inventories and owned tools move into slots automatically, nothing lost.
 
 ## 5. Fighting

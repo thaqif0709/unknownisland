@@ -49,7 +49,7 @@
   });
 
   function renderBinds() {
-    $('binds').innerHTML = ACTIONS.map(([a, name]) =>
+    $('binds').innerHTML = ACTIONS.filter(([, , , flag]) => !flag || WG.feature(flag)).map(([a, name]) =>
       `<div class="bind"><span>${esc(name)}</span><button type="button" data-bind="${a}" class="${waitingBind === a ? 'wait' : ''}">${waitingBind === a ? 'Press a key\u2026' : esc(keyLabel(prefs.binds[a]))}</button></div>`).join('');
   }
   function renderSettings() {
