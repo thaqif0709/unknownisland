@@ -528,6 +528,48 @@
     }
   }
 
+  // ================= Hit chips =================
+  // Small debris flung from a chop or mine hit - wood splinters or stone/ore chips -
+  // tumbling out and settling under gravity. A small reused pool, like the smoke puffs.
+  // Not added to `noInk`: that set is for things managed by opacity (like the smoke
+  // puffs) which the two-pass renderer force-shows after the normal pass; a chip's
+  // on/off pooling is done with `.visible`, so it must stay out of that set, and
+  // getting a normal ink outline while tumbling suits solid debris anyway.
+  const CHIP_N = 24, chipMeshes = [];
+  for (let i = 0; i < CHIP_N; i++) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(.05, .05, .05), new THREE.MeshBasicMaterial({ color: 0x8A6A4A }));
+    m.visible = false; m.userData.life = 0;
+    scene.add(m);
+    chipMeshes.push(m);
+  }
+  function spawnChips(o) {
+    const cy = groundAt(o.x, o.z), tall = o.type === 'tree' || o.type === 'palm';
+    const color = o.type === 'ore' ? (o.ore === 'copper' ? 0xC9793A : 0xAEB6BC) : o.type === 'rock' ? 0x8A8171 : 0x8A6A4A;
+    let spawned = 0;
+    for (const m of chipMeshes) {
+      if (spawned >= 6) break;
+      if (m.userData.life > 0) continue;
+      const a = Math.random() * Math.PI * 2, spd = 1.1 + Math.random() * 1.4;
+      m.position.set(o.x, cy + (tall ? 1 + Math.random() * .6 : .35 + Math.random() * .2), o.z);
+      m.material.color.setHex(color);
+      m.userData = { life: 1, vx: Math.cos(a) * spd, vy: 1.8 + Math.random() * 1.4, vz: Math.sin(a) * spd,
+        spinX: (Math.random() - .5) * 14, spinY: (Math.random() - .5) * 10, dur: .45 + Math.random() * .2 };
+      m.scale.setScalar(.7 + Math.random() * .6);
+      m.visible = true;
+      spawned++;
+    }
+  }
+  function updateChips(dt) {
+    for (const m of chipMeshes) {
+      const u = m.userData;
+      if (!u || u.life <= 0) continue;
+      u.life -= dt / u.dur;
+      if (u.life <= 0) { m.visible = false; continue; }
+      u.vy -= 9 * dt;
+      m.position.x += u.vx * dt; m.position.y += u.vy * dt; m.position.z += u.vz * dt;
+      m.rotation.x += u.spinX * dt; m.rotation.y += u.spinY * dt;
+    }
+  }
 
   // ================= Shore ripples =================
   // Curling wave crests on the water just off the coast, washing in and out.
@@ -1055,6 +1097,12 @@
         add(new THREE.SphereGeometry(.035, 6, 4), softShared(key === 'copper' ? 0xD9803A : 0xC9D2DA), .06, .04, .05); break;
       case 'seeds': for (const [x, z] of [[-.03, 0], [.03, .02], [0, -.03]]) add(new THREE.SphereGeometry(.03, 6, 4), softShared(0xC8A860), x, 0, z).scale.set(.8, .6, 1.3); break;
       case 'oil': add(new THREE.SphereGeometry(.07, 10, 8), softShared(0xE0A33A), 0, 0, 0); add(new THREE.CylinderGeometry(.025, .03, .07, 8), logM, 0, .09, 0); break;
+      // Swung tools: a handle hanging from the fist with the head at the tip, so the
+      // existing overhead swing motion reads as a real chop or pickaxe strike.
+      case 'axe': add(new THREE.CylinderGeometry(.022, .026, .42, 6), logM, 0, -.24, 0);
+        add(new THREE.BoxGeometry(.05, .17, .11), softShared(0x8C6B4A), .02, -.44, 0).rotation.z = .3; break;
+      case 'pickaxe': add(new THREE.CylinderGeometry(.02, .024, .42, 6), logM, 0, -.24, 0);
+        { const bar = add(new THREE.CylinderGeometry(.017, .017, .36, 5), rockM[1], 0, -.45, 0); bar.rotation.z = Math.PI / 2; } break;
       default: add(new THREE.BoxGeometry(.12, .12, .12), sackM, 0, 0, 0);
     }
     shadows(g);
@@ -1067,6 +1115,19 @@
     if (key) { av.held = heldModel(key); av.held.position.set(0, -.5, .07); av.armR.add(av.held); }
   }
   function setHood(av, up) { if (!av) return; av.hoodUp.visible = !!up; av.hoodDown.visible = !up; }
+  // The tool shown only while a swing is in progress (axe/pickaxe), separate from
+  // whatever hotbar item is normally in hand; hides that item for the moment so
+  // you don't appear to be chopping a tree with a fistful of wood.
+  function setSwingTool(av, key) {
+    if (!av) return;
+    if (av.swingTool) { av.armR.remove(av.swingTool); av.swingTool = null; }
+    if (key) {
+      av.swingTool = heldModel(key);
+      av.swingTool.position.set(0, -.5, .07);
+      av.armR.add(av.swingTool);
+    }
+    if (av.held) av.held.visible = !key;
+  }
 
   // A frog castaway in a simple hooded cloak: part wizard, part wanderer.
   function makeCastaway(cloak) {
@@ -1172,7 +1233,10 @@
     const s = Math.sin(av.walk) * (moving ? .8 : 0);
     av.legL.rotation.x = s; av.legR.rotation.x = -s;
     av.armL.rotation.x = -s * .9;
-    if (av.swingT > 0) { av.swingT -= dt; const k = av.swingT / .35; av.armR.rotation.x = -2.4 * Math.sin(k * Math.PI); }
+    if (av.swingT > 0) {
+      av.swingT -= dt; const k = av.swingT / .35; av.armR.rotation.x = -2.4 * Math.sin(k * Math.PI);
+      if (av.swingT <= 0 && av.swingTool) setSwingTool(av, null);   // put the tool away once the swing ends
+    }
     else av.armR.rotation.x = av.held ? -.6 + s * .25 : s * .9;   // holding something: arm forward
     // bouncy walk, gentle breathing when idle
     av.body.position.y = moving ? Math.abs(Math.cos(av.walk)) * .08 : Math.sin(elapsed * 2.2) * .015;
@@ -1874,8 +1938,15 @@
         if (left == null && f.pot) setPot(f, null); else if (left != null && f.pot) f.pot.left = left; } break;
       case 'pot': { const f = fires.get(m.id); if (f) setPot(f, m.pot); break; }
       case 'fx': {
-        if (m.o != null && objects[m.o] && objects[m.o].mesh) objects[m.o].mesh.rotation.z = .06;
-        if (me && m.id !== me.id) { const r = remotes.get(m.id); if (r) r.av.swingT = .35; }
+        if (m.o != null && objects[m.o] && objects[m.o].mesh) {
+          const o = objects[m.o];
+          o.mesh.rotation.z = .06;
+          if (['tree', 'palm', 'rock', 'ore'].includes(o.type)) spawnChips(o);
+        }
+        if (me && m.id !== me.id) {
+          const r = remotes.get(m.id);
+          if (r) { r.av.swingT = .35; if (m.o != null && objects[m.o]) setSwingTool(r.av, swingToolFor(objects[m.o])); }
+        }
         if (m.k === 'bell') Sound.bell(m.x, m.z);
         break;
       }
@@ -2027,6 +2098,17 @@
     }
   }
   const has = tool => stats.tools.includes(tool);
+  // Which tool (if any) shows in hand while swinging at this target. Chopping and
+  // mining rock work bare-handed too (a tool just yields more), so this only shows
+  // one when it's actually owned; ore requires a pickaxe, so it's always shown there.
+  function swingToolFor(o) {
+    if (!o) return null;
+    if (o.type === 'tree') return has('axe') ? 'axe' : null;
+    if (o.type === 'palm') return (o.state && o.state.coconuts > 0) ? null : (has('axe') ? 'axe' : null);
+    if (o.type === 'rock') return has('pickaxe') ? 'pickaxe' : null;
+    if (o.type === 'ore') return 'pickaxe';
+    return null;
+  }
   function targetKey(o) {
     if (o.type === 'spring' || o.type === 'sea') return o.type;
     return ({ fire: 'f', drop: 'd', lantern: 'l', wash: 'w', bug: 'b' }[o.type] || 'o') + o.id;
@@ -2061,6 +2143,7 @@
     if (target.type === 'board') { togglePanel('board'); return; }
     if (target.type === 'carving') { readCarving(target); return; }
     if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig', 'lantern'].includes(target.type)) hero.swingT = .35;
+    if (['tree', 'palm', 'rock', 'ore'].includes(target.type)) setSwingTool(hero, swingToolFor(target));
     net.send({ t: 'act', target: targetKey(target) });
   }
   // Build a recipe: tools are made on the spot, fires are placed in front of you.
@@ -2787,9 +2870,10 @@
   if (/[?&]debug/.test(location.search)) { renderer.info.autoReset = false; window.__dbg = { renderer, scene, camera, chunks, objects: () => objects, stats, stilled,
     pos: () => ({ x: px, z: pz }), lookAt: (x, z) => { yaw = Math.atan2(-(x - px), -(z - pz)); },
     washups: () => washups, bugs: () => bugs, previewJournal: keys => { keys.forEach(k => { journal.mine[k] = 1 + (k.length % 3); journal.firsts[k] = journal.firsts[k] || 'aiman'; }); },
-    setEnv: e => setEnv(e), cloudSheet: () => clouds.slice(0, 12).map(c => c.material.map.image.toDataURL()), teleport: (x, z) => { px = x; pz = z; }, floorAt: (x, z, y) => floorAt(x, z, y), setHealth: v => { stats.health = v; }, drops: () => drops, hop: () => hop, why: () => ({ state, air: hop.air, knockT, down: stats.down, ex: nrg.exhausted, panel: panelOpen(), h: heightAt(px, pz) }), addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
+    setEnv: e => setEnv(e), cloudSheet: () => clouds.slice(0, 12).map(c => c.material.map.image.toDataURL()), teleport: (x, z) => { px = x; pz = z; if (net && net.open) net.send({ t: 'pos', x: px, z: pz, face, moving: false, sprint: false, cam: 0 }); }, floorAt: (x, z, y) => floorAt(x, z, y), setHealth: v => { stats.health = v; }, drops: () => drops, hop: () => hop, why: () => ({ state, air: hop.air, knockT, down: stats.down, ex: nrg.exhausted, panel: panelOpen(), h: heightAt(px, pz) }), addFire: f => addFire(f), hero: () => hero, cut: () => Cut, cutJump: T => { Cut.T = T; }, startCut: r => startCutscene(r), carvings: () => carvings, read: id => readCarving(carvings.get(id)),
     recarve: (id, text, st) => { const c = carvings.get(id); setCarvings([{ id, key: c.key, x: c.x, z: c.z, face: c.mesh.rotation.y, text, state: st || 'active', tally: [2, 5] }], id, 'new'); }, face: () => face, gy: () => groundAt(px, pz), board: () => board, openPanel: w => togglePanel(w), patches: l => { myPatches = l; setPatches(hero, l); },
-    lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); } }; }
+    lanterns: () => lanterns, previewLantern: (id, lit) => { const l = lanterns.get(id); setLantern({ ...l, lit, fuel: 400 }); },
+    chips: () => chipMeshes.filter(m => m.visible), target: () => target, cooldown: () => cooldown, swingToolFor: o => swingToolFor(o) }; }
 
   // ================= Sky =================
   const skyKeys = [
@@ -3392,6 +3476,7 @@
     const cloudTint = .35 + sunI * .65;
     updateCrests(elapsed, cloudTint);
     updatePuffs(dt, elapsed);
+    updateChips(dt);
     clouds.forEach(c => {
       // drift east with the wind; wrap within 260 units of you so the sky is never empty
       const u = c.userData, W = 260, wx = u.bx + elapsed * u.speed;
