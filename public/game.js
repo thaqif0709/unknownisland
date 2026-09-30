@@ -2602,7 +2602,7 @@
     lanterns.forEach(l => mark(l.lit ? 'lanternLit' : 'lantern', l.x, l.z, l.big ? 1.35 : 1));
     fires.forEach(f => mark(f.fuel > 0 ? 'fire' : 'fireOut', f.x, f.z));
     drops.forEach(d => mark('sack', d.x, d.z, .9));
-    // players: a white ring, their colour, and (on the big map) their name
+    // players: their colour, and (on the big map) their name
     const label = (text, cx, cy, col) => {
       g.font = `600 ${Math.round(12 * Math.max(.8, dotScale))}px Fredoka, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
       g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = '#FFFBF0'; g.strokeText(text, cx + 12 * dotScale, cy); g.fillStyle = '#2B211F'; g.fillText(text, cx + 12 * dotScale, cy);
@@ -2610,13 +2610,11 @@
     remotes.forEach((r, id) => {
       if (r.dead) return;
       const s2 = r.remote.sample(), [cx, cy] = at(s2.x, s2.z), col = mapCol(id);
-      g.beginPath(); g.arc(cx, cy, 8 * dotScale, 0, Math.PI * 2); g.fillStyle = '#FFFBF0'; g.fill(); g.lineWidth = 1.5; g.strokeStyle = '#2B211F'; g.stroke();
-      g.beginPath(); g.arc(cx, cy, 5.2 * dotScale, 0, Math.PI * 2); g.fillStyle = col; g.fill(); g.lineWidth = 1.2; g.stroke();
+      g.beginPath(); g.arc(cx, cy, 5.2 * dotScale, 0, Math.PI * 2); g.fillStyle = col; g.fill(); g.lineWidth = 1.2; g.strokeStyle = '#2B211F'; g.stroke();
       if (full) label(r.name, cx, cy, col);
     });
     if (inGame()) {
       const [cx, cy] = at(px, pz), col = mapCol(me.id);
-      g.beginPath(); g.arc(cx, cy, 10.5 * dotScale, 0, Math.PI * 2); g.fillStyle = '#FFFBF0'; g.fill(); g.lineWidth = 1.8; g.strokeStyle = '#2B211F'; g.stroke();
       g.save(); g.translate(cx, cy); g.rotate(Math.PI - face); g.scale(dotScale, dotScale);
       g.beginPath(); g.moveTo(0, -9); g.lineTo(6.5, 7); g.lineTo(0, 3.5); g.lineTo(-6.5, 7); g.closePath();
       g.fillStyle = col; g.fill(); g.lineWidth = 1.8; g.strokeStyle = '#2B211F'; g.stroke();
