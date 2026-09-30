@@ -2,8 +2,8 @@
 id: F2
 title: Split the client into modules
 lane: foundations
-owner: edvin
-status: todo
+owner: thaqif
+status: doing
 depends: []
 flag: none
 size: 1–2 sessions
@@ -42,4 +42,5 @@ Runs at the same time as F1 (different files). Nothing else merges on the client
 
 ## Log
 
+- 2026-09-30: taken over by thaqif so the World lane isn't blocked (Edvin: don't start this one).
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->

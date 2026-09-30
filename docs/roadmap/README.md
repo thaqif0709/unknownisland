@@ -37,7 +37,7 @@ dependencies are `done`, so the waves are only a guide.
 
 | Wave | Thaqif | Edvin |
 |---|---|---|
-| 0 | F1 split the server → F3 flags and migrations → F5 contract stubs | F2 split the client → F4 tests |
+| 0 | F1 split the server → F3 flags and migrations → F5 contract stubs → F2 split the client | F4 tests (after F2) |
 | 1 | W1 objects from the seed · W8 Sleeper chains · W3 far view | P1 mouse-look · P8 minigames · P5 enemy framework |
 | 2 | W2 near-players only · W4 the 5 km shape · P4 checkpoints | P2 inventory → P3 tools · P9 climbing and gliding |
 | 3 | W5 the Veil · W7 big map · W9 caves · P11 calling out | P6 fighting · P7 fishing · P10 rafts and zip lines |
