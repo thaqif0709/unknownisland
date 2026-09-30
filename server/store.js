@@ -17,9 +17,9 @@ function createPgStore(url) {
   // so new entries in server/content/ appear and edits made in Neon are kept.
   async function seedContent() {
     const C = require('./content');
-    for (const r of C.SLEEPER) await q(`INSERT INTO sleeper_requests (request_key, text, conditions, reward, penalty, min_day, days, stone, done_text, fail_text)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT DO NOTHING`,
-      [r.key, r.text, r.conditions, JSON.stringify(r.reward || []), JSON.stringify(r.penalty || []), r.minDay || 1, r.days || 3, r.stone || null, r.doneText || null, r.failText || null]);
+    for (const r of C.SLEEPER) await q(`INSERT INTO sleeper_requests (request_key, text, conditions, reward, penalty, min_day, days, stone, done_text, fail_text, in_pool)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT DO NOTHING`,
+      [r.key, r.text, r.conditions, JSON.stringify(r.reward || []), JSON.stringify(r.penalty || []), r.minDay || 1, r.days || 3, r.stone || null, r.doneText || null, r.failText || null, r.pool !== false]);
     for (const e of C.JOURNAL) await q(`INSERT INTO journal_entries (entry_key, category, name, description, rarity) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
       [e.key, e.category, e.name, e.description, e.rarity]);
     for (const t of C.TIDE) await q(`INSERT INTO tide_table (item_key, weight, min_day, conditions, kind, label, gives, entry_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING`,
@@ -81,7 +81,7 @@ function createPgStore(url) {
     async pruneSessions() { await q('DELETE FROM sessions WHERE expires_at <= now()'); },
 
     async loadIsland(id) {
-      const r = await q('SELECT id, name, seed, day, time_of_day, last_tick_at, weather FROM islands WHERE id = $1', [id]);
+      const r = await q('SELECT id, name, seed, day, time_of_day, last_tick_at, weather, chains FROM islands WHERE id = $1', [id]);
       const row = r.rows[0];
       if (!row) return null;
       const objs = await q('SELECT obj_id, state FROM world_objects WHERE island_id = $1', [id]);
@@ -89,7 +89,7 @@ function createPgStore(url) {
       const drops = await q('SELECT id, x, z, items FROM drops WHERE island_id = $1 ORDER BY id', [id]);
       const lanterns = await q('SELECT lantern_id, lit, fuel, offerings, cleared_since, reclaim_progress FROM lanterns WHERE island_id = $1', [id]);
       return {
-        id: row.id, name: row.name, seed: row.seed, day: row.day, time: row.time_of_day, weather: row.weather,
+        id: row.id, name: row.name, seed: row.seed, day: row.day, time: row.time_of_day, weather: row.weather, chains: row.chains || {},
         lastTickAt: new Date(row.last_tick_at).getTime(),
         objects: objs.rows.map(o => ({ id: o.obj_id, state: o.state })),
         fires: fires.rows.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: f.kind, builtBy: f.built_by, pot: f.pot || null })),
@@ -109,8 +109,8 @@ function createPgStore(url) {
       const c = await pool.connect();
       try {
         await c.query('BEGIN');
-        await c.query('UPDATE islands SET day = $2, time_of_day = $3, last_tick_at = $4, moon_day = $5, weather = $6 WHERE id = $1',
-          [snap.id, snap.day, snap.time, new Date(snap.lastTickAt), snap.moonDay, snap.weather]);
+        await c.query('UPDATE islands SET day = $2, time_of_day = $3, last_tick_at = $4, moon_day = $5, weather = $6, chains = $7 WHERE id = $1',
+          [snap.id, snap.day, snap.time, new Date(snap.lastTickAt), snap.moonDay, snap.weather, JSON.stringify(snap.chains || {})]);
         for (const o of snap.objects) {
           if (o.state) {
             await c.query(`INSERT INTO world_objects (island_id, obj_id, state) VALUES ($1, $2, $3)
@@ -153,10 +153,10 @@ function createPgStore(url) {
     async loadContent() {
       const j = await q('SELECT entry_key, category, name, description, rarity FROM journal_entries ORDER BY category, entry_key');
       const t = await q('SELECT item_key, weight, min_day, conditions, kind, label, gives, entry_key FROM tide_table');
-      const sl = await q('SELECT request_key, text, conditions, reward, penalty, min_day, weight, days, stone, done_text, fail_text FROM sleeper_requests WHERE enabled');
+      const sl = await q('SELECT request_key, text, conditions, reward, penalty, min_day, weight, days, stone, done_text, fail_text, in_pool FROM sleeper_requests WHERE enabled');
       return {
         sleeper: sl.rows.map(r => ({ key: r.request_key, text: r.text, conditions: r.conditions, reward: r.reward, penalty: r.penalty, minDay: r.min_day,
-          weight: r.weight, days: r.days, stone: r.stone, doneText: r.done_text, failText: r.fail_text })),
+          weight: r.weight, days: r.days, stone: r.stone, doneText: r.done_text, failText: r.fail_text, inPool: r.in_pool })),
         journal: j.rows.map(r => ({ key: r.entry_key, category: r.category, name: r.name, description: r.description, rarity: r.rarity })),
         tide: t.rows.map(r => ({ key: r.item_key, weight: r.weight, minDay: r.min_day, conditions: r.conditions, kind: r.kind, label: r.label, gives: r.gives, entry: r.entry_key })),
       };
@@ -261,7 +261,7 @@ function createMemoryStore() {
       const i = islands.get(id);
       if (!i) return null;
       return {
-        id: i.id, name: i.name, seed: i.seed, day: i.day, time: i.time, lastTickAt: i.lastTickAt, weather: i.weather || 'clear',
+        id: i.id, name: i.name, seed: i.seed, day: i.day, time: i.time, lastTickAt: i.lastTickAt, weather: i.weather || 'clear', chains: clone(i.chains || {}),
         objects: [...i.objects].map(([oid, state]) => ({ id: oid, state: clone(state) })),
         fires: clone(i.fires),
         drops: clone(i.drops),
@@ -275,7 +275,7 @@ function createMemoryStore() {
     },
     async saveIsland(snap) {
       const i = islands.get(snap.id);
-      Object.assign(i, { day: snap.day, time: snap.time, lastTickAt: snap.lastTickAt, weather: snap.weather });
+      Object.assign(i, { day: snap.day, time: snap.time, lastTickAt: snap.lastTickAt, weather: snap.weather, chains: clone(snap.chains || {}) });
       for (const o of snap.objects) o.state ? i.objects.set(o.id, clone(o.state)) : i.objects.delete(o.id);
       for (const f of snap.fires) { const x = i.fires.find(y => y.id === f.id); if (x) { x.fuel = f.fuel; x.pot = f.pot ? clone(f.pot) : null; } }
       for (const l of snap.lanterns || []) i.lanterns.set(l.id, clone({ id: l.id, lit: l.lit, fuel: l.fuel, offerings: l.offerings,
@@ -296,7 +296,7 @@ function createMemoryStore() {
     async loadContent() {
       const C = require('./content');
       return { journal: clone(C.JOURNAL), tide: C.TIDE.map(t => ({ minDay: 1, gives: {}, conditions: {}, ...clone(t) })),
-        sleeper: C.SLEEPER.map(r => ({ minDay: 1, weight: 1, days: 3, stone: null, reward: [], penalty: [], ...clone(r) })) };
+        sleeper: C.SLEEPER.map(({ pool, ...r }) => ({ minDay: 1, weight: 1, days: 3, stone: null, reward: [], penalty: [], ...clone(r), inPool: pool !== false })) };
     },
     async setSeenIntro(playerId, seen) { const p = players.get(playerId); if (p) p.seenIntro = !!seen; },
     async loadEvents(islandId) { return clone(events.filter(e => e.islandId === islandId).slice(-60)); },

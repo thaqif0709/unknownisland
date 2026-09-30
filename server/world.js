@@ -42,6 +42,7 @@ class Island {
     }
     this.lanternsDirty = new Set();
     this.weather = data.weather || 'clear';
+    this.chains = data.chains || {};   // Sleeper request chains: { region: { done, completeDay } }
     this.env = {};   // moon and weather flags, see updateEnv()
     const l0 = WG.generateLanterns(this.seed)[0];
     this.board = { x: r2(l0.x + 2.6), z: r2(l0.z + 1.4) };   // the driftwood board, by the beach lantern
@@ -185,7 +186,7 @@ class Island {
     const lanterns = [...this.lanternsDirty].map(id => { const l = this.lanterns[id]; return { id, lit: l.lit, fuel: r2(l.fuel), offerings: [...l.offerings], litBy: l.litBy, clearedSince: l.clearedSince, reclaim: r2(l.reclaim) }; });
     this.lanternsDirty = new Set();
     const snap = {
-      id: this.id, day: this.day, time: this.time, lastTickAt: this.lastTickAt, moonDay: WG.moonPhase(this.day), weather: this.weather,
+      id: this.id, day: this.day, time: this.time, lastTickAt: this.lastTickAt, moonDay: WG.moonPhase(this.day), weather: this.weather, chains: this.chains,
       objects, fires: this.fires.map(f => ({ id: f.id, fuel: r2(f.fuel), pot: f.pot ? { ...f.pot } : null })), members,
       lanterns,
     };

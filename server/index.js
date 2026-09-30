@@ -133,7 +133,9 @@ async function sendHiddenPages(res) {
     sendJson(res, 200, {
       journal: c.journal.map(e => ({ key: e.key, category: e.category, name: e.name, rarity: e.rarity, hint: island.findHint(e.key) })),
       tide: c.tide.filter(t => t.weight > 0).map(t => ({ label: t.label, kind: t.kind, minDay: t.minDay || 1 })),
-      requests: (c.sleeper || []).length,
+      requests: (c.sleeper || []).filter(r => r.inPool !== false).length,   // the random ones; chain steps are counted in chains
+      chains: Object.fromEntries(WG.REGIONS.map(r => [r.id, (require(`./regions/${r.id}`).requests || []).length]).filter(([, n]) => n)),
+      features: WG.features(),
       day: island.day,
     });
   } catch (e) { sendJson(res, 500, { error: 'The island is not answering.' }); }

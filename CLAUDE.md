@@ -12,6 +12,8 @@ do) goes inside a `<details class="spoiler">` box so it's hidden until clicked.
 Numbers there are read live from `server/shared/world-gen.js` (`data-r="RULE.PATH"`)
 and `/api/hiddenpages` (journal, tide, carving requests), so prefer wiring new numbers the
 same way instead of typing them in.
+For a feature still behind a flag, wrap its Hidden Pages text (and its changelog line)
+in `data-feature="flagname"` so it only appears once the flag is on.
 
 Also keep `docs/HANDOFF.md` (design notes for developers) and `README.md` in step.
 

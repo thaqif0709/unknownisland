@@ -10,6 +10,8 @@
 //   bugs         bugs caught while it's carved   { count }
 //   find         someone finds a journal entry   { key }
 // reward / penalty: a list of { type } from calm, gift, relic, note, light / press, dread, douse
+// pool: false = only asked as a step of a region's chain (the order is in server/regions/<id>.js),
+// never picked at random.
 const SLEEPER = [
   { key: 'east_flame', text: 'Feed the east flame before the dark moon.', stone: 'shore', days: 4, minDay: 2,
     conditions: { type: 'lantern_fed', which: 'east', fuel: 900 }, reward: [{ type: 'calm', nights: 1 }, { type: 'gift' }], penalty: [{ type: 'press', days: 2 }],
@@ -38,6 +40,23 @@ const SLEEPER = [
   { key: 'sea_voice', text: 'Bring me the voice of the sea.', stone: 'shore', days: 5, minDay: 3,
     conditions: { type: 'find', key: 'conch' }, reward: [{ type: 'relic', key: 'carved_mask' }, { type: 'calm', nights: 1 }], penalty: [{ type: 'press', days: 2 }],
     doneText: 'I heard it. I have not heard it in so long.', failText: 'Quiet.' },
+
+  // ---- The Landing's chain (W8). Something is coming up out of the sea: the Tidewife. ----
+  { key: 'landing_watch', pool: false, text: 'Something is coming up out of the water. Keep two fires awake until the sun, so I can watch it.', stone: 'shore', days: 3,
+    conditions: { type: 'fires_dawn', count: 2 }, reward: [{ type: 'gift' }], penalty: [{ type: 'press', days: 1 }],
+    doneText: 'It stayed in the water. It did not like the light.', failText: 'It came up while you slept. Look at the sand.' },
+  { key: 'landing_weight', pool: false, text: 'It digs at my shore. Bring twelve stones to the spring, so I can hold the sand down.', stone: 'spring', days: 3,
+    conditions: { type: 'offer', item: 'stone', count: 12 }, reward: [{ type: 'calm', nights: 1 }], penalty: [{ type: 'dread', amount: 15 }],
+    doneText: 'Heavy. Good. It cannot dig here now.', failText: 'It took more of the shore.' },
+  { key: 'landing_together', pool: false, text: 'It is louder when you are alone. Come to me together, when it is dark.', stone: 'ridge', days: 3,
+    conditions: { type: 'gather', count: 2 }, reward: [{ type: 'light' }, { type: 'note' }], penalty: [{ type: 'douse' }],
+    doneText: 'You heard it too. Scratching, under the sand.', failText: 'Alone. It likes you alone.' },
+  { key: 'landing_east', pool: false, text: 'Feed the east flame. It watches the water for me.', stone: 'shore', days: 4,
+    conditions: { type: 'lantern_fed', which: 'east', fuel: 1200 }, reward: [{ type: 'calm', nights: 1 }, { type: 'gift' }], penalty: [{ type: 'press', days: 2 }],
+    doneText: 'I can see it now. It is bigger than it was.', failText: 'The east is dark. It came closer.' },
+  { key: 'landing_call', pool: false, text: 'Light three lanterns, so it can find its way to you. Then it will come.', stone: 'ridge', days: 5,
+    conditions: { type: 'lanterns_lit', count: 3, minHeight: 0 }, reward: [{ type: 'note' }], penalty: [{ type: 'press', days: 2 }],
+    doneText: 'It is coming. At the lowest tide, on the east sand.', failText: 'It lost its way. Light them again.' },
 ];
 
 // What the stones say when they aren't asking for anything.

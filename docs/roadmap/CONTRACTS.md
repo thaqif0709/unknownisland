@@ -25,6 +25,9 @@ WG.features()         // { slots: false, combat: true } (the resolved set)
   start-up, and warns about names that aren't in `RULES.FEATURES` (typos).
 - The server sends the resolved flags in the `welcome` message and `public/net.js` applies
   them, so the client never decides on its own.
+- Hidden Pages text about a flagged feature goes in an element with
+  `data-feature="name"` (a section, a spoiler box, a changelog `<li>`). It stays hidden
+  until the flag is on (the page reads the flags from `/api/hiddenpages`).
 - Each task names its flag. Flip it to `true` in `RULES.FEATURES` in the task's last PR.
   Once a feature has been on for a while, delete the flag and the `if`s.
 
@@ -174,8 +177,15 @@ island.combat.onDowned(p) / onRevived(p)
 // server/bosses/<id>.js: a mob definition plus
 { region: 'landing', appear: { when: 'lowest-tide', x, z }, arena: 40, phases: [...], trophy: { patch, relic } }
 island.summonBoss(regionId)      // W8 calls this when a chain finishes; stub (F5) logs a 'boss_summoned' event
-// On defeat the boss system calls island.openRegion(nextRegion).
+// On defeat the boss system sets island.chains[region].bossDay = island.day (that stops the
+// stone's boss hint) and calls island.openRegion(nextRegion).
 ```
+
+Where and when a boss appears is in its region file, which W8 already reads:
+`bossHint: { stone: 'shore', text: 'At the lowest tide. The east sand.' }` (what the stone
+says while the boss waits). A region's chain is `requests: ['key1', ...]` in the same file;
+each key is a `sleeper_requests` row, written in `server/content/sleeper.js` with
+`pool: false` so it's never picked at random.
 
 ## 11. Checkpoints (P4)
 

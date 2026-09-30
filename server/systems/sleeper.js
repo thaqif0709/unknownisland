@@ -3,11 +3,19 @@
 // sleeper_requests table, carved at dawn (also during offline catch-up).
 // Answer it and it gives something back; ignore it and the fog presses harder.
 // Everything that happens is logged in island_events.
+// Request chains (W8, flag `chains`): each open region has a chain of requests, in the
+// order listed in server/regions/<id>.js. The next step of the first unfinished chain is
+// always carved next; finishing the chain calls the region's boss (summonBoss). With no
+// chain to work on, requests come at random from the pool as before.
 const WG = require('../shared/world-gen');
 const CONTENT = require('../content');
 const { RULES, heightAt, isNight } = WG;
 
 const r2 = v => Math.round(v * 100) / 100;
+// Each region's file (chain order, boss hint), loaded once.
+const REGION_FILES = Object.fromEntries(WG.REGIONS.map(r => [r.id, require(`../regions/${r.id}`)]));
+const chainOf = region => (REGION_FILES[region] && REGION_FILES[region].requests) || [];
+const CHAIN_KEYS = new Set(WG.REGIONS.flatMap(r => chainOf(r.id)));
 const KINDS = new Set(['offer', 'lanterns_lit', 'lantern_fed', 'gather', 'fires_dawn', 'fog_walk', 'bugs', 'find']);
 const need = c => c.type === 'offer' || c.type === 'lanterns_lit' || c.type === 'gather' || c.type === 'fires_dawn' || c.type === 'bugs' ? Math.max(1, c.count | 0) : 1;
 
@@ -41,19 +49,57 @@ const methods = {
 
   // A new carving, on its stone (or any stone).
   sleeperPick() {
-    const S = this.sleeper, list = (this.content.sleeper || []).filter(r => (r.minDay || 1) <= this.day && KINDS.has(r.conditions && r.conditions.type));
-    let pool = list.filter(r => !S.recent.includes(r.key)); if (!pool.length) pool = list;
-    if (!pool.length) { S.req = null; return; }
-    const total = pool.reduce((a, r) => a + (r.weight ?? 1), 0);
-    let roll = Math.random() * total, def = pool[0];
-    for (const r of pool) if ((roll -= (r.weight ?? 1)) <= 0) { def = r; break; }
+    const S = this.sleeper, all = (this.content.sleeper || []).filter(r => (r.minDay || 1) <= this.day && KINDS.has(r.conditions && r.conditions.type));
+    const chains = WG.feature('chains'), step = chains ? this.chainStep() : null;
+    let def = step && all.find(r => r.key === step.key);
+    if (step && !def) console.warn(`[island ${this.id}] chain step ${step.key} (${step.region}) is missing, disabled or too early; carving a side request`);
+    if (!def) {
+      // Chain steps are never picked at random (with chains on, not even old pool requests
+      // that a region's chain uses).
+      const list = all.filter(r => r.inPool !== false && !(chains && CHAIN_KEYS.has(r.key)));
+      let pool = list.filter(r => !S.recent.includes(r.key)); if (!pool.length) pool = list;
+      if (!pool.length) { S.req = null; return; }
+      const total = pool.reduce((a, r) => a + (r.weight ?? 1), 0);
+      let roll = Math.random() * total;
+      def = pool[0];
+      for (const r of pool) if ((roll -= (r.weight ?? 1)) <= 0) { def = r; break; }
+    }
     const stone = this.carvings.find(c => c.key === def.stone) || this.carvings[Math.floor(Math.random() * this.carvings.length)];
     S.req = { key: def.key, stone: stone.id, progress: 0, need: need(def.conditions), startDay: this.day,
       expiresDay: this.day + (def.days || RULES.SLEEPER.DAYS), status: 'active', resolvedDay: null };
+    if (step && def.key === step.key) S.req.region = step.region;
     S.recent = [...S.recent, def.key].slice(-3);
     this.saveReq();
     this.sleeperChanged(stone.id, 'new');
     console.log(`[island ${this.id}] the Sleeper carves "${def.text}" on the ${stone.key} stone`);
+  },
+  // The next request of the first open region whose chain isn't finished, or null.
+  chainStep() {
+    for (const r of [...WG.REGIONS].sort((a, b) => a.stage - b.stage)) {
+      if (!this.isRegionOpen(r.id)) continue;
+      const keys = chainOf(r.id), done = (this.chains[r.id] || {}).done || 0;
+      if (done < keys.length) return { region: r.id, key: keys[done], step: done + 1, of: keys.length };
+    }
+    return null;
+  },
+  // A chain step was answered: move on, and at the end call the region's boss.
+  chainAdvance(region) {
+    const c = this.chains[region] = { done: 0, ...this.chains[region] }, keys = chainOf(region);
+    c.done = Math.min(keys.length, c.done + 1);
+    console.log(`[island ${this.id}] ${region} chain: ${c.done}/${keys.length}`);
+    if (c.done >= keys.length && c.completeDay == null) {
+      c.completeDay = this.day;
+      this.summonBoss(region);
+    }
+  },
+  // What a stone says while a finished chain's boss is waiting (C0 sets bossDay when it's beaten).
+  bossHintFor(stoneKey) {
+    if (!WG.feature('chains')) return null;
+    for (const r of WG.REGIONS) {
+      const c = this.chains[r.id], hint = REGION_FILES[r.id].bossHint;
+      if (c && c.completeDay != null && c.bossDay == null && hint && hint.stone === stoneKey) return hint.text;
+    }
+    return null;
   },
   sleeperChanged(stoneId, why) {
     if (!this.players || !this.players.size) return;
@@ -70,7 +116,7 @@ const methods = {
         if (req.status === 'active') { v.tally = [Math.min(req.progress, req.need), req.need]; v.offer = def.conditions.type === 'offer' ? def.conditions.item : null; }
       } else {
         const idle = CONTENT.SLEEPER_IDLE[c.key] || ['...'];
-        v.state = 'idle'; v.text = idle[(this.day + c.id) % idle.length];
+        v.state = 'idle'; v.text = this.bossHintFor(c.key) || idle[(this.day + c.id) % idle.length];
       }
       return v;
     });
@@ -91,6 +137,7 @@ const methods = {
     this.saveReq();
     if (this.players.size) this.broadcast({ t: 'toast', msg: `The carving on the ${stone.key} stone has changed.` });
     for (const r of [].concat(def.reward || [])) this.sleeperEffect(r, stone);
+    if (req.region && WG.feature('chains')) this.chainAdvance(req.region);
     this.sleeperChanged(stone.id, 'done');
     console.log(`[island ${this.id}] the Sleeper was answered: ${req.key}`);
   },

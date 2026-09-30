@@ -45,7 +45,10 @@ between the Stairs and the Teeth.
 
 ## 3. Progression: the Sleeper opens the world
 
-- Each **open** region has a **chain of 5 requests** at the carvings ("steady" pace).
+- Each **open** region has a **chain of 5 requests** at the carvings ("steady" pace),
+  carved one after another in a fixed order (the region's file). Ignore one and the same
+  request comes back at the next dawn, after the usual penalty. Between chains (while a
+  boss waits to be met), the stones ask random requests as before. Built in W8.
 - Finishing the chain **calls that region's boss**. Beating the boss **opens the next
   region at dawn**. Fixed order (table above).
 - Locked land is behind **the Veil**: a wall of thick fog. Walking in raises dread

@@ -220,6 +220,17 @@ planned separately by Thaqif):
   stone or old tooth, journal category `relics`), `note`, `light` (the nearest
   cold lantern lights itself). Penalties: `press` (fog front +4, lanterns burn
   1.5x), `dread`, `douse`. Every request and mood is logged in `island_events`.
+- **Sleeper request chains (built, flag `chains`, off until the first boss exists).**
+  Each region's chain is a list of request keys in `server/regions/<id>.js`
+  (`requests`), in order; chain-only requests have `in_pool = false` in
+  `sleeper_requests` so they never come up at random. With the flag on, the next step
+  of the first open region whose chain isn't finished is always carved; an ignored step
+  is carved again at the next dawn; between chains, pool requests come at random as
+  before. Progress is `islands.chains` (`{ landing: { done, completeDay, bossDay } }`).
+  Finishing a chain calls `summonBoss(region)` and the region's `bossHint` stone gives the
+  time and place until the boss system (C0) sets `bossDay`. The Landing's chain (5 steps,
+  leading to the Tidewife) is written. When the flag goes on, a request already carved
+  finishes first.
   Gifts left at a stone survive the tide. The carved text re-inks itself on the
   stone when it changes; reading a stone at night plays breathing; Drowning
   nights bring small tremors.

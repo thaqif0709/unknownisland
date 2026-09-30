@@ -97,7 +97,9 @@
     // Add `name: false` when a task starts and set it to true in the task's last PR.
     // On the server the FEATURES env var overrides these ("slots,combat" or "-slots").
     // See docs/roadmap/CONTRACTS.md section 1.
-    FEATURES: {},
+    FEATURES: {
+      chains: false,     // W8: Sleeper request chains per region (goes live with the first boss)
+    },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {
       PER_PLAYER: 2, ALONE_EXTRA: 1, DREAD_EXTRA: 1, MAX: 12,

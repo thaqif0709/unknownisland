@@ -52,6 +52,8 @@ code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--chip);bo
 .r-common{color:var(--leaf)} .r-uncommon{color:var(--blue)} .r-rare{color:var(--ochre)}
 .grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px 18px}
 .log li{margin:4px 0}
+/* Parts about features that are switched off (RULES.FEATURES) stay hidden until they go live. */
+[data-feature]:not(.live){display:none}
 details.spoiler{border:2px dashed var(--line);border-radius:12px;margin:8px 0;padding:0 12px}
 details.spoiler[open]{border-style:solid;padding-bottom:8px}
 details.spoiler summary{cursor:pointer;padding:8px 0;list-style:none;font-weight:500}
@@ -293,6 +295,14 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li>A new carving appears at dawn. Put your ear to a stone at night and listen.</li>
       </ul>
       <p class="muted">There are <span id="reqCount">several</span> different requests so far; more may be added.</p></details>
+      <details class="spoiler" data-feature="chains"><summary><span class="warn">Spoiler</span> The stones tell a story <span class="muted">(click to show)</span></summary>
+      <p>The stones don't only ask at random. Each part of the island has its own run of requests, carved one after another, and together they tell a story.</p>
+      <ul>
+        <li>When one is answered, the next in the run is carved at the following dawn.</li>
+        <li>Ignore one and the fog presses as usual, then the <b>same request</b> comes back at the next dawn. The story waits for you.</li>
+        <li>The Landing's run has <span id="chainLen">five</span> requests. After the last one, something comes up out of the sea. The stones will tell you when and where.</li>
+        <li>Between runs, the stones ask for other things, as before.</li>
+      </ul></details>
     </section>
 
     <section id="tides"><h2>Tides</h2>
@@ -349,6 +359,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="chains"><b>The carving stones tell a story:</b> each part of the island has a run of requests, one after another.</li>
         <li><b>Longer days:</b> a full day is now 20 minutes: 15 of daylight and 5 of night.</li>
         <li>Hidden Pages: spoilers (rare finds, strange tides, what the stones and the Stilled do) are hidden until you click to show them.</li>
         <li>This page is now called the <b>Hidden Pages</b> (<code>/hiddenpages</code>; the old <code>/wiki</code> link still works).</li>
@@ -415,6 +426,8 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     }).join(''));
     $('tideList').innerHTML = d.tide.map(t => `<div>${esc(t.label)} <span class="muted">(${esc(t.kind)}${t.minDay > 1 ? `, from day ${t.minDay}` : ''})</span></div>`).join('');
     if (d.requests) $('reqCount').textContent = d.requests;
+    document.querySelectorAll('[data-feature]').forEach(el => el.classList.toggle('live', !!(d.features || {})[el.dataset.feature]));
+    if (d.chains && d.chains.landing) $('chainLen').textContent = d.chains.landing;
     $('liveNote').textContent = `(Live numbers; the island is on day ${d.day}.)`;
   }).catch(() => { $('liveNote').textContent = '(The island is asleep; the journal list will show once it wakes.)'; });
 })();

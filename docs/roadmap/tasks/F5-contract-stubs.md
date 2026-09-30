@@ -37,5 +37,5 @@ Stubs for contracts §4, §5, §6, §10, §11, §12
 
 ## Log
 
-- 2026-09-30 thaqif: done. Dropped the F2 dependency (everything here is server-side). server/systems/inventory.js owns p.inv/p.tools/p.buckets and all ~40 direct uses in 10 files now call it; E on world objects goes through a `uses` registry (CONTRACTS.md §5 changed from `WG.USE` to per-system `uses`); regions, bosses and respawn placeholders in systems/regions.js (`summonBoss` is a flat method, not `island.bosses.summon`); WG.REGIONS/regionAt/climbAt; server/regions/<id>.js for all seven regions. 124 existing server checks plus 29 new ones pass.
+- 2026-09-30 thaqif: done. Dropped the F2 dependency (everything here is server-side). server/systems/inventory.js owns p.inv/p.tools/p.buckets and all ~40 direct uses in 10 files now call it; E on world objects goes through a `uses` registry (CONTRACTS.md §5 changed from `WG.USE` to per-system `uses`); regions, bosses and respawn placeholders in systems/regions.js (`summonBoss` is a flat method, not `island.bosses.summon`); WG.REGIONS/regionAt/climbAt; server/regions/<id>.js for all seven regions. 124 existing server checks plus 28 new ones pass.
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->
