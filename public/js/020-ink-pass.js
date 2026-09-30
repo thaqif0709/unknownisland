@@ -23,11 +23,12 @@
       fogTex: { value: fogTex }, fogOrigin: { value: fogOrigin }, fogSize: { value: FOG_SIZE },
       invProj: { value: camera.projectionMatrixInverse }, camWorld: { value: camera.matrixWorld }, camPos: { value: camera.position },
       night: { value: 0 }, time: { value: 0 }, dread: { value: 0 }, seeFar: { value: 1 },
+      farFog: { value: 0 }, fogFrontU: { value: -2 },   // far view (W3): fog beyond the fog map from height
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
     fragmentShader: `
       uniform sampler2D tColor, tDepth, tNormal, fogTex;
-      uniform vec2 res, fogOrigin; uniform float width, near, far, useNormals, fogSize, night, time, dread, seeFar;
+      uniform vec2 res, fogOrigin; uniform float width, near, far, useNormals, fogSize, night, time, dread, seeFar, farFog, fogFrontU;
       uniform vec3 ink, camPos; uniform mat4 invProj, camWorld;
       varying vec2 vUv;
       float lin(vec2 uv){ float z = texture2D(tDepth, uv).x * 2. - 1.; return 2. * near * far / (far + near - z * (far - near)); }
@@ -37,9 +38,13 @@
         return mix(mix(hash(i), hash(i + vec2(1., 0.)), f.x), mix(hash(i + vec2(0., 1.)), hash(i + vec2(1., 1.)), f.x), f.y); }
       float b2(vec2 a){ a = floor(a); return fract(dot(a, vec2(.5, a.y * .75))); }
       float bayer(vec2 a){ return b2(.5 * a) * .25 + b2(a); }
-      float fogField(vec2 xz){
-        vec2 f = (xz - fogOrigin) / fogSize;
-        if (f.x < 0. || f.y < 0. || f.x > 1. || f.y > 1.) return 1.;   // beyond the map: assume the worst
+      float fogField(vec3 wp){
+        vec2 f = (wp.xz - fogOrigin) / fogSize;
+        if (f.x < 0. || f.y < 0. || f.x > 1. || f.y > 1.) {
+          if (farFog < .5) return 1.;   // beyond the map: assume the worst
+          // far view: the same rule as the fog map (low ground fills first), from the height of what you see
+          return clamp(max(smoothstep(-1.5, -4.5, wp.y), smoothstep(fogFrontU + 2.5, fogFrontU - 1.5, wp.y)), 0., 1.);
+        }
         return texture2D(fogTex, f).r;
       }
       void main(){
@@ -52,12 +57,12 @@
         float d0 = lin(uv);
         bool sky = d0 >= far * .98;
         // ---- fog: density along the view, from where you stand and where you look ----
-        float fCam = fogField(camPos.xz);
+        float fCam = fogField(camPos);
         float fog = fCam * .85;
         if (!sky) {
           vec4 v = invProj * vec4(uv * 2. - 1., raw * 2. - 1., 1.); v /= v.w;
           vec3 wp = (camWorld * v).xyz;
-          float fPix = fogField(wp.xz);
+          float fPix = fogField(wp);
           fog = max(max(fPix * smoothstep(1.5, 18., d0), fCam * smoothstep(2., 16., d0)), fPix * .35);
         }
         fog = clamp(fog * (.85 + noise(gl_FragCoord.xy * .015 + time * .06) * .3) * seeFar, 0., 1.);

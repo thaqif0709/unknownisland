@@ -362,6 +362,9 @@ The browser code is `public/js/NNN-name.js`, one file per part, joined in number
 file). They share one scope as if they were one file. New parts are new numbered files and
 plug in with `UI.net.on`, `UI.onFrame` and `UI.panels.register` (`000-start.js`,
 `240-input.js`). Details: `docs/roadmap/CONTRACTS.md` section 3.
+With the `farview` flag, `125-far-view.js` draws a coarse ring of land out to 2 km (1 km on
+phones) around the detailed chunks, with its own shader hole where the chunks are, and pushes
+the camera range and haze out to match; the ink pass takes fog beyond its fog map from height.
 
 ## Feature flags and migrations
 - **Flags:** `RULES.FEATURES` in `world-gen.js`, read with `WG.feature(name)` on both sides.

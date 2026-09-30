@@ -79,6 +79,14 @@ UI.panels.toggle(name) / UI.panels.close() / UI.panels.isOpen()
 `UI.panels.register` must run from a part numbered after `240-input.js` (or inside a
 function). `window.UI` is also handy in the browser console.
 
+**Far view (W3, flag `farview`, `125-far-view.js`):** with it on, the camera reaches
+`UI.farView.radius + 300` m (2 km ring on desktop, 1 km on coarse pointers, none on Low
+graphics; it shrinks itself below 24 fps unless `UI.farView.lock`), the near plane is 0.25 m and
+`scene.fog` runs from 160 m to the ring's edge. Anything that sets `camera.far` or `scene.fog`
+should leave them alone while `WG.feature('farview')` is on (cutscenes are exempt: the far view
+switches off while `Cut.on`). The ring is coarse and cut away within 114 m of you, so anything
+that must look right up close still belongs in the chunks.
+
 ## 4. Items and inventory (F5 done as a stub → P2 real)
 
 Nothing outside `server/systems/inventory.js` touches `p.inv`, `p.tools` or `p.buckets`

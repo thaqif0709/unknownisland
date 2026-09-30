@@ -139,6 +139,9 @@ To open a region by hand (for testing the big world), put your username in an `A
 environment variable on Render (comma-separated for several) and type `/open stair` in chat.
 The Veil lifts at the next dawn.
 
+The big world is behind three flags that go together: `FEATURES=streaming,bigworld,farview`
+(chunks load around each player, the 5 km world, and the view out to 2 km).
+
 ## Trying it on your own computer (optional)
 
 You need [Node.js](https://nodejs.org) 20 or newer.

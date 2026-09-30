@@ -102,6 +102,7 @@
       chains: false,     // W8: Sleeper request chains per region (goes live with the first boss)
       streaming: false,  // W2: send and run only the chunks of new land near players
       bigworld: false,   // W4: the 5 km world around the Landing (needs streaming on too)
+      farview: false,    // W3: see out to about 2 km (1 km on phones)
     },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {
