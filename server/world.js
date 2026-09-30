@@ -131,7 +131,7 @@ class Island {
     // Everyone's position, in one shared message.
     const snap = JSON.stringify({
       t: 'snap', time: this.time, day: this.day,
-      p: [...this.players.values()].map(p => [p.id, r2(p.x), r2(p.z), r2(p.face), p.moving ? (p.running ? 2 : 1) : 0, p.dead ? 1 : 0, p.stand ? r2(p.stand) : 0, p.under || 0, p.pose === 'climb' ? 1 : p.pose === 'glide' ? 2 : 0]),
+      p: [...this.players.values()].map(p => [p.id, r2(p.x), r2(p.z), r2(p.face), p.moving ? (p.running ? 2 : 1) : 0, p.dead ? 1 : 0, p.stand ? r2(p.stand) : 0, p.under || 0, p.pose === 'climb' ? 1 : p.pose === 'glide' ? 2 : p.pose === 'fly' ? 3 : 0]),
       m: this.mobs.snap(),
     });
     for (const p of this.players.values()) this.sendRaw(p, snap);

@@ -141,12 +141,13 @@
       let ix = free ? (held('right') || keys.ArrowRight ? 1 : 0) - (held('left') || keys.ArrowLeft ? 1 : 0) + joy.x : 0;
       let iz = free ? (held('forward') || keys.ArrowUp ? 1 : 0) - (held('back') || keys.ArrowDown ? 1 : 0) - joy.y : 0;
       const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
-      wantSprint = free && l > .08 && (held('sprint') || runToggle);
+      wantSprint = free && l > .08 && (held('sprint') || runToggle) && !flying;   // (flying: Shift sinks instead)
       running = WG.stepEnergy(nrg, dt, wantSprint, travelDrain());   // (climbing and gliding use energy too)
-      if (climb) { stepClimb(dt, ix, iz); moving = climbMoving; }   // on a trunk or a cliff (385-climbing.js)
+      if (flying) moving = flyStep(dt, ix, iz);   // creative mode (387-creative.js)
+      else if (climb) { stepClimb(dt, ix, iz); moving = climbMoving; }   // on a trunk or a cliff (385-climbing.js)
       else if (glide) { const [gx, gz] = glideDir(ix, iz); hop.fwd = RULES.TRAVEL.GLIDE_SPEED; hop.fx = gx; hop.fz = gz; }
-      const leaping = !climb && hop.air && hop.fwd > 0;
-      if (!climb && (l > .08 || leaping)) {
+      const leaping = !climb && !flying && hop.air && hop.fwd > 0;
+      if (!climb && !flying && (l > .08 || leaping)) {
         const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
         const dx = rx * ix + fx * iz, dz = rz * ix + fz * iz;
         // a bit slower through the air, so you can land on the rock you jumped at instead of sailing past it
@@ -294,7 +295,7 @@
     } else {
       // Past the lowest orbit angle the camera stops sinking, comes in closer
       // behind the frog and tilts up, so you can look at the sky and treetops.
-      camLift += (((climb || glide) ? hop.y : (hop.floor || 0)) - camLift) * Math.min(1, dt * 6);   // follow you up onto a rock (or a trunk, or a glide), smoothly
+      camLift += (((climb || glide || flying) ? hop.y : (hop.floor || 0)) - camLift) * Math.min(1, dt * 6);   // follow you up onto a rock (or a trunk, or a glide), smoothly
       const py = (myCave ? myFloor() : Math.max(heightAt(px, pz), -.75)) + camLift, LOW = .18;   // in a cave: its floor (W9)
       const up = Math.max(0, LOW - pitch), orbit = Math.max(pitch, LOW - up * .12);
       const dist = camDist * (1 - Math.min(up, 1) * .45);
