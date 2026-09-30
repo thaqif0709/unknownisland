@@ -142,7 +142,7 @@ const methods = {
       else dd += D.FRIENDS * (this.has(p, 'conch_charm') ? 2 : 1);
       if (p.warm) dd += D.LIGHT * (p.sitting ? 2 : 1);   // resting by the fire calms you faster
       if (nf < .5 && p.fog < .3) dd += D.DAY;
-      if (this.stilled.some(s => Math.hypot(s.x - p.x, s.z - p.z) < RULES.STILLED.NEAR_RADIUS)) dd += RULES.STILLED.NEAR_DREAD;
+      if (this.mobs.of('stilled').some(s => Math.hypot(s.x - p.x, s.z - p.z) < RULES.STILLED.NEAR_RADIUS)) dd += RULES.STILLED.NEAR_DREAD;
       if (dd > 0 && this.has(p, 'moon_wing')) dd *= 1.3;
       p.dread = Math.max(0, Math.min(100, p.dread + dd * dt));
       p.running = WG.stepEnergy(p, dt, p.wantSprint && p.moving);

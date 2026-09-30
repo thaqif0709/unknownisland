@@ -59,7 +59,7 @@ const methods = {
         const c = camps[Math.floor(Math.random() * camps.length)], a = Math.random() * Math.PI * 2, r = 10 + Math.random() * 4;
         const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
         if (heightAt(x, z) < .3) return false;
-        this.stilled.push({ id: this.nextStilled++, x, z, face: Math.atan2(c.x - x, c.z - z), lingering: true });
+        this.mobs.spawn('stilled', x, z, { face: Math.atan2(c.x - x, c.z - z), lingering: true });
         return 'a Stilled left by the camp';
       }),
       this.lanterns.some(l => l.lit) && (() => {   // a lantern put out

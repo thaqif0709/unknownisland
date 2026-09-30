@@ -43,7 +43,7 @@
         for (const o of objects) applyState(o);
         clearFires(); m.fires.forEach(addFire);
         clearDrops(); (m.drops || []).forEach(addDrop);
-        clearStilled();
+        clearMobs();
         clearLanterns(); (m.lanterns || []).forEach(setLantern);
         clearWash(); (m.washups || []).forEach(addWash);
         syncBugs(m.bugs || []);
@@ -74,7 +74,7 @@
       }
       case 'snap':
         t = m.time; day = m.day;
-        syncStilled(m.s);
+        syncMobs(m.m);
         for (const [id, x, z, f, moving, dead, stand] of m.p) {
           const r = remotes.get(id);
           if (r) { r.remote.push(x, z, f, moving, dead); r.dead = !!dead; r.stand = stand || 0; }
@@ -199,7 +199,7 @@
     state = 'title';
     showHud(false);
     ui.banner.classList.add('hidden');
-    resetRemotes(); clearStilled();
+    resetRemotes(); clearMobs();
     if (hero) { removeCastaway(hero); hero = null; }
   }
 

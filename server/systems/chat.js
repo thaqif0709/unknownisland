@@ -40,6 +40,13 @@ const methods = {
         const id = String(rest[0] || '').toLowerCase();
         return sys(this.openRegion(id) ? `The Veil will lift from ${id} at the next dawn.` : `Can't open "${id}" (already open, or not a region: ${WG.REGIONS.map(r => r.id).join(', ')}).`);
       }
+      // ...and spawn a creature a few steps in front of you, for trying the mob framework (P5).
+      if (cmd === 'spawn' && isAdmin(p)) {
+        const kind = String(rest[0] || '').toLowerCase(), kinds = this.mobs.constructor.kinds();
+        if (!kinds.includes(kind)) return sys(`Spawn what? ${kinds.join(', ')}`);
+        const m = this.mobs.spawn(kind, p.x + Math.sin(p.face) * 6, p.z + Math.cos(p.face) * 6, { face: p.face + Math.PI });
+        return sys(`A ${kind} (#${m.id}) appears.`);
+      }
       if (cmd === 'help' || cmd === '?') return sys('Commands: /w name message (whisper), /r message (reply to a whisper), /who (who is here). Anything else goes to everyone.');
       return sys(`There's no /${cmd0} command. Type /help for the list.`);
     }

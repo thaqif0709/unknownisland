@@ -7,6 +7,7 @@ const ME_EVERY = 3;           // personal stats every 3 ticks (~4 Hz)
 const FIRES_EVERY = 12;       // fire fuel sync about once a second
 const SAVE_MS = 30 * 1000;
 const { r2 } = require('./systems/util');
+const { Mobs } = require('./mobs');
 
 // Every feature lives in server/systems/<name>.js and plugs in here: its `methods`
 // are mixed into Island.prototype, its `messages` answer msg.t from clients, its `uses`
@@ -47,7 +48,7 @@ class Island {
     const l0 = WG.generateLanterns(this.seed)[0];
     this.board = { x: r2(l0.x + 2.6), z: r2(l0.z + 1.4) };   // the driftwood board, by the beach lantern
     this.notes = [];
-    this.stilled = []; this.nextStilled = 1; this.stilledTimer = 0;
+    this.mobs = new Mobs(this);   // the Stilled and every other creature (server/mobs/)
     this.bugs = []; this.nextBug = 1; this.washups = [];
     this.players = new Map();   // playerId -> live player
     this.dirty = new Set();     // object ids changed since the last save
@@ -119,7 +120,7 @@ class Island {
     const night = isNight(this.time);
     const lights = this.lights();
     const nf = WG.nightFactor(this.time);
-    this.updateStilled(dt, lights);
+    this.mobs.update(dt, lights);
     if ((this.sleeperTimer = (this.sleeperTimer || 0) - dt) <= 0) { this.sleeperCheck(1 - this.sleeperTimer); this.sleeperTimer = 1; }
     this.updateBugs(dt);
     this.updatePlayers(dt, lights, night, nf);
@@ -129,7 +130,7 @@ class Island {
     const snap = JSON.stringify({
       t: 'snap', time: this.time, day: this.day,
       p: [...this.players.values()].map(p => [p.id, r2(p.x), r2(p.z), r2(p.face), p.moving ? (p.running ? 2 : 1) : 0, p.dead ? 1 : 0, p.stand ? r2(p.stand) : 0]),
-      s: this.stilled.map(s => [s.id, r2(s.x), r2(s.z), r2(s.face)]),
+      m: this.mobs.snap(),
     });
     for (const p of this.players.values()) this.sendRaw(p, snap);
 

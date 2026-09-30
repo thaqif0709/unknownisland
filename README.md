@@ -139,7 +139,8 @@ when it starts.
 
 To open a region by hand (for testing the big world), put your username in an `ADMINS`
 environment variable on Render (comma-separated for several) and type `/open stair` in chat.
-The Veil lifts at the next dawn.
+The Veil lifts at the next dawn. Admins can also type `/spawn dummy` to put the test creature
+(a straw dummy that warns before it strikes) in front of them.
 
 The big world is behind three flags that go together: `FEATURES=streaming,bigworld,farview`
 (chunks load around each player, the 5 km world, and the view out to 2 km).
@@ -185,6 +186,7 @@ server/auth.js            Sign-up with invite code, login, sessions
 server/world.js           The island core: loop, snapshots, messages, saving
 server/systems/           One file per feature (players, gathering, crafting, fires,
                           lanterns, the Stilled, tides, bugs, chat, the Sleeper...)
+server/mobs/              Creatures: the engine (index.js) and one file per kind
 server/content/           Default journal, tide, bug and request content, by topic
 server/store.js           Database access (Neon), or in-memory for testing
 server/shared/world-gen.js Island shape, object placement, survival rules

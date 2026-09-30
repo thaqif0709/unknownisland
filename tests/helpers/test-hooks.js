@@ -6,7 +6,7 @@
 //    (it only rolls at noon and at sunrise).
 // 2. A `{ t: 'test', do, ... }` WebSocket message for setting things up quickly: give a
 //    player items, put them somewhere, wash up a tide, carve an offering request, finish
-//    boiling. The answer comes back as `{ t: 'test', id, ... }`.
+//    boiling, set the time or weather, spawn and hit mobs. The answer comes back as `{ t: 'test', id, ... }`.
 const path = require('path');
 const SERVER = path.join(__dirname, '..', '..', 'server');
 const storeModule = require(path.join(SERVER, 'store'));
@@ -62,8 +62,28 @@ const COMMANDS = {
     for (const f of this.fires) if (f.pot) f.pot.left = 0;
     return { pots: this.fires.filter(f => f.pot).map(f => f.id) };
   },
+  // Set the clock (0 = midnight, .5 = noon; night is before .22 and from .8) and/or the weather.
+  set(p, { time, weather }) {
+    if (typeof time === 'number') this.time = time;
+    if (weather) this.weather = weather;
+    this.updateEnv();
+    return { time: this.time, weather: this.weather };
+  },
+  // A mob of `kind` at x, z (with any extra fields in opts).
+  spawn(p, { kind, x, z, opts = {} }) {
+    const m = this.mobs.spawn(kind, x, z, opts);
+    return { mob: { id: m.id, kind: m.kind, x: m.x, z: m.z, hp: m.hp, state: m.state } };
+  },
+  // Hit a mob: { mob: its id, amount, source: ['fire'] }. (Not `id`: that's the request's.)
+  mobHit(p, { mob, amount, source }) {
+    const m = this.mobs.byId(mob);
+    if (!m) return { error: `no mob ${mob}` };
+    const dmg = this.mobs.hit(m, { amount, source, from: p });
+    return { dmg, hp: m.hp, gone: !!m.gone };
+  },
+  mobs() { return { mobs: this.mobs.list.map(m => ({ id: m.id, kind: m.kind, x: m.x, z: m.z, state: m.state, hp: m.hp })) }; },
   state() {
-    return { day: this.day, time: this.time, weather: this.weather, env: this.env, stilled: this.stilled.length };
+    return { day: this.day, time: this.time, weather: this.weather, env: this.env, stilled: this.mobs.of('stilled').length };
   },
 };
 

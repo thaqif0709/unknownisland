@@ -57,7 +57,9 @@ class TestClient {
   }
 
   // A setup command from test-hooks.js; rejects if the server says it failed.
+  // (`id` is taken: it matches the reply to the request.)
   async test(what, args = {}) {
+    if ('id' in args) throw new Error(`test ${what}: don't pass "id", it's the request's own`);
     const id = this.nextTestId++;
     const r = await this.request({ t: 'test', do: what, id, ...args }, m => m.t === 'test' && m.id === id, { what: `test ${what} reply` });
     if (r.error) throw new Error(`test ${what}: ${r.error}`);
