@@ -11,6 +11,8 @@ const path = require('path');
 const SERVER = path.join(__dirname, '..', '..', 'server');
 const storeModule = require(path.join(SERVER, 'store'));
 const { Island } = require(path.join(SERVER, 'world'));
+const WG = require(path.join(SERVER, 'shared', 'world-gen'));
+const { newBucketId } = require(path.join(SERVER, 'systems', 'util'));
 
 const MIDDAY = 0.51;   // just after noon: noon's weather roll has passed, night starts at 0.8
 
@@ -27,10 +29,14 @@ storeModule.createStore = () => {
 };
 
 const COMMANDS = {
-  // { inv: { wood: 4 }, tools: ['pickaxe'] }
-  give(p, { inv = {}, tools = [] }) {
+  // { inv: { wood: 4 }, tools: ['pickaxe'], buckets: [{ water: 'clean' }] }
+  give(p, { inv = {}, tools = [], buckets = [] }) {
     for (const [k, n] of Object.entries(inv)) this.give(p, k, n);
     for (const t of tools) this.addTool(p, t);
+    for (const b of buckets) {   // a wooden bucket, full of clean water unless it says otherwise
+      const water = b.water || 'clean';
+      p.buckets.push({ id: newBucketId(), mat: 'wood', uses: 3, water, drinks: water === 'clean' ? WG.RULES.BUCKET.DRINKS : 0 });
+    }
     this.sendMe(p);
     return { inv: p.inv, tools: p.tools };
   },
@@ -66,8 +72,9 @@ const COMMANDS = {
   },
   // Set the clock (0 = midnight, .5 = noon; night is before .22 and from .8), the weather,
   // and/or the player's hunger.
-  set(p, { time, weather, hunger }) {
+  set(p, { time, weather, hunger, thirst }) {
     if (typeof hunger === 'number') { p.hunger = hunger; this.sendMe(p); }
+    if (typeof thirst === 'number') { p.thirst = thirst; this.sendMe(p); }
     if (typeof time === 'number') this.time = time;
     if (weather) this.weather = weather;
     this.updateEnv();

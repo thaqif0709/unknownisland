@@ -251,7 +251,8 @@
       }
       target = Cut.on ? null : findTarget();
       const ba = bucketAction();
-      const lab = ba && ba.label ? ba.label : label(target);
+      const food = !target && !ba && UI.consumable && UI.consumable();
+      const lab = ba && ba.label ? ba.label : food ? `Hold to eat the ${WG.ITEMS[food.key.replace(/\d+$/, '')].toLowerCase()}` : label(target);
       if (lab) { ui.prompt.innerHTML = `<kbd>${esc(keyLabel(prefs.binds.act))}</kbd>${esc(lab)}`; ui.prompt.classList.remove('hidden'); $('btnAct').textContent = lab.split(' ').slice(0, 2).join(' '); }
       else { ui.prompt.classList.add('hidden'); $('btnAct').textContent = 'Act'; }
 

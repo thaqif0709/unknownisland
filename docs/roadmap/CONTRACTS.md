@@ -138,6 +138,13 @@ As built (P2, flag `slots`):
 - Messages: `move { from, to, count }` (to -1: across, bag <-> hotbar; always answered with
   `me`), `select { slot }`, `eat { slot }` (food only, at most every `RULES.SLOTS.EAT_GAP` s),
   and `dropitem { slot, count }` alongside the old `{ key, count }` / `{ bucket }`.
+- **Everything you eat or drink from your hand works the same way:** hold E, a ring fills for
+  `RULES.SLOTS.EAT_TIME`, and when it's full the count and the meter change right then (the
+  browser shows it before the server answers); holding on has the next one. A new food only
+  needs `ITEM_INFO` `{ kind: 'food', food, water }`. Anything else to consume (a new drink, a
+  potion) goes through `consumable()` / `applyBite()` in `public/js/255-inventory.js`, and its
+  server handler must count the request in `p.bites` and answer every request, refused or
+  not, with `sendMe` (see `eat` in inventory.js and `drink` in buckets.js).
 - `me` and `welcome.you` carry `slots` and `sel`. The saved inventory JSON gains `slots`.
   Loading lays the counts out again over the saved arrangement (so the counts always win, and
   switching the flag off and on loses nothing); anything that no longer fits goes in a sack at

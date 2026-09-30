@@ -9,7 +9,8 @@ const methods = {
   // fire to boil. drink: a sip from a bucket of clean water.
   onBucket(p, { id, action, fire }) {
     const b = (p.buckets || []).find(b => b.id === id), say = msg => this.send(p, { t: 'toast', msg }), B = RULES.BUCKET;
-    if (!b || p.dead || p.knockedUntil > Date.now()) return;
+    if (action === 'drink') p.bites = (p.bites || 0) + 1;   // counted like a bite (inventory.js eat)
+    if (!b || p.dead || p.knockedUntil > Date.now()) return action === 'drink' ? this.sendMe(p) : undefined;
     const name = b.mat === 'iron' ? 'iron bucket' : 'wooden bucket';
     if (action === 'fill') {
       if (heightAt(p.x, p.z) > 0.25 + 0.4) return say('Wade into the sea to fill it.');
@@ -25,9 +26,13 @@ const methods = {
       f.pot = { ...b, left: B[b.mat].boil };
       this.broadcast({ t: 'pot', id: f.id, pot: this.potView(f) });
       say(f.fuel > 0 ? `You set the ${name} on the fire. It will be ready in about ${B[b.mat].boil} seconds.` : 'You set the bucket on the fire. The fire is out; add wood to boil it.');
-    } else if (action === 'drink') {
-      if (b.water === 'sea') return say('Seawater. Boil it on a fire first.');
-      if (b.water !== 'clean' || b.drinks <= 0) return say('The bucket is empty.');
+    } else if (action === 'drink') {   // held for RULES.SLOTS.EAT_TIME in the browser, like eating
+      const now = Date.now();
+      if (b.water === 'sea') { say('Seawater. Boil it on a fire first.'); return this.sendMe(p); }
+      if (b.water !== 'clean' || b.drinks <= 0) { say('The bucket is empty.'); return this.sendMe(p); }
+      if (now - (p.lastEatAt || 0) < RULES.SLOTS.EAT_GAP * 1000) return this.sendMe(p);
+      if (p.thirst >= 99.5) { say('You’re not thirsty.'); return this.sendMe(p); }
+      p.lastEatAt = now;
       b.drinks--;
       p.thirst = Math.min(100, p.thirst + B.DRINK);
       if (b.drinks <= 0) {

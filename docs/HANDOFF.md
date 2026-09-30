@@ -197,8 +197,13 @@ planned separately by Thaqif):
   + 30 bag; `{ k, n }`, `{ b: bucketId }` or null) and still recounts `p.inv` as totals, so
   nothing outside it changed except drops (drop by slot; picking up a sack takes what fits
   and leaves the rest) and gathering (coconuts and berries go into the bag as items, eaten
-  with `eat {slot}`). Picking an empty hotbar slot (or the held stack running out) leaves
-  your hands empty; eating is timed by the clock (frame time is capped). Moves are `move {from,to,count}`, checked on the server: into an empty
+  with `eat {slot}`). Picking or cycling onto an empty hotbar slot leaves your hands empty.
+  Eating and drinking from a clean bucket share one hold-E ring in `255-inventory.js`
+  (`consumable()`, timed by the clock since frame time is capped): when it fills, the browser
+  sends `eat` or `bucket drink` and shows the bite at once (`applyBite`); the server counts
+  every bite it handles (`p.bites`, in each `me`), and bites it hasn't answered yet are
+  applied again on top of any older `me`, so a tick's `me` can't undo one on screen. A refused
+  bite always gets a fresh `me`, which puts things right. Moves are `move {from,to,count}`, checked on the server: into an empty
   slot, onto the same item up to its stack, or a whole stack swaps; everything else is
   refused, and the answer is always a fresh `me`. Loading always rebuilds the slots from the
   counts over the saved arrangement, so the counts win, switching the flag off and on loses

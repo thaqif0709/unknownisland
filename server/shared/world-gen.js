@@ -119,8 +119,8 @@
       BAG: 30,                 // slots 8-37, the bag on I
       STACK: 50,               // most things stack this high
       FOOD_STACK: 10,          // food
-      EAT_TIME: 1,             // seconds holding E (or Act) with food in hand to eat it
-      EAT_GAP: .7,             // seconds between two bites, at least
+      EAT_TIME: 1,             // seconds holding E (or Act) with food or clean water in hand to eat or drink it
+      EAT_GAP: .45,            // seconds between two bites or sips, at least (well under EAT_TIME: messages can bunch up on a slow connection)
     },
     // Climbing and gliding (P9, flag travel). Speeds in m/s, energy per second.
     TRAVEL: {

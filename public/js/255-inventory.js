@@ -7,7 +7,8 @@
   // drop what you tapped).
   // Every move is a 'move' message; the server checks it and sends the slots back, so nothing
   // here changes what you carry by itself.
-  // Holding E (or the Act button) for RULES.SLOTS.EAT_TIME with food in hand eats one ('eat').
+  // Holding E (or the Act button) for RULES.SLOTS.EAT_TIME with food in hand eats one ('eat'),
+  // and with a bucket of clean water drinks from it (below).
   const BAG0 = 8, BAGN = 38;
   const bagEl = document.createElement('div');
   bagEl.className = 'panel gone bag'; bagEl.id = 'inventory';
@@ -126,21 +127,65 @@
     bagKey = ''; renderBag();
   });
   $('bagDrop').addEventListener('click', () => { if (pick) sendDrop(pick.from, pick.count); pick = null; bagKey = ''; renderBag(); });
-  $('bagEat').addEventListener('click', () => { if (pick && net) net.send({ t: 'eat', slot: pick.from }); });
+  $('bagEat').addEventListener('click', () => { if (pick && net) { bitesSent++; net.send({ t: 'eat', slot: pick.from }); } });   // counted like a held bite (below)
 
-  // ---- eating: hold E (or Act) with food in hand ----
+  // ---- eating and drinking: hold E (or Act) with something to eat or drink in hand ----
+  // Every consumable works the same way: a ring fills for RULES.SLOTS.EAT_TIME, and when it's
+  // full you've had it: the count and the meter change right then (here first, so it never
+  // waits on the network; the server's 'me' then confirms or puts it right), and holding on
+  // starts the next one. Timed by the clock, not by frames (frame time is capped).
   const eatRing = document.createElement('div');
   eatRing.className = 'eatring hidden'; eatRing.setAttribute('aria-hidden', 'true');
   eatRing.innerHTML = '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="19"/><circle cx="24" cy="24" r="19" class="fg" pathLength="100"/></svg>';
   document.body.appendChild(eatRing);
   const eatArc = eatRing.querySelector('.fg');
-  // timed by the clock, not by frames: frame time is capped, so on a slow frame rate a bite
-  // took two or three times as long as it should and seemed to happen only on letting go
-  let eatFrom = -1, eatSlot = -1;
-  const heldFood = () => slotsOn() && selSlot >= 0 && isFood(bagSlot(selSlot));
-  // full up: holding E does nothing (the server says so once)
-  const full = () => { const s = bagSlot(selSlot), w = s && WG.itemInfo(s.k).water; return stats.hunger >= 99.5 && (!w || stats.thirst >= 99.5); };
-  function eatStart() { if (heldFood() && state === 'play' && !blocksInput()) { eatFrom = performance.now(); eatSlot = selSlot; } }
+  let eatFrom = -1, eatWhat = '';
+  // What you'd have by holding E now: { key, full, bite }, or null. A bite is what changes:
+  // { bucket } (a drink from it) or { slot, k } (one of the food there).
+  function consumable() {
+    const hb = heldBucket();
+    if (hb) {
+      if (hb.water !== 'clean' || !(hb.drinks > 0)) return null;
+      return { key: 'b' + hb.id, full: stats.thirst >= 99.5, bite: { bucket: hb.id } };
+    }
+    const slot = selSlot, s = slotsOn() && slot >= 0 ? bagSlot(slot) : null;
+    if (!isFood(s)) return null;
+    const info = WG.itemInfo(s.k);
+    return { key: s.k + slot, full: stats.hunger >= 99.5 && (!info.water || stats.thirst >= 99.5), bite: { slot, k: s.k } };
+  }
+  // Show a bite on what we have (the server does the same, and its 'me' says how many it has had)
+  function applyBite(b) {
+    if (b.bucket != null) {
+      const hb = (stats.buckets || []).find(x => x.id === b.bucket);
+      if (!hb || !(hb.drinks > 0)) return;
+      hb.drinks--; if (hb.drinks <= 0) hb.water = 'none';
+      stats.thirst = Math.min(100, stats.thirst + RULES.BUCKET.DRINK);
+      return;
+    }
+    const s = bagSlot(b.slot), info = WG.itemInfo(b.k);
+    if (!s || s.k !== b.k) return;
+    stats.hunger = Math.min(100, stats.hunger + (info.food || 0));
+    if (info.water) stats.thirst = Math.min(100, stats.thirst + info.water);
+    stats.inv[b.k] = Math.max(0, (stats.inv[b.k] || 0) - 1);
+    stats.slots[b.slot] = s.n > 1 ? { ...s, n: s.n - 1 } : null;
+  }
+  // Bites sent that the server hasn't answered yet: a 'me' it sent before it had them (the
+  // regular one each tick) would otherwise undo them on screen for a moment.
+  let bitesSent = 0, pending = [];
+  UI.net.on('welcome', () => { bitesSent = 0; pending = []; });
+  UI.net.on('me', m => {
+    pending = pending.filter(b => b.n > (m.bites || 0));
+    if (!pending.length) return;
+    for (const b of pending) applyBite(b);
+    lastInv = ''; renderInventory(); bagKey = ''; renderBag();
+  });
+  UI.consumable = consumable;   // the E prompt says "Hold E: ..." for it (230-actions.js)
+  function eatStart() {
+    const c = state === 'play' && !blocksInput() ? consumable() : null;
+    if (!c) return;
+    if (c.full) { toast(c.key[0] === 'b' ? 'You’re not thirsty.' : 'You’re full.'); return; }
+    eatFrom = performance.now(); eatWhat = c.key;
+  }
   function eatStop() { eatFrom = -1; eatRing.classList.add('hidden'); }
   window.addEventListener('keydown', e => { if (e.code === prefs.binds.act && !e.repeat) eatStart(); });
   window.addEventListener('keyup', e => { if (e.code === prefs.binds.act) eatStop(); });
@@ -148,15 +193,18 @@
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(t => $('btnAct').addEventListener(t, eatStop));
   UI.onFrame(() => {
     if (eatFrom < 0) return;
-    if (!heldFood() || selSlot !== eatSlot || state !== 'play' || knockT > 0) { eatStop(); return; }
-    const now = performance.now(), eatT = (now - eatFrom) / 1000;
-    const f = Math.min(1, eatT / RULES.SLOTS.EAT_TIME);
-    eatRing.classList.toggle('hidden', eatT < .15);
+    const c = consumable();
+    if (!c || c.key !== eatWhat || c.full || state !== 'play' || knockT > 0 || !net) { eatStop(); return; }
+    const now = performance.now(), t = (now - eatFrom) / 1000;
+    const f = Math.min(1, t / RULES.SLOTS.EAT_TIME);
+    eatRing.classList.toggle('hidden', t < .15);
     eatArc.style.strokeDasharray = `${(f * 100).toFixed(1)} 100`;
-    if (f >= 1) {   // a bite; keep holding for the next
-      if (net) net.send({ t: 'eat', slot: selSlot });
-      if (full()) { eatStop(); return; }
-      startSwing(hero, null, .5);
-      eatFrom = now;
-    }
+    if (f < 1) return;
+    // done: have it now, and tell the server
+    const b = { ...c.bite, n: ++bitesSent };
+    net.send(b.bucket != null ? { t: 'bucket', id: b.bucket, action: 'drink' } : { t: 'eat', slot: b.slot });
+    pending.push(b); applyBite(b);
+    lastInv = ''; renderInventory(); bagKey = ''; renderBag();
+    startSwing(hero, null, .5);
+    eatFrom = now;   // keep holding for the next one
   });
