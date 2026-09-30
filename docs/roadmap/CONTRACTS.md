@@ -307,3 +307,15 @@ WG.chunkOf(x, z) / WG.chunkKey(cx, cz) / WG.chunkOfId(id)   // chunks are WG.CHU
 - `SPAWN_TEST=1` (server env, testing only) scatters extra trees, rocks and bushes over the
   Landing's chunks so streaming can be seen before any region has land.
 
+## 17. The map (W7, done)
+
+- `UI.mapLayers.push({ draw(g, at, dotScale, full) })` adds markers: `at(x, z)` gives canvas
+  pixels for a world spot, `dotScale` is the marker size (1 on the full map, smaller on the
+  minimap), `full` is true on the full map (draw labels only there). Use `markerShape(g,
+  kind, cx, cy, scale, fill)` for the ink style, and add a `MARK` entry if it belongs in the
+  legend. P4's hearth flags, C0's boss markers and P11's calls go here.
+- With `bigworld` on: the full map pans and zooms (`295-map-controls.js`), sharper 256 m tiles
+  are drawn when zoomed in, the minimap follows the player, and charting covers unexplored
+  land in parchment: one bit per 32 m chunk, `islands.seen` (migration 0006), `welcome.seen`
+  (base64) and `seen { list: [[cx, cz]] }` as land is found (`server/systems/charting.js`).
+

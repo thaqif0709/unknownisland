@@ -1,36 +1,86 @@
   // ================= Map =================
-  // A top-down chart of the island, inked in flat biome colours once and cached;
-  // markers for springs, lanterns, carving stones, the board, fires and players
-  // are redrawn on top of a scaled copy of that cache for both the full panel
-  // (opened with M) and the always-on minimap in the top-right corner.
+  // A top-down chart, inked in flat biome colours. A coarse picture of everything the map
+  // can show is drawn once and cached; with the big world on, sharper 256 m tiles are drawn
+  // on top when zoomed in (a few per frame), and land nobody has walked near yet is covered
+  // in blank parchment (charting, W7). Markers go on top. The full map (M) can be panned and
+  // zoomed (295-map-controls.js); the minimap follows you. Other parts add markers with
+  // UI.mapLayers.push({ draw(g, at, dotScale, full) }).
   const MAP_PX = 480, MINI_PX = 190, MINI_DOT = .68;
-  // What the map covers: the Landing, or the whole world when the big world is on (W4).
-  // Proper zooming and panning for the big world is task W7.
+  // What the coarse picture covers: the Landing, or the whole world with the big world on.
   let MAP_HALF = WG.ISL * 1.15, MAP_CX = 0, MAP_CZ = 0;
-  UI.net.on('welcome', () => {
-    const big = WG.feature('bigworld'), half = big ? 2600 : WG.ISL * 1.15, cz = big ? -1900 : 0;
+  const bigMap = () => WG.feature('bigworld');
+  // The full map's view (the minimap's is worked out each time): centre and half-width, metres.
+  const mapView = { cx: 0, cz: 0, half: WG.ISL * 1.15, set: false };
+  const MINI_HALF_BIG = 170, MAP_MIN_HALF = 40;
+  const mapMaxHalf = () => (bigMap() ? 2700 : MAP_HALF);
+  UI.mapLayers = [];
+  UI.net.on('welcome', m => {
+    const big = bigMap(), half = big ? 2600 : WG.ISL * 1.15, cz = big ? -1900 : 0;
     if (half !== MAP_HALF || cz !== MAP_CZ) { MAP_HALF = half; MAP_CZ = cz; }
     mapBase = null;   // redrawn with the Veil as it is now
+    tiles.clear(); tileQueue.length = 0; mapView.set = false;
+    resetFog(big ? m.seen : null);
   });
-  UI.net.on('regions', () => { mapBase = null; });
+  UI.net.on('regions', () => { mapBase = null; tiles.clear(); tileQueue.length = 0; });
+
+  // Sharper tiles for zooming in on the big world: 256 m each, 4 m a pixel.
+  const TILE = 256, TILE_PX = 64, TILE_STEP = 2;
+  const tiles = new Map(), tileQueue = [];
+  function paintLand(g, x, z, px, py, step) {
+    const h = WG.heightAt(x, z);
+    g.fillStyle = BIOME_COL[WG.biomeAt(x, z, h)] || BIOME_COL.sea;
+    g.fillRect(px, py, step, step);
+    if (veilBlocks(x, z)) {   // behind the Veil: fogged over and hatched
+      g.fillStyle = 'rgba(238,234,226,.62)'; g.fillRect(px, py, step, step);
+      if (((px + py) / step) % 3 === 0) { g.strokeStyle = 'rgba(70,60,52,.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(px, py + step); g.lineTo(px + step, py); g.stroke(); }
+    }
+  }
+  function renderTile(tx, tz) {
+    const c = document.createElement('canvas'); c.width = c.height = TILE_PX;
+    const g = c.getContext('2d'), n = TILE_PX / TILE_STEP;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) paintLand(g, tx * TILE + (i + .5) * TILE / n, tz * TILE + (j + .5) * TILE / n, i * TILE_STEP, j * TILE_STEP, TILE_STEP);
+    tiles.set(tx + ',' + tz, c);
+  }
+  function tileFor(tx, tz) {
+    const k = tx + ',' + tz, t = tiles.get(k);
+    if (t) return t;
+    if (!tileQueue.includes(k)) { tileQueue.push(k); if (tileQueue.length > 160) tileQueue.shift(); }
+    return null;
+  }
+  UI.onFrame(() => {   // draw waiting tiles, a few milliseconds' worth per frame, newest first
+    const t0 = performance.now();
+    while (tileQueue.length && performance.now() - t0 < 5) { const [a, b] = tileQueue.pop().split(',').map(Number); renderTile(a, b); }
+  });
+
+  // Charting: one pixel per 32 m chunk, parchment where nobody has been yet. Drawn scaled
+  // over the map with smoothing, so explored land has soft edges.
+  const SEEN_SPAN = 320, SEEN_OFF = 160, PARCHMENT = [239, 230, 208];
+  const fogCanvas = document.createElement('canvas'); fogCanvas.width = fogCanvas.height = SEEN_SPAN;
+  const fogG = fogCanvas.getContext('2d');
+  let fogOn = false;
+  function resetFog(b64) {
+    fogOn = !!b64;
+    if (!fogOn) return;
+    const bits = Uint8Array.from(atob(b64), ch => ch.charCodeAt(0)), img = fogG.createImageData(SEEN_SPAN, SEEN_SPAN);
+    for (let i = 0; i < SEEN_SPAN; i++) for (let j = 0; j < SEEN_SPAN; j++) {
+      const bit = i * SEEN_SPAN + j, cx = i - SEEN_OFF, cz = j - SEEN_OFF;
+      const seen = (bits[bit >> 3] >> (bit & 7)) & 1 || Math.hypot((cx + .5) * WG.CHUNK, (cz + .5) * WG.CHUNK) < 330;   // the Landing is always known
+      const o = (j * SEEN_SPAN + i) * 4;
+      img.data[o] = PARCHMENT[0]; img.data[o + 1] = PARCHMENT[1]; img.data[o + 2] = PARCHMENT[2]; img.data[o + 3] = seen ? 0 : 255;
+    }
+    fogG.putImageData(img, 0, 0);
+  }
+  UI.net.on('seen', m => { if (fogOn) for (const [cx, cz] of m.list) fogG.clearRect(cx + SEEN_OFF, cz + SEEN_OFF, 1, 1); });
   const BIOME_COL = { sea: '#4A6F91', beach: '#D8C9A0', meadow: '#8FAE72', forest: '#5C7A4B', highland: '#9C8A6A', peak: '#D9D3C4', spring: '#7FC9D6' };
   let mapBase = null, mapTimer = 0;
   function buildMapBase() {
     const c = document.createElement('canvas'); c.width = c.height = MAP_PX;
     const g = c.getContext('2d'), STEP = 4, n = MAP_PX / STEP;
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-      const x = MAP_CX + (i + .5) / n * MAP_HALF * 2 - MAP_HALF, z = MAP_CZ + (j + .5) / n * MAP_HALF * 2 - MAP_HALF;
-      const h = WG.heightAt(x, z);
-      g.fillStyle = BIOME_COL[WG.biomeAt(x, z, h)] || BIOME_COL.sea;
-      g.fillRect(i * STEP, j * STEP, STEP, STEP);
-      if (veilBlocks(x, z)) {   // behind the Veil: fogged over and hatched
-        g.fillStyle = 'rgba(238,234,226,.62)'; g.fillRect(i * STEP, j * STEP, STEP, STEP);
-        if ((i + j) % 3 === 0) { g.strokeStyle = 'rgba(70,60,52,.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(i * STEP, j * STEP + STEP); g.lineTo(i * STEP + STEP, j * STEP); g.stroke(); }
-      }
+      paintLand(g, MAP_CX + (i + .5) / n * MAP_HALF * 2 - MAP_HALF, MAP_CZ + (j + .5) / n * MAP_HALF * 2 - MAP_HALF, i * STEP, j * STEP, STEP);
     }
     mapBase = c;
   }
-  const mapCoord = (v, size, c = 0) => (v - c + MAP_HALF) / (MAP_HALF * 2) * size;
   // Marker shapes, shared by the map and its legend so the two always match.
   const MARK = {
     spring: { name: 'Spring (fresh water)', col: '#4FA9C9' }, lanternLit: { name: 'Lantern, lit', col: '#F2B33D' },
@@ -73,8 +123,7 @@
   }
   // Players on the map use a brighter version of their cloak colour so they pop.
   const mapCol = id => { const c = new THREE.Color(colorFor(id)), h = {}; c.getHSL(h); c.setHSL(h.h, Math.max(.6, h.s * 1.9), .56); return '#' + c.getHexString(); };
-  function drawMapMarkers(g, size, dotScale, full) {
-    const at = (x, z) => [mapCoord(x, size, MAP_CX), mapCoord(z, size, MAP_CZ)];
+  function drawMapMarkers(g, at, dotScale, full) {
     const mark = (kind, x, z, k = 1) => { const [cx, cy] = at(x, z); markerShape(g, kind, cx, cy, dotScale * k); };
     WG.SPRINGS.forEach(sp => mark('spring', sp.x, sp.z));
     if (board) mark('board', board.x, board.z);
@@ -82,6 +131,7 @@
     lanterns.forEach(l => mark(l.lit ? 'lanternLit' : 'lantern', l.x, l.z, l.big ? 1.35 : 1));
     fires.forEach(f => mark(f.fuel > 0 ? 'fire' : 'fireOut', f.x, f.z));
     drops.forEach(d => mark('sack', d.x, d.z, .9));
+    for (const layer of UI.mapLayers) layer.draw(g, at, dotScale, full);   // markers other parts add
     // players: their colour, and (on the big map) their name
     const label = (text, cx, cy, col) => {
       g.font = `600 ${Math.round(12 * Math.max(.8, dotScale))}px Fredoka, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
@@ -118,16 +168,37 @@
     const places = Object.keys(MARK).map(k => li(iconFor(k), MARK[k].name));
     const land = [['beach', 'Beach'], ['meadow', 'Meadow'], ['forest', 'Forest'], ['highland', 'Hills'], ['peak', 'Peak'], ['spring', 'Spring pool'], ['sea', 'Sea']]
       .map(([k, n]) => li(iconFor('land', BIOME_COL[k]), n));
+    if (bigMap()) land.push(li(iconFor('land', 'rgb(210,204,196)'), 'Behind the Veil'), li(iconFor('land', `rgb(${PARCHMENT})`), 'Not explored yet'));
     $('mapLegend').innerHTML = `<h4>On the island now</h4><ul>${people.join('')}</ul><h4>Places</h4><ul>${places.join('')}</ul><h4>Land</h4><ul>${land.join('')}</ul>`;
   }
-  function drawMap(canvas, size, dotScale) {
+  // Draw the map for a view { cx, cz, half } (metres) onto a square canvas.
+  function drawMap(canvas, size, dotScale, view, full) {
     if (!mapBase) buildMapBase();
-    const g = canvas.getContext('2d');
-    g.clearRect(0, 0, size, size);
-    g.drawImage(mapBase, 0, 0, MAP_PX, MAP_PX, 0, 0, size, size);
-    drawMapMarkers(g, size, dotScale, size === MAP_PX);
+    const g = canvas.getContext('2d'), mpp = view.half * 2 / size, x0 = view.cx - view.half, z0 = view.cz - view.half;
+    g.fillStyle = BIOME_COL.sea; g.fillRect(0, 0, size, size);
+    const bpp = MAP_HALF * 2 / MAP_PX;   // metres per pixel of the coarse picture
+    g.drawImage(mapBase, (x0 - (MAP_CX - MAP_HALF)) / bpp, (z0 - (MAP_CZ - MAP_HALF)) / bpp, view.half * 2 / bpp, view.half * 2 / bpp, 0, 0, size, size);
+    if (bigMap() && mpp < 6) {   // zoomed in: the sharper tiles, as they're ready
+      for (let tx = Math.floor(x0 / TILE); tx * TILE < x0 + view.half * 2; tx++) for (let tz = Math.floor(z0 / TILE); tz * TILE < z0 + view.half * 2; tz++) {
+        const t = tileFor(tx, tz);
+        if (t) g.drawImage(t, (tx * TILE - x0) / mpp, (tz * TILE - z0) / mpp, TILE / mpp + .6, TILE / mpp + .6);
+      }
+    }
+    if (fogOn) {   // land nobody has seen yet
+      const cpp = WG.CHUNK;
+      g.drawImage(fogCanvas, x0 / cpp + SEEN_OFF, z0 / cpp + SEEN_OFF, view.half * 2 / cpp, view.half * 2 / cpp, 0, 0, size, size);
+    }
+    drawMapMarkers(g, (x, z) => [(x - x0) / mpp, (z - z0) / mpp], dotScale, full);
   }
-  const renderMap = () => { drawMap($('mapCanvas'), MAP_PX, 1); renderMapLegend(); };
-  const renderMinimap = () => drawMap($('minimapCanvas'), MINI_PX, MINI_DOT);
+  // The full map: where you left it, or around you the first time.
+  function fullMapView() {
+    if (!bigMap()) { if (!mapView.set) Object.assign(mapView, { cx: MAP_CX, cz: MAP_CZ, half: MAP_HALF, set: true }); }
+    else if (!mapView.set) Object.assign(mapView, { cx: inGame() ? px : 0, cz: inGame() ? pz : 0, half: 600, set: true });
+    return mapView;
+  }
+  // The minimap: the whole Landing, or (big world) the land around you.
+  const miniView = () => (bigMap() && inGame() ? { cx: px, cz: pz, half: MINI_HALF_BIG } : { cx: MAP_CX, cz: MAP_CZ, half: MAP_HALF });
+  const renderMap = () => { drawMap($('mapCanvas'), MAP_PX, 1, fullMapView(), true); renderMapLegend(); };
+  const renderMinimap = () => drawMap($('minimapCanvas'), MINI_PX, MINI_DOT, miniView(), false);
   $('minimap').addEventListener('click', () => togglePanel('map'));
 

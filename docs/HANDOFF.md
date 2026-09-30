@@ -348,6 +348,10 @@ Default content is in `server/content/<topic>.js`.
   usernames in the `ADMINS` env var); the Veil lifts at the next dawn (`regions_open`,
   migration 0005). Stepping onto locked land turns you around (server and browser both
   check); the browser draws a fog bank along locked borders and hatches them on the map.
+- **The map (W7):** pan and zoom on the full map; with `bigworld` on, sharper tiles when
+  zoomed in, a minimap that follows you, and charting (explored 32 m chunks, shared and
+  saved in `islands.seen`, revealed 5 x 5 chunks around each player every second). Other parts
+  add markers through `UI.mapLayers` (CONTRACTS.md section 17).
 - **Placeholders for later work:** `WG.REGIONS`, `WG.regionAt`, `WG.climbAt`,
   `isRegionOpen/openRegion`, `summonBoss`, `respawnPoint` (`systems/regions.js`), and one file
   per region in `server/regions/<id>.js` for region packs to fill in.

@@ -81,7 +81,7 @@ function createPgStore(url) {
     async pruneSessions() { await q('DELETE FROM sessions WHERE expires_at <= now()'); },
 
     async loadIsland(id) {
-      const r = await q('SELECT id, name, seed, day, time_of_day, last_tick_at, weather, chains FROM islands WHERE id = $1', [id]);
+      const r = await q('SELECT id, name, seed, day, time_of_day, last_tick_at, weather, chains, seen FROM islands WHERE id = $1', [id]);
       const row = r.rows[0];
       if (!row) return null;
       const objs = await q('SELECT obj_id, state FROM world_objects WHERE island_id = $1 AND obj_id < $2', [id, require('./shared/world-gen').CHUNK_ID_BASE]);   // chunk objects load with their chunk
@@ -89,7 +89,7 @@ function createPgStore(url) {
       const drops = await q('SELECT id, x, z, items FROM drops WHERE island_id = $1 ORDER BY id', [id]);
       const lanterns = await q('SELECT lantern_id, lit, fuel, offerings, cleared_since, reclaim_progress FROM lanterns WHERE island_id = $1', [id]);
       return {
-        id: row.id, name: row.name, seed: row.seed, day: row.day, time: row.time_of_day, weather: row.weather, chains: row.chains || {},
+        id: row.id, name: row.name, seed: row.seed, day: row.day, time: row.time_of_day, weather: row.weather, chains: row.chains || {}, seen: row.seen || null,
         lastTickAt: new Date(row.last_tick_at).getTime(),
         objects: objs.rows.map(o => ({ id: o.obj_id, state: o.state })),
         fires: fires.rows.map(f => ({ id: f.id, x: f.x, z: f.z, fuel: f.fuel, kind: f.kind, builtBy: f.built_by, pot: f.pot || null })),
@@ -140,6 +140,7 @@ function createPgStore(url) {
           }
         }
         for (const f of snap.fires) await c.query('UPDATE fires SET fuel = $2, pot = $3 WHERE id = $1', [f.id, f.fuel, f.pot ? JSON.stringify(f.pot) : null]);
+        if (snap.seen) await c.query('UPDATE islands SET seen = $2 WHERE id = $1', [snap.id, snap.seen]);
         for (const [chunk, day] of snap.chunkDays || []) {
           await c.query(`INSERT INTO chunk_days (island_id, chunk, day) VALUES ($1, $2, $3)
                          ON CONFLICT (island_id, chunk) DO UPDATE SET day = EXCLUDED.day`, [snap.id, chunk, day]);
@@ -285,7 +286,7 @@ function createMemoryStore() {
       const i = islands.get(id);
       if (!i) return null;
       return {
-        id: i.id, name: i.name, seed: i.seed, day: i.day, time: i.time, lastTickAt: i.lastTickAt, weather: i.weather || 'clear', chains: clone(i.chains || {}),
+        id: i.id, name: i.name, seed: i.seed, day: i.day, time: i.time, lastTickAt: i.lastTickAt, weather: i.weather || 'clear', chains: clone(i.chains || {}), seen: i.seen ? Buffer.from(i.seen) : null,
         objects: [...i.objects].filter(([oid]) => oid < require('./shared/world-gen').CHUNK_ID_BASE).map(([oid, state]) => ({ id: oid, state: clone(state) })),
         fires: clone(i.fires),
         drops: clone(i.drops),
@@ -309,6 +310,7 @@ function createMemoryStore() {
       Object.assign(i, { day: snap.day, time: snap.time, lastTickAt: snap.lastTickAt, weather: snap.weather, chains: clone(snap.chains || {}) });
       i.chunkOf = i.chunkOf || new Map();
       i.chunkDays = i.chunkDays || new Map();
+      if (snap.seen) i.seen = Buffer.from(snap.seen);
       for (const [chunk, day] of snap.chunkDays || []) i.chunkDays.set(chunk, day);
       for (const o of snap.objects) { if (o.state) { i.objects.set(o.id, clone(o.state)); i.chunkOf.set(o.id, o.chunk); } else i.objects.delete(o.id); }
       for (const f of snap.fires) { const x = i.fires.find(y => y.id === f.id); if (x) { x.fuel = f.fuel; x.pot = f.pot ? clone(f.pot) : null; } }

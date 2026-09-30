@@ -14,7 +14,7 @@ const { r2 } = require('./systems/util');
 // optional hooks onTick(dt), onDawn(sunrises) and onJoin(p) (extra welcome fields) run
 // alongside the core loop. See docs/roadmap/CONTRACTS.md section 2.
 const SYSTEMS = ['journal', 'tides', 'bugs', 'weather', 'time', 'chat', 'board', 'patches', 'players',
-  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming'];
+  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting'];
 
 class Island {
   constructor(store, data) {
@@ -75,6 +75,7 @@ class Island {
     isl.washups = await store.loadWashups(id);
     isl.notes = await store.loadNotes(id);
     isl.regionsLoad(await store.loadRegions(id));
+    isl.chartLoad(data.seen);
     isl.sleeperLoad(await store.loadEvents(id));
     isl.updateEnv();
     return isl;
@@ -192,13 +193,16 @@ class Island {
       id: this.id, day: this.day, time: this.time, lastTickAt: this.lastTickAt, moonDay: WG.moonPhase(this.day), weather: this.weather, chains: this.chains,
       objects, fires: this.fires.map(f => ({ id: f.id, fuel: r2(f.fuel), pot: f.pot ? { ...f.pot } : null })), members,
       lanterns, chunkDays,
+      seen: this.seenDirty ? Buffer.from(this.seen) : null,
     };
+    this.seenDirty = false;
     this.saving = this.saving.then(() => this.store.saveIsland(snap)).then(() => {
       for (const [key, day] of chunkDays) { const c = this.chunks.get(key); if (c) c.savedDay = day; }
     }).catch(e => {
       console.error(`[island ${this.id}] save failed:`, e.message);
       for (const o of objects) this.dirty.add(o.id);   // try again next time
       for (const l of lanterns) this.lanternsDirty.add(l.id);
+      if (snap.seen) this.seenDirty = true;
     });
     return this.saving;
   }
