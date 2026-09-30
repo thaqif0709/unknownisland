@@ -4,7 +4,7 @@ title: Climbing and gliding
 lane: player
 owner: edvin
 status: todo
-depends: [F5]
+depends: [F2, F5]
 flag: travel
 size: 1–2 sessions
 ---

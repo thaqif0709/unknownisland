@@ -314,8 +314,15 @@ system in `server/systems/<name>.js` that exports `methods` (mixed into `Island.
 `docs/roadmap/CONTRACTS.md` section 2. Systems: journal, tides, bugs, weather, time (clock,
 regrowth, catch-up, overnight), chat, board, patches, players (join/leave, views, movement,
 survival loop, show-only messages), gather (E on things), crafting, fires, stilled (and
-knockdowns), lanterns (and `lights()`), buckets, drops, sleeper. Default content is in
-`server/content/<topic>.js`.
+knockdowns), lanterns (and `lights()`), buckets, drops, sleeper, inventory, regions.
+Default content is in `server/content/<topic>.js`.
+- **Inventory:** only `systems/inventory.js` touches `p.inv`, `p.tools`, `p.buckets`; everything
+  else calls `give/take/count/held/hasTool/...` (CONTRACTS.md section 4).
+- **E on world objects:** each system exports `uses: { kind: { reach?, use(p, obj, { say, changed }) } }`;
+  palm, tree, bush, rock, ore and dig are in `systems/gather.js` (section 5).
+- **Placeholders for later work:** `WG.REGIONS`, `WG.regionAt`, `WG.climbAt`,
+  `isRegionOpen/openRegion`, `summonBoss`, `respawnPoint` (`systems/regions.js`), and one file
+  per region in `server/regions/<id>.js` for region packs to fill in.
 
 ## Feature flags and migrations
 - **Flags:** `RULES.FEATURES` in `world-gen.js`, read with `WG.feature(name)` on both sides.

@@ -83,20 +83,20 @@ const methods = {
     const l = this.lanterns[id], L = RULES.LANTERN;
     if (!l || Math.hypot(l.x - p.x, l.z - p.z) > (l.big ? 2.2 : 1.6) + RULES.REACH + REACH_SLACK) return;
     const say = msg => this.send(p, { t: 'toast', msg });
-    if (p.inv.oil <= 0) return say(l.lit ? 'It burns on. Lamp oil would keep it going.' : 'Cold stone. It wants an offering of lamp oil.');
+    if (this.count(p, 'oil') <= 0) return say(l.lit ? 'It burns on. Lamp oil would keep it going.' : 'Cold stone. It wants an offering of lamp oil.');
     if (l.lit) {
       if (l.fuel >= L.MAX_FUEL - 1) return say('The lantern is full.');
-      p.inv.oil--; l.fuel = Math.min(L.MAX_FUEL, l.fuel + L.FUEL_PER_OIL * (this.has(p, 'violet_charm') ? 1.5 : 1));
+      this.take(p, 'oil'); l.fuel = Math.min(L.MAX_FUEL, l.fuel + L.FUEL_PER_OIL * (this.has(p, 'violet_charm') ? 1.5 : 1));
       say('The flame steadies.');
     } else if (l.big) {
       if (l.offerings.includes(p.id)) return say('You have made your offering. It needs other frogs\u2019 too.');
-      p.inv.oil--; l.offerings.push(p.id);
+      this.take(p, 'oil'); l.offerings.push(p.id);
       if (l.offerings.length >= L.BIG_OFFERINGS) {
         l.lit = true; l.fuel = L.FUEL_PER_OIL * L.BIG_OFFERINGS; l.litBy = p.id; l.reclaim = 0; l.clearedSince = l.clearedSince || Date.now();
         this.broadcast({ t: 'toast', msg: 'A great lantern flares to life. The fog pulls back from the hill.' });
       } else say(`Your offering is taken. It needs ${L.BIG_OFFERINGS - l.offerings.length} more frog${L.BIG_OFFERINGS - l.offerings.length > 1 ? 's' : ''}.`);
     } else {
-      p.inv.oil--; l.lit = true; l.fuel = L.FUEL_PER_OIL * (this.has(p, 'violet_charm') ? 1.5 : 1); l.litBy = p.id; l.reclaim = 0; l.clearedSince = l.clearedSince || Date.now();
+      this.take(p, 'oil'); l.lit = true; l.fuel = L.FUEL_PER_OIL * (this.has(p, 'violet_charm') ? 1.5 : 1); l.litBy = p.id; l.reclaim = 0; l.clearedSince = l.clearedSince || Date.now();
       say('The old lantern catches. The fog draws back.');
     }
     this.lanternsDirty.add(l.id);

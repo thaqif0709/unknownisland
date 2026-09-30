@@ -4,7 +4,7 @@ title: Fast travel between lit lanterns
 lane: world
 owner: thaqif
 status: on-hold
-depends: [F5]
+depends: [F2, F5]
 flag: fasttravel
 size: ½ session
 ---

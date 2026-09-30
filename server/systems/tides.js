@@ -68,7 +68,7 @@ const methods = {
       say(`${t.label}. You eat it on the spot.`);
     } else {
       const got = [];
-      for (const [k, n] of Object.entries(t.gives || {})) if (k in p.inv) { p.inv[k] += n; got.push(`+${n} ${WG.ITEMS[k].toLowerCase()}`); }
+      for (const [k, n] of Object.entries(t.gives || {})) if (this.give(p, k, n) > 0) { got.push(`+${n} ${WG.ITEMS[k].toLowerCase()}`); }
       say(got.length ? `${t.label}: ${got.join(', ')}` : `${t.label}. Into the journal.`);
     }
     this.washups = this.washups.filter(x => x !== w);

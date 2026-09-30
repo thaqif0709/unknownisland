@@ -16,7 +16,7 @@ Each open region has a chain of 5 requests; finishing it calls the region's boss
 
 - A `region` and `chain_order` on `sleeper_requests`; requests only come from open regions' chains, in order.
 - The Landing's chain of 5, written from today's requests plus new ones.
-- On the last one: `island.bosses.summon(region)` (stub until C0) and a carving that names the time and place.
+- On the last one: `island.summonBoss(region)` (stub until C0) and a carving that names the time and place.
 - Hidden Pages: chains explained, contents in spoilers.
 
 ## Files it touches

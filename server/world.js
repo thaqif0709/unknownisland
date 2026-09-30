@@ -9,11 +9,12 @@ const SAVE_MS = 30 * 1000;
 const { r2 } = require('./systems/util');
 
 // Every feature lives in server/systems/<name>.js and plugs in here: its `methods`
-// are mixed into Island.prototype, its `messages` answer msg.t from clients, and the
+// are mixed into Island.prototype, its `messages` answer msg.t from clients, its `uses`
+// say what E does to kinds of world object, and the
 // optional hooks onTick(dt), onDawn(sunrises) and onJoin(p) (extra welcome fields) run
 // alongside the core loop. See docs/roadmap/CONTRACTS.md section 2.
 const SYSTEMS = ['journal', 'tides', 'bugs', 'weather', 'time', 'chat', 'board', 'patches', 'players',
-  'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper'];
+  'inventory', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions'];
 
 class Island {
   constructor(store, data) {
@@ -145,6 +146,8 @@ class Island {
     if (!msg || typeof msg.t !== 'string' || !Object.prototype.hasOwnProperty.call(MESSAGES, msg.t)) return;
     return MESSAGES[msg.t].call(this, p, msg);
   }
+  // What E does to a kind of world object (from the systems' `uses`), or undefined.
+  useFor(type) { return Object.prototype.hasOwnProperty.call(USES, type) ? USES[type] : undefined; }
   // Extra fields systems add to the welcome message (onJoin hooks).
   joinExtras(p) {
     const extra = {};
@@ -168,10 +171,10 @@ class Island {
   save(extraMembers = []) {
     this.lastSave = Date.now();
     const members = [...this.players.values(), ...extraMembers].map(p => {
-      const { wood, stone, ...rest } = p.inv;
+      const { wood, stone, inventory } = this.inventorySave(p);
       return {
         playerId: p.id, x: r2(p.x), z: r2(p.z), face: r2(p.face), health: r2(p.health), hunger: r2(p.hunger),
-        thirst: r2(p.thirst), wood, stone, inventory: { ...rest, tools: [...p.tools], hoodDown: !!p.hoodDown, buckets: p.buckets || [] }, dread: r2(p.dread),
+        thirst: r2(p.thirst), wood, stone, inventory: { ...inventory, hoodDown: !!p.hoodDown }, dread: r2(p.dread),
       };
     });
     const objects = [...this.dirty].map(id => {
@@ -196,6 +199,7 @@ class Island {
 }
 
 const MESSAGES = {};
+const USES = {};
 const HOOKS = { onTick: [], onDawn: [], onJoin: [] };
 for (const name of SYSTEMS) {
   const sys = require(`./systems/${name}`);
@@ -206,6 +210,10 @@ for (const name of SYSTEMS) {
   for (const [t, fn] of Object.entries(sys.messages || {})) {
     if (MESSAGES[t]) throw new Error(`systems/${name}.js: message "${t}" is already handled`);
     MESSAGES[t] = fn;
+  }
+  for (const [type, u] of Object.entries(sys.uses || {})) {
+    if (USES[type]) throw new Error(`systems/${name}.js: E on "${type}" is already handled`);
+    USES[type] = u;
   }
   for (const h of Object.keys(HOOKS)) if (sys[h]) HOOKS[h].push(sys[h]);
 }

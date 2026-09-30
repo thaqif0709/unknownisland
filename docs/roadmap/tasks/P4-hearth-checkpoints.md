@@ -4,7 +4,7 @@ title: Hearth checkpoints
 lane: player
 owner: thaqif
 status: todo
-depends: [F5]
+depends: [F2, F5]
 flag: checkpoints
 size: 1 session
 ---

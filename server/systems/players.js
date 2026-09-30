@@ -1,7 +1,7 @@
 // Players: joining and leaving, what others see, movement, survival, and small show-only messages.
 const WG = require('../shared/world-gen');
 const { RULES, FIRES, ITEMS, heightAt, SPAWN } = WG;
-const { r2, num, cleanBuckets } = require('./util');
+const { r2, num } = require('./util');
 
 const methods = {
   // Watching the intro cutscene (held safe for at most two and a half minutes).
@@ -23,14 +23,12 @@ const methods = {
     if (this.players.size === 0) this.start();
 
     const saved = m.inventory || {};
-    const inv = { wood: m.wood, stone: m.stone };
-    for (const k of Object.keys(ITEMS)) if (!(k in inv)) inv[k] = Math.max(0, saved[k] | 0);
+    const { inv, tools, buckets } = this.loadInventory(m);
     const p = {
       id: account.id, name: account.username, ws,
       x: m.x ?? SPAWN.x, z: m.z ?? SPAWN.z, face: m.face,
       health: m.health, hunger: m.hunger, thirst: m.thirst, inv,
-      tools: (Array.isArray(saved.tools) ? saved.tools : []).filter(t => WG.recipeById(t)),
-      buckets: cleanBuckets(saved.buckets),
+      tools, buckets,
       dead: m.health <= 0, cause: '', moving: false, warm: false,
       energy: 100, exhausted: false, rest: 0, wantSprint: false, running: false,
       dread: m.dread || 0, fog: 0, knockedUntil: 0, camYaw: null, lastKnockAt: 0, patches, hoodDown: !!saved.hoodDown,
@@ -74,12 +72,12 @@ const methods = {
 
   selfView(p) {
     return { id: p.id, name: p.name, x: p.x, z: p.z, face: p.face, health: p.health, hunger: p.hunger,
-      thirst: p.thirst, inv: p.inv, tools: p.tools, buckets: p.buckets, energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches, hoodDown: p.hoodDown };
+      thirst: p.thirst, ...this.inventoryView(p), energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches, hoodDown: p.hoodDown };
   },
   publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown, hold: p.hold || null, sit: !!p.sitting }; },
 
   sendMe(p) {
-    this.send(p, { t: 'me', health: r2(p.health), hunger: r2(p.hunger), thirst: r2(p.thirst), inv: p.inv, tools: p.tools, buckets: p.buckets,
+    this.send(p, { t: 'me', health: r2(p.health), hunger: r2(p.hunger), thirst: r2(p.thirst), ...this.inventoryView(p),
       energy: r2(p.energy), exhausted: p.exhausted, warm: p.warm, dead: p.dead, dread: r2(p.dread), fog: r2(p.fog),
       down: p.knockedUntil > Date.now() });
   },
@@ -111,8 +109,9 @@ const methods = {
   onRespawn(p) {
     if (!p.dead) return;
     // You keep your tools; what you were carrying is lost.
-    for (const k of Object.keys(p.inv)) p.inv[k] = 0;
-    Object.assign(p, RULES.START, { x: SPAWN.x, z: SPAWN.z, face: Math.PI, dead: false, cause: '', lastPosAt: Date.now(),
+    this.clearItems(p);
+    const at = this.respawnPoint(p);
+    Object.assign(p, RULES.START, { x: at.x, z: at.z, face: Math.PI, dead: false, cause: '', lastPosAt: Date.now(),
       energy: 100, exhausted: false, rest: 0, dread: 10, knockedUntil: 0 });
     this.send(p, { t: 'respawned', you: this.selfView(p) });
   },

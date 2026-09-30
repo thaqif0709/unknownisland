@@ -62,15 +62,23 @@ UI.onFrame(dt => {...});                 // per-frame update
 UI.panels.register('inventory', {...});  // panels (see 7)
 ```
 
-## 4. Items and inventory (F5 stub → P2 real)
+## 4. Items and inventory (F5 done as a stub → P2 real)
 
-Nothing outside the inventory module touches `p.inv` directly.
+Nothing outside `server/systems/inventory.js` touches `p.inv`, `p.tools` or `p.buckets`
+directly (F5 moved every other use onto these). `this` is the Island:
 
 ```js
-this.give(p, key, n, meta?)  // -> number actually added (rest drops in a sack when slots are on)
-this.take(p, key, n)         // -> true if removed (checks first)
+this.give(p, key, n, meta?)  // -> number actually added (0 for an unknown item; the rest drops in a sack once slots are on)
+this.take(p, key, n)         // -> true if removed (checks first; takes nothing otherwise)
 this.count(p, key)           // -> total across all slots
 this.held(p)                 // -> { key, meta } of the selected hotbar slot, or null
+this.hasTool(p, id)          // tools become items in P3; callers don't change
+this.addTool(p, id)
+this.canAfford(p, cost) / this.spend(p, cost) / this.gain(p, items)   // cost/items = { key: n }
+this.takeUpTo(p, key, n)     // -> how many were taken
+this.takeShare(p, share)     // -> { key: n } taken (knockdowns)
+this.clearItems(p)           // lose everything carried (tools and buckets stay)
+this.loadInventory(row) / this.inventoryView(p) / this.inventorySave(p)   // join, client, database
 ```
 
 Items are declared in `WG.ITEMS` with optional fields:
@@ -83,22 +91,40 @@ ITEMS.trout = { name: 'Mountain trout', kind: 'food', stack: 10, food: 22, cook:
 
 Stub (F5): same functions over today's `p.inv` counts, so W and C lanes can use them now.
 
-## 5. Things you use with E (F5)
+## 5. Things you use with E (F5 done)
 
-Objects register what happens on use instead of editing one `onAct`:
+What E does to each kind of world object is registered by the system that owns it,
+instead of a case in one big `onAct`. A system exports `uses` next to its `messages`:
 
 ```js
-WG.USE.register('vent', { reach: 2, use(island, p, obj, held) {...} });
+// server/systems/<name>.js
+const uses = {
+  vent: { reach: 2, use(p, obj, { say, changed }) {   // `this` is the Island
+    ...; say('It hisses.'); changed();                  // changed(): save the object and tell everyone
+  } },
+};
+module.exports = { methods, messages, uses };
 ```
+
+`reach` is optional (default `RULES.REACH`). The reach check, cooldown and "is it gone"
+check happen before `use` is called. Two systems registering the same kind fail at
+start-up. Today's kinds (palm, tree, bush, rock, ore, dig) are in `server/systems/gather.js`;
+`this.useFor(kind)` returns the handler. Other E targets (fires, lanterns, sacks, bugs, tide
+finds, carving stones) are separate lists with their own ids and are still routed in `onAct`.
 
 ## 6. Regions (F5 stub → W4 real, W5 opening)
 
 ```js
 WG.regionAt(x, z)        // -> 'landing' | 'stair' | 'wood' | 'mire' | 'teeth' | 'ash' | 'hollow' | 'sea'
-island.isRegionOpen(id)  // stub: only 'landing'
-island.openRegion(id)    // records an island event; the Veil lifts at the next dawn
+                         //    stub (F5): 'landing' on land, 'sea' below sea level
+island.isRegionOpen(id)  // stub: only 'landing' (plus any opened since the server started)
+island.openRegion(id)    // the Veil lifts at the next dawn. Stub: remembered in memory and
+                         //    logged as a 'region_open' island event; W5 saves it properly
 WG.REGIONS               // [{ id, name, stage }] in opening order
 ```
+
+The stubs live in `server/systems/regions.js`. The island event log only keeps the last
+60 events for loading, so W5 must store opened regions in their own table, not rely on it.
 
 Region ids are fixed now: `landing stair wood mire teeth ash hollow`.
 Content tasks put per-region data in `server/regions/<id>.js` (spawn tables, Stilled kind,
@@ -147,7 +173,7 @@ island.combat.onDowned(p) / onRevived(p)
 ```js
 // server/bosses/<id>.js: a mob definition plus
 { region: 'landing', appear: { when: 'lowest-tide', x, z }, arena: 40, phases: [...], trophy: { patch, relic } }
-island.bosses.summon(regionId)   // W8 calls this when a chain finishes; stub logs an event
+island.summonBoss(regionId)      // W8 calls this when a chain finishes; stub (F5) logs a 'boss_summoned' event
 // On defeat the boss system calls island.openRegion(nextRegion).
 ```
 
@@ -155,7 +181,7 @@ island.bosses.summon(regionId)   // W8 calls this when a chain finishes; stub lo
 
 ```js
 p.checkpoint        // hearth id or null (players.checkpoint column)
-island.respawnPoint(p)   // -> { x, z } used by knockdowns, bosses, caves
+island.respawnPoint(p)   // -> { x, z } used by knockdowns, bosses, caves. Stub (F5): the island's start
 ```
 
 ## 12. Climbing surfaces (P9)
@@ -163,7 +189,7 @@ island.respawnPoint(p)   // -> { x, z } used by knockdowns, bosses, caves
 World content marks climbable things; the movement code only asks:
 
 ```js
-WG.climbAt(x, y, z)  // -> null or { normal, top } from objects with `climb: true` or cliff slopes
+WG.climbAt(x, y, z)  // -> null or { normal, top } from objects with `climb: true` or cliff slopes. Stub (F5): always null
 ```
 
 ## 13. Minigames (P8)

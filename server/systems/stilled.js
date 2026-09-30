@@ -90,8 +90,7 @@ const methods = {
     p.knockedUntil = now + K.DOWN_MS;
     p.health = Math.max(1, p.health - K.HEALTH);
     p.dread = Math.min(100, p.dread + K.DREAD);
-    const items = {};
-    for (const [k, n] of Object.entries(p.inv)) { const lose = Math.ceil(n * K.DROP); if (lose > 0) { items[k] = lose; p.inv[k] -= lose; } }
+    const items = this.takeShare(p, K.DROP);
     this.broadcast({ t: 'knocked', id: p.id });
     this.send(p, { t: 'toast', msg: Object.keys(items).length ? 'Something knocks you down. Your things scatter.' : 'Something knocks you down.' });
     this.sendMe(p);

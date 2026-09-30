@@ -24,9 +24,9 @@ const methods = {
       items = { buckets: [b] };
     } else {
       if (typeof key !== 'string' || !(key in ITEMS)) return;
-      n = Math.min(Math.max(1, count | 0), p.inv[key] || 0);
+      n = Math.min(Math.max(1, count | 0), this.count(p, key));
       if (n <= 0) return;
-      p.inv[key] -= n;
+      this.take(p, key, n);
       items = { [key]: n };
     }
     p.lastDropAt = now;
@@ -45,7 +45,7 @@ const methods = {
       this.drops.push({ id, x, z, items });
       this.broadcast({ t: 'drop', drop: { id, x, z, items } });
     } catch (e) {
-      if (items.buckets) p.buckets.push(...items.buckets); else p.inv[key] += n;   // give it back if it couldn't be saved
+      if (items.buckets) p.buckets.push(...items.buckets); else this.give(p, key, n);   // give it back if it couldn't be saved
       this.sendMe(p);
       console.error('[island] could not save drop', e.message);
     }
@@ -56,7 +56,7 @@ const methods = {
     if (!d || Math.hypot(d.x - p.x, d.z - p.z) > RULES.REACH + 1 + REACH_SLACK) return;
     this.drops = this.drops.filter(x => x !== d);
     const got = [];
-    for (const [k, n] of Object.entries(d.items)) if (k in p.inv && n > 0) { p.inv[k] += n; got.push(`${n} ${ITEMS[k].toLowerCase()}`); }
+    for (const [k, n] of Object.entries(d.items)) if (n > 0 && this.give(p, k, n) > 0) { got.push(`${n} ${ITEMS[k].toLowerCase()}`); }
     const bs = cleanBuckets(d.items.buckets);
     if (bs.length) { p.buckets.push(...bs); got.push(bs.length > 1 ? `${bs.length} buckets` : 'a bucket'); }
     this.broadcast({ t: 'undrop', id });

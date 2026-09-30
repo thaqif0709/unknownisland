@@ -4,7 +4,7 @@ title: Slot inventory and the 30-slot bag
 lane: player
 owner: edvin
 status: todo
-depends: [F3, F5]
+depends: [F2, F3, F5]
 flag: slots
 size: 2 sessions
 ---

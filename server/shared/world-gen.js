@@ -476,11 +476,29 @@
     return out;
   }
 
+  // ================= Regions (docs/roadmap/CONTRACTS.md section 6) =================
+  // The planned regions in opening order. Ids are fixed; names can change.
+  const REGIONS = [
+    { id: 'landing', name: 'The Landing', stage: 0 },
+    { id: 'stair', name: 'The Stairs', stage: 1 },
+    { id: 'wood', name: 'The Weeping Wood', stage: 2 },
+    { id: 'mire', name: 'The Mire', stage: 3 },
+    { id: 'teeth', name: 'The Teeth', stage: 4 },
+    { id: 'ash', name: 'The Ashen Shore', stage: 5 },
+    { id: 'hollow', name: 'The Hollow', stage: 6 },
+  ];
+  // Which region a spot belongs to. Placeholder until the 5 km world (task W4): all land
+  // is the Landing, everything below sea level is 'sea'.
+  const regionAt = (x, z) => (heightAt(x, z) < 0 ? 'sea' : 'landing');
+  // A climbable surface at this spot, or null (section 12). Placeholder until task P9.
+  const climbAt = (x, y, z) => null;
+
   const WorldGen = {
     RULES, ITEMS, RECIPES, FIRES, PATCHES, MOON_NAMES, moonPhase, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
     generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
     feature, features, setFeatures, resolveFeatures,
+    REGIONS, regionAt, climbAt,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;
   else root.WorldGen = WorldGen;

@@ -13,10 +13,10 @@ const methods = {
     const f = this.fires.find(f => f.id === id);
     if (!f || Math.hypot(f.x - p.x, f.z - p.z) - 0.6 > RULES.REACH + REACH_SLACK) return;
     // a bucket on it: take it when it's ready (or when there's no wood to keep it going)
-    if (f.pot && (f.pot.left <= 0 || p.inv.wood <= 0)) return this.takePot(p, f);
-    if (p.inv.wood <= 0) return say('You need wood for the fire.');
+    if (f.pot && (f.pot.left <= 0 || this.count(p, 'wood') <= 0)) return this.takePot(p, f);
+    if (this.count(p, 'wood') <= 0) return say('You need wood for the fire.');
     const k = FIRES[f.kind];
-    p.inv.wood--;
+    this.take(p, 'wood');
     f.fuel = Math.min(f.fuel + k.add, k.max);
     this.broadcast({ t: 'fires', list: [[f.id, r2(f.fuel)]] });
     this.fx(p, 'swing');

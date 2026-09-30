@@ -210,9 +210,9 @@ const methods = {
     const stone = this.carvings[id], req = this.sleeper.req, def = this.reqDef(), say = msg => this.send(p, { t: 'toast', msg });
     if (!stone || p.dead || Math.hypot(stone.x - p.x, stone.z - p.z) > RULES.SLEEPER.REACH + RULES.REACH + .9) return;
     if (!req || req.status !== 'active' || req.stone !== id || def.conditions.type !== 'offer') return;
-    const item = def.conditions.item, give = Math.min(p.inv[item] || 0, req.need - req.progress);
+    const item = def.conditions.item, give = Math.min(this.count(p, item), req.need - req.progress);
     if (give <= 0) return say(`It wants ${WG.ITEMS[item].toLowerCase()}. You have none.`);
-    p.inv[item] -= give;
+    this.takeUpTo(p, item, give);
     say(`You leave ${give} ${WG.ITEMS[item].toLowerCase()} at the foot of the stone. ${req.progress + give >= req.need ? '' : 'The marks deepen.'}`.trim());
     this.fx(p, 'swing');
     this.sendMe(p);

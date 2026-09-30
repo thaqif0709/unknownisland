@@ -49,7 +49,7 @@ of you pull `main` straight away.
 
 ### Dependencies that can't be avoided
 
-- Everything needs **F1/F2** (the split) and most things **F5** (the stubs).
+- Everything needs **F1/F2** (the split) and most things **F5** (the stubs, server-side only, so it didn't wait for F2).
 - **W1 → W2 → W4 → W5**: the world has to stream before it can grow, and grow before it can be locked.
 - **P2 → P3 → P6**: fighting needs weapons, weapons need slots.
 - **P5 → P6 → C0 → bosses**: every boss needs enemies and fighting.

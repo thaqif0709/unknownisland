@@ -14,7 +14,7 @@ Everything bosses share: appearing, arenas, scaling, phases, losing, winning and
 
 ## Scope
 
-- `server/bosses/<id>.js` on top of the mob framework (CONTRACTS.md §10); real `island.bosses.summon`.
+- `server/bosses/<id>.js` on top of the mob framework (CONTRACTS.md §10); real `island.summonBoss`.
 - A `bosses` table (state, health, phase, defeated_at) so a restart resumes a fight.
 - Arena of ~40 m, health × (1 + 0.6 per extra frog), wipe resets it to its next appearance, trophies for everyone present, echoes for latecomers.
 - Boss health bar, map marker, camera shake. On defeat call `openRegion(next)`.
