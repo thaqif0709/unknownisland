@@ -98,6 +98,16 @@ function createPgStore(url) {
           clearedSince: l.cleared_since ? new Date(l.cleared_since).getTime() : null, reclaim: l.reclaim_progress })),
       };
     },
+    // Regions the Veil has opened (or will open at dawn): [{ region, openedDay, liftedDay }].
+    async loadRegions(islandId) {
+      const r = await q('SELECT region, opened_day, lifted_day FROM regions_open WHERE island_id = $1', [islandId]);
+      return r.rows.map(x => ({ region: x.region, openedDay: x.opened_day, liftedDay: x.lifted_day }));
+    },
+    async saveRegion(islandId, reg) {
+      await q(`INSERT INTO regions_open (island_id, region, opened_day, lifted_day) VALUES ($1, $2, $3, $4)
+               ON CONFLICT (island_id, region) DO UPDATE SET opened_day = EXCLUDED.opened_day, lifted_day = EXCLUDED.lifted_day`,
+      [islandId, reg.region, reg.openedDay, reg.liftedDay ?? null]);
+    },
     // The island day a chunk was last saved on, or null.
     async loadChunkDay(islandId, chunk) {
       const r = await q('SELECT day FROM chunk_days WHERE island_id = $1 AND chunk = $2', [islandId, chunk]);
@@ -282,6 +292,8 @@ function createMemoryStore() {
         lanterns: [...i.lanterns.values()].map(clone),
       };
     },
+    async loadRegions(islandId) { return clone([...((islands.get(islandId).regions || new Map()).values())]); },
+    async saveRegion(islandId, reg) { const i = islands.get(islandId); i.regions = i.regions || new Map(); i.regions.set(reg.region, clone(reg)); },
     async loadChunkDay(islandId, chunk) { const d = (islands.get(islandId).chunkDays || new Map()).get(chunk); return d == null ? null : d; },
     async loadChunkStates(islandId, chunk) {
       const i = islands.get(islandId), m = i.chunkOf || new Map();

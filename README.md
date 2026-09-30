@@ -135,6 +135,10 @@ island before it's finished, add a `FEATURES` environment variable on Render (fo
 Database changes go in `server/migrations/` as numbered files; the server runs any new ones
 when it starts.
 
+To open a region by hand (for testing the big world), put your username in an `ADMINS`
+environment variable on Render (comma-separated for several) and type `/open stair` in chat.
+The Veil lifts at the next dawn.
+
 ## Trying it on your own computer (optional)
 
 You need [Node.js](https://nodejs.org) 20 or newer.

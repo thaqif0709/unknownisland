@@ -134,14 +134,18 @@ finds, carving stones) are separate lists with their own ids and are still route
 ```js
 WG.regionAt(x, z)        // -> 'landing' | 'stair' | 'wood' | 'mire' | 'teeth' | 'ash' | 'hollow' | 'sea'
                          //    real with the `bigworld` flag (W4); without it all land is 'landing'
-island.isRegionOpen(id)  // stub: only 'landing' (plus any opened since the server started)
-island.openRegion(id)    // the Veil lifts at the next dawn. Stub: remembered in memory and
-                         //    logged as a 'region_open' island event; W5 saves it properly
+island.isRegionOpen(id)  // the Landing always; others once the Veil has lifted (W5)
+island.openRegion(id)    // the Veil lifts at the next dawn (regions_open table, a 'region_open'
+                         //    event, a 'regions' message to everyone at dawn). Safe to repeat
+island.veilAt(x, z)      // true on locked land (only with `bigworld` on; water never)
 WG.REGIONS               // [{ id, name, stage }] in opening order
 ```
 
-The stubs live in `server/systems/regions.js`. The island event log only keeps the last
-60 events for loading, so W5 must store opened regions in their own table, not rely on it.
+All in `server/systems/regions.js`. The server turns you around (`veil` message, +6 dread)
+if a move would step onto locked land; the browser (`115-veil.js`) stops you first, turns
+you round and draws the fog bank along locked borders within 180 m. `welcome.regions` and
+`regions {open, lifted}` tell clients what's open. Admins (usernames in the `ADMINS` env var)
+can type `/open <region>` in chat.
 
 Region ids are fixed now: `landing stair wood mire teeth ash hollow`.
 

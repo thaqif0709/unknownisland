@@ -343,6 +343,11 @@ Default content is in `server/content/<topic>.js`.
   neck, with river valleys through the Wood and the Mire. Near the Landing, old land keeps
   its exact height (`landingHeightAt`, used for all Landing placement). The browser rebuilds
   terrain and the map when the server switches it on. Placeholder colours and spawn tables.
+- **The Veil (W5, part of `bigworld`):** every region but the Landing is locked until
+  `openRegion` (the previous region's boss, C0; or an admin's `/open <region>` in chat, with
+  usernames in the `ADMINS` env var); the Veil lifts at the next dawn (`regions_open`,
+  migration 0005). Stepping onto locked land turns you around (server and browser both
+  check); the browser draws a fog bank along locked borders and hatches them on the map.
 - **Placeholders for later work:** `WG.REGIONS`, `WG.regionAt`, `WG.climbAt`,
   `isRegionOpen/openRegion`, `summonBoss`, `respawnPoint` (`systems/regions.js`), and one file
   per region in `server/regions/<id>.js` for region packs to fill in.

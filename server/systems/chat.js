@@ -1,6 +1,8 @@
 // Chat and whispers.
 const WG = require('../shared/world-gen');
 
+const isAdmin = p => String(process.env.ADMINS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean).includes(p.name.toLowerCase());
+
 const methods = {
   // ================= Chat =================
   // Plain text goes to everyone on the island. Commands:
@@ -32,6 +34,11 @@ const methods = {
       }
       if (cmd === 'who' || cmd === 'online') {
         return sys('On the island: ' + [...this.players.values()].map(q => `${q.name} (#${q.id})`).join(', '));
+      }
+      // For whoever runs the island (usernames in the ADMINS env var): open a region by hand.
+      if (cmd === 'open' && isAdmin(p)) {
+        const id = String(rest[0] || '').toLowerCase();
+        return sys(this.openRegion(id) ? `The Veil will lift from ${id} at the next dawn.` : `Can't open "${id}" (already open, or not a region: ${WG.REGIONS.map(r => r.id).join(', ')}).`);
       }
       if (cmd === 'help' || cmd === '?') return sys('Commands: /w name message (whisper), /r message (reply to a whisper), /who (who is here). Anything else goes to everyone.');
       return sys(`There's no /${cmd0} command. Type /help for the list.`);

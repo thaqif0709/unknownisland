@@ -98,6 +98,12 @@ const methods = {
     const maxStep = speed * 1.4 * Math.min(dt, 1) + 0.6;
     const d = Math.hypot(x - p.x, z - p.z);
     if (heightAt(x, z) <= -1) { this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }
+    if (this.veilAt(x, z) && !this.veilAt(p.x, p.z)) {   // the Veil: you're turned around, not let through
+      this.veilTurned(p);
+      this.send(p, { t: 'veil' });
+      this.send(p, { t: 'correct', x: p.x, z: p.z });
+      return;
+    }
     if (d > maxStep) {
       // Too fast: move as far as allowed and tell the client where it really is.
       p.x += (x - p.x) / d * maxStep; p.z += (z - p.z) / d * maxStep;

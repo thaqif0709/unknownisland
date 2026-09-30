@@ -9,8 +9,10 @@
   let MAP_HALF = WG.ISL * 1.15, MAP_CX = 0, MAP_CZ = 0;
   UI.net.on('welcome', () => {
     const big = WG.feature('bigworld'), half = big ? 2600 : WG.ISL * 1.15, cz = big ? -1900 : 0;
-    if (half !== MAP_HALF || cz !== MAP_CZ) { MAP_HALF = half; MAP_CZ = cz; mapBase = null; }
+    if (half !== MAP_HALF || cz !== MAP_CZ) { MAP_HALF = half; MAP_CZ = cz; }
+    mapBase = null;   // redrawn with the Veil as it is now
   });
+  UI.net.on('regions', () => { mapBase = null; });
   const BIOME_COL = { sea: '#4A6F91', beach: '#D8C9A0', meadow: '#8FAE72', forest: '#5C7A4B', highland: '#9C8A6A', peak: '#D9D3C4', spring: '#7FC9D6' };
   let mapBase = null, mapTimer = 0;
   function buildMapBase() {
@@ -21,6 +23,10 @@
       const h = WG.heightAt(x, z);
       g.fillStyle = BIOME_COL[WG.biomeAt(x, z, h)] || BIOME_COL.sea;
       g.fillRect(i * STEP, j * STEP, STEP, STEP);
+      if (veilBlocks(x, z)) {   // behind the Veil: fogged over and hatched
+        g.fillStyle = 'rgba(238,234,226,.62)'; g.fillRect(i * STEP, j * STEP, STEP, STEP);
+        if ((i + j) % 3 === 0) { g.strokeStyle = 'rgba(70,60,52,.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(i * STEP, j * STEP + STEP); g.lineTo(i * STEP + STEP, j * STEP); g.stroke(); }
+      }
     }
     mapBase = c;
   }

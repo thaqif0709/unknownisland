@@ -3,7 +3,7 @@ id: W5
 title: The Veil and opening regions
 lane: world
 owner: thaqif
-status: todo
+status: done
 depends: [W4]
 flag: bigworld
 size: 1 session
@@ -30,11 +30,12 @@ Contract §6 real opening
 
 ## Done when
 
-- [ ] Only the Landing is reachable on a fresh island.
-- [ ] A debug command opening the Stairs lifts the Veil at the next dawn.
-- [ ] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
-- [ ] This file's `status` set to `done` in the PR that finishes it.
+- [x] Only the Landing is reachable on a fresh island.
+- [x] A debug command opening the Stairs lifts the Veil at the next dawn.
+- [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
+- [x] This file's `status` set to `done` in the PR that finishes it.
 
 ## Log
 
+- 2026-09-30 thaqif: done, part of the `bigworld` flag. `regions_open` (migration 0005): `openRegion` marks a region, the Veil lifts at the next dawn (onDawn hook), `regions` message to everyone. Server refuses moves onto locked land (`veil` message, +6 dread, 1.5 s cooldown); browser `115-veil.js` stops you first and turns you round, draws a fog bank (up to 420 puffs) along locked borders within 180 m, and the map fogs and hatches locked land. The "debug command" is `/open <region>` for usernames in `ADMINS`. Hidden Pages text flag-gated. Tests: 13 server checks (fresh island, blocked at the Stairs' shore at z = -370, dread, admin only, lifts at dawn, walkable after, survives a restart, flag off) and 5 browser checks (fog bank drawn, walking north for 7 s never crosses, the message shows). The wall is only drawn within 180 m; seeing it from afar goes with W3.
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->

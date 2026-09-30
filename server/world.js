@@ -74,6 +74,7 @@ class Island {
     for (const d of await store.loadDiscoveries(id)) isl.noteDiscovery(d.key, d.playerId, d.name, d.first, d.count);
     isl.washups = await store.loadWashups(id);
     isl.notes = await store.loadNotes(id);
+    isl.regionsLoad(await store.loadRegions(id));
     isl.sleeperLoad(await store.loadEvents(id));
     isl.updateEnv();
     return isl;

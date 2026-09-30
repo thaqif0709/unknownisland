@@ -151,7 +151,10 @@
         const spd = (heightAt(px, pz) < .1 ? RULES.WADE_SPEED : RULES.WALK_SPEED) * WG.speedMult(running, nrg.exhausted) * Math.min(1, l) * (hop.air ? .6 : 1);
         let nx = px + dx * spd * dt, nz = pz + dz * spd * dt;
         if (leaping) { nx += hop.fx * hop.fwd * dt; nz += hop.fz * hop.fwd * dt; }   // a charged jump carries you forward
-        if (heightAt(nx, nz) > -1) {
+        // the Veil: you can't walk into land that isn't open yet; it turns you around
+        const veiled = veilBlocks(nx, nz) && !veilBlocks(px, pz);
+        if (veiled) veilTurn();
+        if (heightAt(nx, nz) > -1 && !veiled) {
           const push = o => {
             if (o.state.gone || o.type === 'dig') return;
             if (hop.y > 0 && hop.y >= topOf(o) - .05) return;   // high enough (or standing on top): pass over it
