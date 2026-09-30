@@ -67,6 +67,7 @@ body{background:var(--paper);font-family:var(--hand);color:var(--ink);-webkit-us
 .slot i{position:absolute;left:3px;top:1px;font-style:normal;font-size:11px;font-weight:600;color:var(--soft);line-height:1;z-index:1}
 .slot.sel{border-color:var(--rose);box-shadow:0 0 0 3px var(--rose),inset 2px 2px 0 rgba(255,250,235,.7);transform:translateY(-3px)}
 .slot.tool{pointer-events:none}
+@media (hover:hover){ .inv .slot:not(.tool):not(.sel):hover{border-color:var(--rose);border-style:solid;background:#F1E6CD;transform:translateY(-2px)} }
 .day .timer{display:block;font-weight:600;font-size:14px;color:var(--ochre);margin-top:1px}
 .day .timer.soon{color:var(--rose)}
 .day .timer.night{color:var(--blue)}

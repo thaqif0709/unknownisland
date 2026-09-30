@@ -39,6 +39,13 @@ test('sea water, boiled clean, quenches thirst', async () => {
   await a.settle();
   assert.equal(a.me.buckets.length, 0, 'the bucket is on the fire now');
 
+  // feeding the fire keeps the bucket on it, and says so (the browser used to take it away)
+  await a.test('give', { inv: { wood: 2 } });
+  const fed = a.next(m => m.t === 'fires' && m.list.some(([id]) => id === fire.id));
+  assert.match((await a.act('f' + fire.id)).msg, /flares up/);
+  const [, , left] = (await fed).list.find(([id]) => id === fire.id);
+  assert.ok(left > 0, 'the fire update still carries the boiling bucket');
+
   await a.test('boil');   // skip the 75 seconds
   assert.match((await a.act('f' + fire.id)).msg, /Clean water/);
   const clean = a.me.buckets[0];
