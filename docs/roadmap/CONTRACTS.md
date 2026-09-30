@@ -266,6 +266,17 @@ registers `UI.mobs.register(kind, { make(id) -> Object3D, pose(mob, dt, now) })`
 `135-mobs.js` is followed by `mobs/*.js`); `mob.state` and `mob.stateAt` drive poses.
 Telegraphs are draped over the ground in ink and darken until they land.
 
+The Crawler (C2) is the kind `crawler` (`server/mobs/crawler.js`, drawn by
+`public/js/mobs/crawler.js`): one lives in each cave whose description lists it (`lair:
+['crawler']` in the region file; the Landing's sea cave), spawned by its `tick`, back the day
+after it's killed. It moves along the cave's nodes (never through rock or water deeper than
+`C.DRY`); states `lurk` (on the roof), `hunt`, `windup` (a `line` telegraph), `strike` (knock
+plus a drag deeper), `recover`, `recoil` (from a lit torch within `C.LIGHT`), `stagger`. It
+hears `p.running`, `p.lastCallAt` and `p.lastChatAt` (chat.js sets both) within `C.HEAR_*`.
+`view` is `[surface ('f' floor | 'c' ceiling), height]`. It broadcasts `{ t: 'scream', id, x,
+z, under }` (dread for those near, a shake, a sound: clips listed in
+`public/sfx/crawler/list.json`, or a made-up screech). `weak: { fire: 3, light: 2 }` for P6.
+
 The Stilled are the kind `stilled` (their behaviour is unchanged: `tick` fades and spawns,
 one `stalk` state moves and knocks). `dummy` is a test mob (never spawns by itself): admins
 type `/spawn dummy` (or any kind) in chat, with their name in `ADMINS`. Each region's
@@ -498,5 +509,5 @@ island.caveList() / caveById(id) / caveHitOf(p) / caveCut(x, z) / caveLit(p)
   them on the cave floor). The sea's shader leaves out the nearest cave's footprint (a mask
   texture); the camera stays under the roof; daylight fades with `Caves.darkness`; up to two
   torch lights. `__dbg.cave()` for tests.
-- For C2 (the Crawler): it lives in the Landing's sea cave; use `caveHit` for where it can
-  crawl (floor, walls up to `roof`), `p.under` for who it can reach, and `caveLit` for light.
+- The Crawler (C2) lives in caves whose description has `lair: ['crawler']` (section 8).
+  Test command `place { x, z, under }` puts a player in (or out of) a cave.

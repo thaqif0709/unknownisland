@@ -17,7 +17,7 @@ module.exports = {
   // described here and built by Caves.generateCave (server/shared/caves.js, CONTRACTS.md
   // section 18); s is metres in from the mouth.
   cave: {
-    id: 'seacave', sea: true, x: 114.94, z: 24.4, dir: -1.762, length: 40, wander: 1.5,
+    id: 'seacave', sea: true, lair: ['crawler'], x: 114.94, z: 24.4, dir: -1.762, length: 40, wander: 1.5,
     floor: [[0, .52], [3, .02], [11, -3], [17, -3], [25, -2], [40, -1.8]],   // down under the sea, then up a little into the chamber
     width: [[0, 1.7], [18, 1.4], [24, 2.6], [30, 5], [37, 4.5], [40, 2.2]],   // half-widths: a narrow way in, a wide chamber
     height: [[0, 2.6], [16, 2.3], [24, 3.2], [31, 4.3], [40, 3]],
