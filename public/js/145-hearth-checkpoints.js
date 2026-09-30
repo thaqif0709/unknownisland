@@ -1,6 +1,6 @@
   // ================= Hearth checkpoints (task P4, flag `checkpoints`) =================
-  // Sit down (V) beside a lit clay hearth, anyone's, and after a few seconds you curl up
-  // asleep: the fire remembers you, and you wake there after a knockdown or dying. Your
+  // Sit down (V) beside a lit clay hearth, anyone's, and you curl up asleep at once (under a
+  // blanket, eyes shut, z's rising: 120-castaways.js); a few seconds later the fire remembers you, and you wake there after a knockdown or dying. Your
   // checkpoint shows on the map as a flag in your colour (friends' fainter) and as a small
   // pennant on the hearth. The server decides (server/systems/checkpoints.js).
   const CP_REACH = 3;
