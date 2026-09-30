@@ -81,6 +81,18 @@ const methods = {
     return { x: SPAWN.x, z: SPAWN.z };
   },
 
+  // Creative mode on or off (admins only, for testing; not saved: it's off again after a rejoin).
+  // Turning it off over the sea or behind the Veil puts you back on the beach.
+  setCreative(p, on) {
+    p.creative = !!on;
+    if (!p.creative) {
+      if (p.pose === 'fly') p.pose = null;
+      const at = this.safeSpot(p.x, p.z);
+      if (at.x !== p.x || at.z !== p.z) { p.x = at.x; p.z = at.z; this.send(p, { t: 'correct', x: p.x, z: p.z }); }
+    }
+    this.send(p, { t: 'mode', creative: p.creative });
+  },
+
   selfView(p) {
     return { id: p.id, name: p.name, x: p.x, z: p.z, face: p.face, health: p.health, hunger: p.hunger,
       thirst: p.thirst, ...this.inventoryView(p), energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches, hoodDown: p.hoodDown };
@@ -95,9 +107,11 @@ const methods = {
 
   onPos(p, { x, z, face, moving, sprint, cam, stand, under, pose }) {
     if (num(cam)) p.camYaw = cam;
-    // climbing a trunk or gliding (P9, flag travel): shown to everyone, and a glide drifts faster than walking
-    p.pose = WG.feature('travel') && (pose === 'climb' || pose === 'glide') && !p.dead ? pose : null;
-    if (num(stand)) p.stand = Math.min(p.pose ? RULES.TRAVEL.MAX_HEIGHT : 2.2, Math.max(0, stand));   // standing on a rock, up a trunk, in the air (just for show)
+    // climbing a trunk or gliding (P9, flag travel): shown to everyone, and a glide drifts faster than walking;
+    // flying, in creative mode (admins, for testing: /creative in chat)
+    p.pose = p.dead ? null : p.creative && pose === 'fly' ? 'fly' : WG.feature('travel') && (pose === 'climb' || pose === 'glide') ? pose : null;
+    const flying = p.pose === 'fly';
+    if (num(stand)) p.stand = Math.min(flying ? RULES.CREATIVE.MAX_HEIGHT : p.pose ? RULES.TRAVEL.MAX_HEIGHT : 2.2, Math.max(0, stand));   // standing on a rock, up a trunk, in the air (just for show)
     if (p.dead || !num(x) || !num(z) || !num(face)) return;
     const now = Date.now();
     if (p.knockedUntil > now) { p.lastPosAt = now; p.moving = false; if (Math.hypot(x - p.x, z - p.z) > .3) this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }
@@ -108,13 +122,14 @@ const methods = {
     let speed = RULES.WALK_SPEED * (p.wantSprint && !p.exhausted ? RULES.SPRINT_MULT : 1)
       + (now - (p.lastJumpAt || 0) < 1600 ? 4.5 : 0);   // a charged leap carries you forward faster than walking
     if (p.pose === 'glide' && !p.exhausted) speed = Math.max(speed, RULES.TRAVEL.GLIDE_SPEED);
+    if (flying) speed = Math.max(speed, RULES.CREATIVE.FLY_SPEED);
     const maxStep = speed * 1.4 * Math.min(dt, 1) + 0.6;
     const d = Math.hypot(x - p.x, z - p.z);
     const wasUnder = p.under || null;
     const cave = this.caveMove(p, x, z, under);   // in a cave (W9): its floor, not the ground, is what counts
     if (cave === 'block') { this.send(p, { t: 'correct', x: p.x, z: p.z, under: p.under || 0 }); return; }
-    if (!cave && heightAt(x, z) <= -1) { this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }
-    if (!cave && this.veilAt(x, z) && !this.veilAt(p.x, p.z)) {   // the Veil: you're turned around, not let through
+    if (!cave && !flying && heightAt(x, z) <= -1) { this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }   // (flying: over the sea too)
+    if (!cave && !flying && this.veilAt(x, z) && !this.veilAt(p.x, p.z)) {   // (and over the Veil)   // the Veil: you're turned around, not let through
       this.veilTurned(p);
       this.send(p, { t: 'veil' });
       this.send(p, { t: 'correct', x: p.x, z: p.z });

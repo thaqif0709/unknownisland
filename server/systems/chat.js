@@ -55,6 +55,15 @@ const methods = {
         this.minigames.start(p, type, { difficulty }).then(r => sys(r.won ? 'You won.' : `You lost (${r.reason}).`));
         return;
       }
+      // ...and creative mode, for getting around quickly while testing (double-tap Space to fly),
+      // like Minecraft's: /creative, /normal (or /survival), or /gamemode creative|normal
+      if (['creative', 'normal', 'survival', 'gamemode', 'gm'].includes(cmd) && isAdmin(p)) {
+        const want = ['gamemode', 'gm'].includes(cmd) ? String(rest[0] || '').toLowerCase() : cmd;
+        const on = ['creative', 'c', '1'].includes(want), off = ['normal', 'survival', 's', '0'].includes(want);
+        if (!on && !off) return sys(`You're in ${p.creative ? 'creative' : 'normal'} mode. /gamemode creative or /gamemode normal`);
+        this.setCreative(p, on);
+        return sys(on ? 'Creative mode: double-tap Space to fly (Space up, Shift down), and again to stop. /normal to go back.' : 'Normal mode.');
+      }
       if (cmd === 'help' || cmd === '?') return sys('Commands: /w name message (whisper), /r message (reply to a whisper), /who (who is here). Anything else goes to everyone.');
       return sys(`There's no /${cmd0} command. Type /help for the list.`);
     }

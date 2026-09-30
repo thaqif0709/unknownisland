@@ -113,6 +113,13 @@
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
       slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
     },
+    // Creative mode, for testing only: admins (the ADMINS env var) type /creative in chat,
+    // then double-tap Space to fly. Speeds in m/s; walking is WALK_SPEED.
+    CREATIVE: {
+      FLY_SPEED: 30,           // across, where the camera looks
+      RISE_SPEED: 14,          // up (Space) and down (Shift)
+      MAX_HEIGHT: 200,         // above the ground or the sea
+    },
     // The slot inventory (P2, flag slots). Stack sizes per kind of item are in ITEM_INFO.
     SLOTS: {
       HOTBAR: 8,               // slots 0-7, keys 1-8

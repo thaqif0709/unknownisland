@@ -381,6 +381,11 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
 .xhair.use .tk,.xhair.use .tk-bg{opacity:0}
 .xhair.hit .ring,.xhair.hit .tk{stroke:var(--rose)}
 .xhair.hit .dot{fill:var(--rose)}
+/* creative mode (admins, for testing): a small tag at the top */
+.creativetag{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:var(--hand);font-weight:600;font-size:15px;padding:3px 12px;border:2px solid var(--ink);border-radius:12px;background:#F2D68A;color:var(--ink)}
+.creativetag span{font-weight:400;font-size:13px;margin-left:6px;color:var(--soft)}
+.creativetag.hidden{display:none}
 .lockpill{position:fixed;left:50%;top:58%;transform:translate(-50%,-50%);z-index:5;font-family:var(--hand);font-weight:600;font-size:18px;
   color:var(--ink);background:rgba(245,236,215,.94);border:2px solid var(--ink);border-radius:18px;padding:6px 18px;box-shadow:3px 3px 0 var(--ink);cursor:pointer}
 html.inkcursor,html.inkcursor *{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M3 2L3 19L7.8 14.6L11.2 21.6L14.4 20.1L11 13.2L17.6 13.2Z' fill='%23F5ECD7' stroke='%232B211F' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") 3 2,auto!important}
