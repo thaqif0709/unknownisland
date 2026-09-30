@@ -32,7 +32,8 @@ test('buildSlots: counts from before the flag become slots, nothing lost', () =>
   wellFormed(slots);
   assert.deepEqual(totals(slots), { wood: 123, stone: 7, seeds: 3 });
   assert.deepEqual(over, {});
-  assert.ok(slots.slice(0, S.HOTBAR).every(s => !s), 'gathered things go in the bag, not the hotbar');
+  assert.deepEqual(slots.slice(0, 5), [{ k: 'wood', n: 50 }, { k: 'wood', n: 50 }, { k: 'wood', n: 23 }, { k: 'stone', n: 7 }, { k: 'seeds', n: 3 }],
+    'the hotbar fills first, as the old 8 slots did');
   // far more than fits: the rest is "over" (a sack at their feet when they join)
   const big = buildSlots({ ...counts, wood: 5000 }, [], null);
   const t = totals(big.slots);
@@ -41,7 +42,8 @@ test('buildSlots: counts from before the flag become slots, nothing lost', () =>
   // a saved arrangement is kept where it still matches, and trimmed where it doesn't
   const saved = [{ k: 'stone', n: 5 }, { k: 'wood', n: 999 }, { k: 'nonsense', n: 4 }, null, { b: 12345 }];
   const again = buildSlots(counts, [{ id: 12345 }], saved);
-  assert.deepEqual(again.slots.slice(0, 5), [{ k: 'stone', n: 7 }, { k: 'wood', n: 50 }, null, null, { b: 12345 }], 'the 2 other stone join the saved stack');
+  assert.deepEqual(again.slots.slice(0, 6), [{ k: 'stone', n: 7 }, { k: 'wood', n: 50 }, { k: 'wood', n: 50 }, { k: 'wood', n: 23 }, { b: 12345 }, { k: 'seeds', n: 3 }],
+    'the 2 other stone join the saved stack; the rest fills the free slots in order');
   assert.deepEqual(totals(again.slots), { wood: 123, stone: 7, seeds: 3 });
 });
 
@@ -65,22 +67,21 @@ test('moving: into an empty slot, onto the same thing up to a stack, and swappin
   await c.test('give', { inv: { wood: 70, stone: 5 } });
   let me = await send(c, { t: 'move', from: 99, to: 0 });   // nothing there: just the slots back
   wellFormed(me.slots);
-  const woodAt = () => me.slots.map((s, i) => (s && s.k === 'wood' ? i : -1)).filter(i => i >= 0);
-  const stoneAt = me.slots.findIndex(s => s && s.k === 'stone');
-  const [w1, w2] = woodAt();
-  assert.deepEqual([me.slots[w1].n, me.slots[w2].n], [50, 20], 'a stack of wood is 50');
-  me = await send(c, { t: 'move', from: w2, to: 0, count: 5 });   // part of a stack into the hotbar
-  assert.deepEqual([me.slots[0], me.slots[w2]], [{ k: 'wood', n: 5 }, { k: 'wood', n: 15 }]);
-  me = await send(c, { t: 'move', from: w1, to: 0 });   // onto the 5: only 45 more fit
-  assert.deepEqual([me.slots[0], me.slots[w1]], [{ k: 'wood', n: 50 }, { k: 'wood', n: 5 }]);
-  me = await send(c, { t: 'move', from: stoneAt, to: 0 });   // a different thing: they swap
-  assert.deepEqual([me.slots[0], me.slots[stoneAt]], [{ k: 'stone', n: 5 }, { k: 'wood', n: 50 }]);
-  me = await send(c, { t: 'move', from: stoneAt, to: 0, count: 3 });   // part of a stack can't swap
-  assert.deepEqual([me.slots[0], me.slots[stoneAt]], [{ k: 'stone', n: 5 }, { k: 'wood', n: 50 }]);
-  me = await send(c, { t: 'move', from: 0, to: -1 });   // Shift-click: hotbar -> bag
-  assert.equal(me.slots[0], null);
-  me = await send(c, { t: 'move', from: stoneAt, to: -1 });   // bag -> hotbar
-  assert.deepEqual(me.slots[0], { k: 'wood', n: 50 });
+  // new things fill the hotbar first: 50 wood, 20 wood, 5 stone
+  assert.deepEqual(me.slots.slice(0, 3), [{ k: 'wood', n: 50 }, { k: 'wood', n: 20 }, { k: 'stone', n: 5 }], 'a stack of wood is 50');
+  const T = 30;   // an empty bag slot
+  me = await send(c, { t: 'move', from: 1, to: T, count: 5 });   // part of a stack into the bag
+  assert.deepEqual([me.slots[T], me.slots[1]], [{ k: 'wood', n: 5 }, { k: 'wood', n: 15 }]);
+  me = await send(c, { t: 'move', from: 0, to: T });   // onto the 5: only 45 more fit
+  assert.deepEqual([me.slots[T], me.slots[0]], [{ k: 'wood', n: 50 }, { k: 'wood', n: 5 }]);
+  me = await send(c, { t: 'move', from: 2, to: T });   // a different thing: they swap
+  assert.deepEqual([me.slots[T], me.slots[2]], [{ k: 'stone', n: 5 }, { k: 'wood', n: 50 }]);
+  me = await send(c, { t: 'move', from: 2, to: T, count: 3 });   // part of a stack can't swap
+  assert.deepEqual([me.slots[T], me.slots[2]], [{ k: 'stone', n: 5 }, { k: 'wood', n: 50 }]);
+  me = await send(c, { t: 'move', from: T, to: -1 });   // Shift-click: bag -> hotbar
+  assert.deepEqual([me.slots[T], me.slots[3]], [null, { k: 'stone', n: 5 }]);
+  me = await send(c, { t: 'move', from: 3, to: -1 });   // hotbar -> bag
+  assert.deepEqual([me.slots[3], me.slots[S.HOTBAR]], [null, { k: 'stone', n: 5 }]);
   assert.deepEqual(nonZero(totals(me.slots)), { wood: 70, stone: 5 });
   assert.equal(me.inv.wood, 70);
 });
@@ -134,7 +135,7 @@ test('a full bag drops what doesn’t fit in a sack at your feet', async () => {
   assert.equal(c.me.inv.wood, 50 * N - 50);
 });
 
-test('berries go in the bag, and holding E with them in hand eats them', async () => {
+test('berries are carried, to eat later', async () => {
   const c = await server.join('eat');
   const o = nearest(objectsWithState(layout, c.welcome), WG.SPAWN, x => x.type === 'bush' && x.state.berries);
   assert.ok(o, 'a bush with berries');
@@ -145,7 +146,7 @@ test('berries go in the bag, and holding E with them in hand eats them', async (
   assert.equal(c.me.inv.seeds, 1);
   assert.ok(c.me.hunger <= hunger, 'not eaten yet');
   const at = c.me.slots.findIndex(s => s && s.k === 'berries');
-  assert.ok(at >= S.HOTBAR, 'in the bag');
+  assert.ok(at >= 0, 'carried');
   await c.test('set', { hunger: 40 });
   const ate = c.next(m => m.t === 'toast' && /eat the berries/.test(m.msg));
   c.send({ t: 'eat', slot: at });

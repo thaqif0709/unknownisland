@@ -117,7 +117,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td><kbd>1</kbd>&ndash;<kbd>8</kbd></td><td>Hold the item in that slot (press again to put it away)</td></tr>
         <tr><td><kbd>Q</kbd> / <kbd>Shift</kbd>+<kbd>Q</kbd></td><td>Next / previous item slot</td></tr>
         <tr><td><kbd>G</kbd> / <kbd>Shift</kbd>+<kbd>G</kbd></td><td>Drop one / all of the held item</td></tr>
-        <tr data-feature="slots"><td><kbd>I</kbd></td><td>Open the bag (drag stacks between the bag and the hotbar)</td></tr>
+        <tr data-feature="slots"><td><kbd>I</kbd></td><td>Open the bag (drag stacks between the bag and the hotbar; phones: the <b>Bag</b> button)</td></tr>
         <tr data-feature="slots"><td><kbd>E</kbd> (hold, food in hand)</td><td>Eat one</td></tr>
         <tr><td><kbd>F</kbd></td><td>Quick-build a campfire</td></tr>
         <tr><td><kbd>V</kbd></td><td>Sit down / get up<span data-feature="checkpoints">. By a lit clay hearth: sleep there, and wake there</span></td></tr>
@@ -261,7 +261,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="items"><h2>Inventory, holding and giving</h2>
       <ul>
         <li data-feature-off="slots">You have <b>8 slots</b>, numbered <kbd>1</kbd>&ndash;<kbd>8</kbd>. Each kind of thing keeps its slot; each bucket has its own.</li>
-        <li data-feature="slots">You carry things in <b><span data-r="SLOTS.HOTBAR"></span> hotbar slots</b> (<kbd>1</kbd>&ndash;<kbd>8</kbd>, along the bottom of the screen) and a <b>bag of <span data-r="SLOTS.BAG"></span> more</b> (<kbd>I</kbd>). A slot holds up to <span data-r="SLOTS.STACK"></span> of one thing (<span data-r="SLOTS.FOOD_STACK"></span> of a food, and one bucket). What you gather goes into the bag first; buckets and torches go into the hotbar, since you use them from your hand.</li>
+        <li data-feature="slots">You carry things in <b><span data-r="SLOTS.HOTBAR"></span> hotbar slots</b> (<kbd>1</kbd>&ndash;<kbd>8</kbd>, along the bottom of the screen) and a <b>bag of <span data-r="SLOTS.BAG"></span> more</b> (<kbd>I</kbd>). A slot holds up to <span data-r="SLOTS.STACK"></span> of one thing (<span data-r="SLOTS.FOOD_STACK"></span> of a food, and one bucket). New things fill the hotbar first, then the bag.</li>
         <li data-feature="slots"><b>In the bag:</b> drag a stack onto an empty slot to move it, onto the same thing to add to it, or onto something else to swap them. Drag with the right mouse button to take half. <kbd>Shift</kbd>+click sends a stack across, between the bag and the hotbar. Drag it off the page to drop it. On a phone, tap a stack and then tap where it goes; the buttons under the bag take half, send it across, eat it or drop it.</li>
         <li data-feature="slots"><b>A full bag:</b> whatever doesn't fit is left in a sack at your feet. Picking up a sack takes what fits and leaves the rest in it.</li>
         <li>Press a number (or <kbd>Q</kbd> to cycle) to hold that item. Your frog carries it in its hand and friends can see it.</li>
@@ -433,7 +433,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
-        <li data-feature="slots"><b>The bag:</b> <span data-r="SLOTS.HOTBAR"></span> hotbar slots and a <span data-r="SLOTS.BAG"></span>-slot bag on <kbd>I</kbd>, with stacks and dragging. Coconuts and berries go into the bag; hold <kbd>E</kbd> with one in hand to eat it.</li>
+        <li data-feature="slots"><b>The bag:</b> <span data-r="SLOTS.HOTBAR"></span> hotbar slots and a <span data-r="SLOTS.BAG"></span>-slot bag on <kbd>I</kbd> (phones: <b>Bag</b>), with stacks and dragging. Coconuts and berries go into the bag; hold <kbd>E</kbd> with one in hand to eat it.</li>
         <li data-feature="travel"><b>Climbing and gliding:</b> climb the tall palms and the cliffs, and glide down with your cloak.</li>
         <li data-feature="fishing"><b>Landing a fish:</b> five little games (trivia, untangle the line, ripple memory, pull and ease, read the water).</li>
         <li><b>Calling out:</b> press C to call to your friends. They hear it from your direction, and see where on the map.</li>

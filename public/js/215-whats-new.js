@@ -5,9 +5,10 @@
   // since the start screen comes before the welcome). Put the newest notes here when you
   // switch something on for players; the full history is the Hidden Pages changelog.
   const NEWS = {
-    id: '2026-09-30b',
+    id: '2026-09-30c',
     when: '30 Sept',
     lines: [
+      { flag: 'slots', html: '<b>A bag.</b> Press I (phones: Bag) for 30 more slots. Drag stacks between the bag and the hotbar. Coconuts and berries go in it now: hold E with one in your hand to eat it.' },
       { flag: 'bigworld', html: '<b>The island is much bigger.</b> Where you arrive is only the Landing: cross the sandy neck on its north shore. Some new lands are open; the rest wait behind a wall of fog, the Veil.' },
       { flag: 'bigworld', html: '<b>A first look:</b> the new lands are bare for now. Their creatures and stories come later.' },
       { flag: 'farview', html: '<b>You can see for kilometres</b>, out to the mountains.' },

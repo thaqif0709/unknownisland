@@ -193,7 +193,7 @@ planned separately by Thaqif):
   holding it on the way down glides. Tests: `tests/server/travel.test.js`,
   `tests/browser/travel.test.js` (runs the page small and on Low graphics: the server spends
   climbing energy by the clock, so a slow headless page would run out halfway up).
-- **The bag (P2, flag `slots`).** `server/systems/inventory.js` keeps `p.slots` (8 hotbar
+- **The bag (P2, flag `slots`, on since 30 Sept).** `server/systems/inventory.js` keeps `p.slots` (8 hotbar
   + 30 bag; `{ k, n }`, `{ b: bucketId }` or null) and still recounts `p.inv` as totals, so
   nothing outside it changed except drops (drop by slot; picking up a sack takes what fits
   and leaves the rest) and gathering (coconuts and berries go into the bag as items, eaten
@@ -206,6 +206,7 @@ planned separately by Thaqif):
   stays names only). Browser: `240-input.js` mirrors slots 0-7 as the hotbar when the flag
   is on and sends `select`; `255-inventory.js` is the bag panel (I; drag, right-drag half,
   Shift-click across, drag off to drop, tap-then-tap on phones) and hold-E-to-eat with a ring.
+  New things fill the hotbar first, then the bag (so the hotbar looks as it did before the bag).
   Silverfin and bugs are still eaten on the spot. Tests: `tests/server/slots.test.js` (with
   400 random and malformed moves that must leave the same totals),
   `tests/browser/slots.test.js`.
