@@ -5,7 +5,7 @@
   // since the start screen comes before the welcome). Put the newest notes here when you
   // switch something on for players; the full history is the Hidden Pages changelog.
   const NEWS = {
-    id: '2026-09-30c',
+    id: '2026-09-30d',
     when: '30 Sept',
     lines: [
       { flag: 'bigworld', html: '<b>The island is much bigger.</b> Where you arrive is only the Landing: cross the sandy neck on its north shore. Some new lands are open; the rest wait behind a wall of fog, the Veil.' },

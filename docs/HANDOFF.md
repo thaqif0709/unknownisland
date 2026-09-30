@@ -179,7 +179,7 @@ planned separately by Thaqif):
   marker in about 86%+ of the time on hard, which is why hard asks for 70%. Admins:
   `/minigame <type> [easy|medium|hard]`. Tests: `tests/server/minigames.test.js`,
   `tests/browser/minigames.test.js`.
-- **Climbing and gliding (P9, flag `travel`, off until tried by hand).** `WG.climbAt` is
+- **Climbing and gliding (P9, flag `travel`, on since 30 Sept).** `WG.climbAt` is
   real: the tall palms (`climb: true` from `generateObjects`) and cliffs (slopes steeper
   than `RULES.TRAVEL.CLIFF_SLOPE`). `public/js/385-climbing.js` holds the climb state
   (`climb`: a trunk with an angle round it, or a cliff you move over the face of) and
