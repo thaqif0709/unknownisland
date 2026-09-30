@@ -1,6 +1,7 @@
-  // ================= The Stilled =================
+  // ---- mob: the Stilled ----
   // Pale, faceless figures drawn as holes in the world: flat colour, marked
   // (alpha 0) so the ink pass leaves them without outlines or shading.
+  // (The intro cutscene borrows makeStilled too.)
   const stilledMat = new THREE.ShaderMaterial({
     uniforms: { col: { value: new THREE.Color(0xE9E1CF) } },
     vertexShader: 'void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
@@ -21,16 +22,4 @@
     scene.add(g);
     return g;
   }
-  const stilled = new Map();   // id -> { remote, mesh }
-  function syncStilled(list) {
-    const seen = new Set();
-    for (const [id, x, z, f] of list || []) {
-      seen.add(id);
-      let s = stilled.get(id);
-      if (!s) { s = { remote: new Net.Remote(x, z, f), mesh: makeStilled(id) }; stilled.set(id, s); }
-      else s.remote.push(x, z, f, 0, 0);
-    }
-    for (const [id, s] of stilled) if (!seen.has(id)) { scene.remove(s.mesh); stilled.delete(id); }
-  }
-  function clearStilled() { stilled.forEach(s => scene.remove(s.mesh)); stilled.clear(); }
-
+  UI.mobs.register('stilled', { make: makeStilled });

@@ -82,16 +82,17 @@ async function startServer({ env = {} } = {}) {
       return { status: res.status, body: await res.json().catch(() => null) };
     },
     // A new account (a unique name each time), signed up with the test invite code.
-    async signup(prefix = 't') {
-      const username = `${prefix}${Date.now().toString(36).slice(-5)}${(n++).toString(36)}${crypto.randomBytes(2).toString('hex')}`.slice(0, 16);
+    async signup(prefix = 't', { username: fixed } = {}) {
+      const username = fixed || `${prefix}${Date.now().toString(36).slice(-5)}${(n++).toString(36)}${crypto.randomBytes(2).toString('hex')}`.slice(0, 16);
       // a made-up address per account, so the per-IP sign-up limit never trips
       const r = await server.api('/api/signup', { username, password: 'password123', invite: INVITE }, { 'X-Forwarded-For': `10.0.${n}.${n}` });
       if (r.status !== 200) throw new Error(`sign-up failed (${r.status}): ${JSON.stringify(r.body)}`);
       return { username, token: r.body.token, id: r.body.player.id };
     },
     // Sign up and join the island; resolves with a connected client once 'welcome' arrives.
-    async join(prefix) {
-      const acct = await server.signup(prefix);
+    // `opts.username` picks the name (e.g. one listed in ADMINS).
+    async join(prefix, opts) {
+      const acct = await server.signup(prefix, opts);
       const c = new TestClient(`ws://127.0.0.1:${port}/ws`, acct);
       clients.push(c);
       await c.open();

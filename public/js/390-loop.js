@@ -208,10 +208,6 @@
     animateCarvings(dt);
     if (state === 'play' && env.drowning && isNight(t) && (nextTremor -= dt) <= 0) { nextTremor = 25 + Math.random() * 35; tremor = 1.6; Sound.rumble(); }
     washups.forEach(w => { if (w.mesh.userData.bell) w.mesh.userData.bell.rotation.z = Math.sin(elapsed * 3 + w.id) * .25; });
-    stilled.forEach(s => {
-      const p = s.remote.sample();
-      s.mesh.position.set(p.x, groundAt(p.x, p.z), p.z); s.mesh.rotation.y = p.face;
-    });
 
     // Other castaways, played back smoothly.
     remotes.forEach(r => {

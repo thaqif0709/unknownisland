@@ -216,6 +216,34 @@ island.mobs.telegraph(mob, { shape: 'circle'|'line'|'cone', x, z, r, ms })   // 
 Clients get `mob` snapshots in the normal snapshot plus `telegraph` events. The client draws
 mobs by `kind` from `public/js/mobs/<kind>.js`.
 
+As built (P5, done): the engine is `server/mobs/index.js` (`island.mobs`, made in the Island
+constructor); a new kind is a file in `server/mobs/` added to the `KINDS` list there. Besides
+`states` (each `(mob, island, dt, ctx) -> next state name or nothing`; `ctx` is `{ lights, now,
+players }` with the living players not watching the intro), a kind can have `start` (first
+state, default `idle`), `tick(island, dt, ctx)` once a tick for the whole kind (spawning,
+fading), `touch` (a distance: `onTouch` runs for players that close, plus `radius`),
+`onHit(island, mob, hit)`, `onDeath(island, mob, hit)` and `view(mob)` (a small extra in the
+snapshot). A mob is `{ id, kind, x, z, face, hp, state, t (seconds in this state), ... }`;
+`mob.gone = true` (or `island.mobs.remove(mob)`) removes it at the end of the tick. Also
+`island.mobs.of(kind)`, `byId(id)`, `setState(mob, s)`, `inTelegraph(mob, x, z)` (is a spot
+inside its last warning, for resolving the strike) and `stateOf(kind)` (a per-kind object for
+timers). `hit()` multiplies by every matching `weak` tag, broadcasts `{ t: 'mobhit', id, hp,
+max, dmg }`, kills at 0 hp and otherwise puts the mob in `stagger` if it has one.
+`telegraph()` broadcasts `{ t: 'telegraph', id, shape, x, z, r, ms, a, len, w }` (`a` the
+direction for line and cone, `w` the line's width or the cone's half-angle).
+
+The snapshot's `m` is `[id, kind, x, z, face, state, extra?]` per mob (it replaced the old
+`s` list of Stilled). In the browser, `public/js/135-mobs.js` plays them back; each kind
+registers `UI.mobs.register(kind, { make(id) -> Object3D, pose(mob, dt, now) })` from
+`public/js/mobs/<kind>.js` (the client bundle joins a part's folder right after it, so
+`135-mobs.js` is followed by `mobs/*.js`); `mob.state` and `mob.stateAt` drive poses.
+Telegraphs are draped over the ground in ink and darken until they land.
+
+The Stilled are the kind `stilled` (their behaviour is unchanged: `tick` fades and spawns,
+one `stalk` state moves and knocks). `dummy` is a test mob (never spawns by itself): admins
+type `/spawn dummy` (or any kind) in chat, with their name in `ADMINS`. Each region's
+`stilled:` field (server/regions/) can name its own kind once one exists.
+
 ## 9. Combat hooks (P6)
 
 ```js
@@ -389,7 +417,7 @@ island.caveList() / caveById(id) / caveHitOf(p) / caveCut(x, z) / caveLit(p)
   metres), keeps you inside the walls, and never moves you part-way through rock. It's in
   `welcome.caves`, `publicView(p).under` and the 8th field of each `snap` player entry.
   Underground players are saved just outside the mouth (`island.savedSpot(p)`).
-- Underground: no fog, no cold, no Stilled (they skip players with `p.under`), no fires, and
+- Underground: no fog, no cold, no Stilled (`server/mobs/stilled.js` leaves out players with `p.under`), no fires, and
   nothing up on the ground is in reach (E does nothing yet: cave finds come with the region
   packs, and should check `p.under`). The Dark (`RULES.DREAD.CAVE_DARK`, scaled by
   `Caves.darkness`) builds unless you, or a friend within `FRIEND_RADIUS` in the same cave,

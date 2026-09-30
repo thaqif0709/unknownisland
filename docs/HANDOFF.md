@@ -141,7 +141,7 @@ planned separately by Thaqif):
   toggle in Settings). `Island.knock(p)` knocks a player down (health, dread,
   half the inventory into a sack saved in the `drops` table; anyone can pick it up).
   The Stilled call it.
-- **Phase 2, the Stilled (done).** Server-side (`updateStilled` in `server/systems/stilled.js`,
+- **Phase 2, the Stilled (done).** Server-side (the mob kind `server/mobs/stilled.js` since P5,
   tuning in `RULES.STILLED`): at night they spawn in fog 22-42 units from players
   (2 per player, +1 if alone, +1 if dread > 70, max 12, doubled on Drowning
   nights), never in plain sight. Clients send their camera yaw with position; a
@@ -152,6 +152,20 @@ planned separately by Thaqif):
   their spot clears. Being within 15 units raises dread. Client draws them with a
   shader that writes alpha 0 into the colour target; the ink pass sees that and
   leaves them as flat pale negative space with only a little fog stipple.
+- **Mobs (P5, done).** Every creature runs on one engine, `server/mobs/index.js`
+  (`island.mobs`): each kind is a file in `server/mobs/` with a state machine
+  (`states`, one runs per mob per tick and returns the next state), optional
+  `tick` for the whole kind, hp, `weak` multipliers by damage tag, `onTouch`,
+  and `telegraph()`s (a circle, line or cone warning, drawn inked on the ground
+  and draped over the terrain, `135-mobs.js`). The Stilled moved onto it
+  unchanged (`tick` = fade and spawn, `stalk` = the old movement and knock;
+  their helpers `fogHere`, `watched`, `isAlone`, `knock` stay in
+  `systems/stilled.js`). The snapshot's `s` list became `m`
+  (`[id, kind, x, z, face, state, extra]`). The browser draws each kind from
+  `public/js/mobs/<kind>.js`; the client bundle now joins a part's folder right
+  after it. `dummy` (a straw dummy that marks a circle where you stand and slams
+  it 0.9 s later) is the test mob: `/spawn dummy` for admins. Details in
+  CONTRACTS.md section 8; tests in `tests/server/mobs.test.js`.
 - **Phase 3, stone lanterns (done; light only, no map gating).** 26 lanterns from
   `generateLanterns(seed)` (one near the spawn beach, one by the main spring; the
   4 highest others are great lanterns needing lamp oil from 3 different frogs).
@@ -332,7 +346,7 @@ system in `server/systems/<name>.js` that exports `methods` (mixed into `Island.
 `messages` (client `msg.t` handlers) and optional `onTick`, `onDawn`, `onJoin` hooks; see
 `docs/roadmap/CONTRACTS.md` section 2. Systems: journal, tides, bugs, weather, time (clock,
 regrowth, catch-up, overnight), chat, board, patches, players (join/leave, views, movement,
-survival loop, show-only messages), gather (E on things), crafting, fires, stilled (and
+survival loop, show-only messages), gather (E on things), crafting, fires, stilled (helpers and
 knockdowns), lanterns (and `lights()`), buckets, drops, sleeper, inventory, regions.
 Default content is in `server/content/<topic>.js`.
 - **Inventory:** only `systems/inventory.js` touches `p.inv`, `p.tools`, `p.buckets`; everything
