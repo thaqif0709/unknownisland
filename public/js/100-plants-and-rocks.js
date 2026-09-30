@@ -194,7 +194,7 @@
   function setLayout(list) {
     for (const o of objects) removeMesh(o);
     objects = list.map(src => ({ id: src.id, type: src.type, x: src.x, z: src.z, r: src.r, s: src.s, maxScale: src.maxScale, size: 1,
-      species: src.species, ore: src.ore, state: WG.defaultState(src.type), mesh: null }));
+      species: src.species, ore: src.ore, climb: src.climb, state: WG.defaultState(src.type), mesh: null }));
     buckets = new Map();
     for (const o of objects) {
       const k = ckey(Math.floor(o.x / CH), Math.floor(o.z / CH));

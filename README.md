@@ -62,6 +62,8 @@ Environment*). Existing players aren't affected.
   campfire, **Esc** for settings.
   With mouse-look switched on (the `mouselook` flag), click the island and the mouse turns the
   camera (**Esc** frees it), the wheel picks your item, and **Ctrl + wheel** zooms.
+  With the `travel` flag, walk into a tall palm or a cliff to climb it (**W**/**S**, **Space**
+  lets go), and hold **Space** while falling from high up to glide with your cloak.
 - **Calling out:** press **C** (phones: **Call**) and friends nearby hear you from your
   direction; everyone sees where you called from on the map for a minute.
 - **Chat:** press **Enter** (or **/**) to type, Enter to send, Esc to close. Plain

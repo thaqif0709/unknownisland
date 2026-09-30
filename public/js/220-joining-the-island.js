@@ -75,9 +75,9 @@
       case 'snap':
         t = m.time; day = m.day;
         syncMobs(m.m);
-        for (const [id, x, z, f, moving, dead, stand] of m.p) {
+        for (const [id, x, z, f, moving, dead, stand, , pose] of m.p) {   // (the 8th, the cave they are in, is read by 135-caves.js)
           const r = remotes.get(id);
-          if (r) { r.remote.push(x, z, f, moving, dead); r.dead = !!dead; r.stand = stand || 0; }
+          if (r) { r.remote.push(x, z, f, moving, dead); r.dead = !!dead; r.stand = stand || 0; r.pose = pose || 0; }
         }
         break;
       case 'me':

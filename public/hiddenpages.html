@@ -120,6 +120,8 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td><kbd>F</kbd></td><td>Quick-build a campfire</td></tr>
         <tr><td><kbd>V</kbd></td><td>Sit down / get up<span data-feature="checkpoints">. By a lit clay hearth: sleep there, and wake there</span></td></tr>
         <tr><td><kbd>C</kbd></td><td>Call out to friends (phones: the <b>Call</b> button)</td></tr>
+        <tr data-feature="travel"><td>Walk into a tall palm or a cliff</td><td>Climb it: <kbd>W</kbd> / <kbd>S</kbd> up and down, <kbd>A</kbd> / <kbd>D</kbd> around, <kbd>Space</kbd> to let go</td></tr>
+        <tr data-feature="travel"><td><kbd>Space</kbd> (hold, falling)</td><td>Glide with your cloak</td></tr>
         <tr><td><kbd>T</kbd></td><td>Hood up / down</td></tr>
         <tr><td><kbd>B</kbd></td><td>Recipe book</td></tr>
         <tr><td><kbd>J</kbd></td><td>Journal (and cloak patches)</td></tr>
@@ -194,6 +196,8 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li><b>Bumping:</b> other frogs are solid; you can't walk through each other.</li>
         <li><b>Sitting</b> (<kbd>V</kbd>): sit on the ground with your knees up. Moving or jumping gets you up. Sitting by a fire calms dread twice as fast.</li>
         <li>Wading in the sea is slow, and you can't jump in water.</li>
+        <li data-feature="travel"><b>Climbing:</b> walk into one of the tall palms, or into a cliff (ground too steep to walk up), and you grab on. <kbd>W</kbd> / <kbd>S</kbd> climb up and down, <kbd>A</kbd> / <kbd>D</kbd> go round the trunk or along the cliff, <kbd>Space</kbd> lets go. It costs <span data-r="TRAVEL.CLIMB_ENERGY"></span> energy a second while you climb (<span data-r="TRAVEL.HANG_ENERGY"></span> just hanging on); run out and you slide back down. Keep climbing at the top of a palm to pull yourself up onto its leaves; at the top of a cliff you step out onto the ground above.</li>
+        <li data-feature="travel"><b>Gliding:</b> falling from at least <span data-r="TRAVEL.GLIDE_MIN_HEIGHT"></span> m up (off a palm, a cliff or a tree top), hold <kbd>Space</kbd> and your cloak catches the air: you sink slowly and drift forward, steering with the walking keys, for <span data-r="TRAVEL.GLIDE_ENERGY"></span> energy a second. Let go of <kbd>Space</kbd> to drop.</li>
       </ul>
     </section>
 
@@ -432,6 +436,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <p class="muted">Newest first.</p>
       <ul class="log">
         <li data-feature="caves"><b>Something lives in the sea cave.</b> Keep quiet, and keep your torch lit.</li>
+        <li data-feature="travel"><b>Climbing and gliding:</b> climb the tall palms and the cliffs, and glide down with your cloak.</li>
         <li data-feature="fishing"><b>Landing a fish:</b> five little games (trivia, untangle the line, ripple memory, pull and ease, read the water).</li>
         <li><b>Calling out:</b> press C to call to your friends. They hear it from your direction, and see where on the map.</li>
         <li data-feature="checkpoints"><b>Hearth checkpoints:</b> sleep by a lit clay hearth and you wake there after being knocked down or collapsing.</li>

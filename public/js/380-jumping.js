@@ -49,8 +49,11 @@
   const CHARGE_FULL = .55, LEAP_SPEED = 4.2;   // forward speed of a full-charge leap (walking is 4.6)
   let jumpBtnHeld = false; let camLift = 0;
   const hop = { y: 0, v: 0, air: false, land: 0, charge: -1 };
-  const canJump = () => !(state !== 'play' || hop.air || knockT > 0 || stats.down || nrg.exhausted || panelOpen() || (myCave ? caveDepth() > CAVE.WADE : heightAt(px, pz) < .1));   // not while wading
-  function startCharge() { if (canJump() && hop.charge < 0) { if (sitting) setSitting(false); hop.charge = 0; } }
+  const canJump = () => !(state !== 'play' || hop.air || climb || knockT > 0 || stats.down || nrg.exhausted || panelOpen() || (myCave ? caveDepth() > CAVE.WADE : heightAt(px, pz) < .1));   // not while wading
+  function startCharge() {
+    if (climb) { letGo(); return; }   // on a trunk or a cliff, Space lets go (385-climbing.js)
+    if (canJump() && hop.charge < 0) { if (sitting) setSitting(false); hop.charge = 0; }
+  }
   // Sitting (V): moving, jumping or getting knocked down stands you up again.
   let sitting = false, sentCharge = false;
   function setSitting(on) {
@@ -85,17 +88,26 @@
     return f;
   }
   function stepHop(h, dt) {   // own frog: simple physics
+    if (climb) { h.floor = 0; h.air = false; h.charge = -1; h.abs = null; glide = false; return; }   // climbing moves you (385-climbing.js)
     if (h.charge >= 0) { h.charge += dt; if (!canJump()) h.charge = -1; }
     else if ((keys[prefs.binds.jump] || jumpBtnHeld) && canJump()) h.charge = 0;   // pressed just before landing: start charging now
     h.floor = floorAt(px, pz, h.y);
     const charging = h.charge >= 0;   // tell friends so they see you crouch
     if (charging !== sentCharge && net && net.open) { sentCharge = charging; net.send({ t: 'charge', on: charging }); }
+    if (h.air && travelOn()) {
+      // With travel on, height in the air is kept against the sea, not the ground under you, so
+      // leaping off a cliff drops you to the ground below (and a glide carries you out over it).
+      const g = groundAt(px, pz);
+      if (h.abs == null) h.abs = g + h.y;
+      if (updateGlide(h)) h.v = -RULES.TRAVEL.GLIDE_FALL; else h.v -= GRAVITY * dt;
+      h.abs += h.v * dt; h.y = h.abs - g;
+    } else if (h.air) h.v -= GRAVITY * dt, h.y += h.v * dt;
     if (h.air) {
-      h.v -= GRAVITY * dt; h.y += h.v * dt;
-      if (h.v > 0) { const ceil = leafCeiling(px, pz, h.y - h.v * dt); if (h.y + FROG_H > ceil) { h.y = Math.max(h.floor, ceil - FROG_H); h.v = 0; } }   // bonk: the leaves stop you
-      if (h.y <= h.floor) { h.y = h.floor; h.v = 0; h.air = false; h.land = .18; h.fwd = 0; }
+      if (h.v > 0) { const ceil = leafCeiling(px, pz, h.y - h.v * dt); if (h.y + FROG_H > ceil) { h.y = Math.max(h.floor, ceil - FROG_H); h.v = 0; if (h.abs != null) h.abs = groundAt(px, pz) + h.y; } }   // bonk: the leaves stop you
+      if (h.y <= h.floor) { h.y = h.floor; h.v = 0; h.air = false; h.land = .18; h.fwd = 0; h.abs = null; glide = false; }
     }
     else {
+      h.abs = null;
       if (h.y > h.floor + .02) { h.air = true; h.v = 0; }   // walked off the edge: drop
       else h.y = h.floor;
       if (h.land > 0) h.land -= dt;
