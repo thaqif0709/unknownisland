@@ -7,7 +7,7 @@ const methods = {
   async onBuild(p, { recipe, x, z }) {
     if (p.dead) return;
     const r = WG.recipeById(recipe || 'campfire');
-    if (!r) return;
+    if (!r || (r.flag && !WG.feature(r.flag))) return;
     const say = msg => this.send(p, { t: 'toast', msg });
     if (r.kind === 'tool' && this.hasTool(p, r.id)) return say(`You already have a ${r.name.toLowerCase()}.`);
     if (r.needs && !this.hasTool(p, r.needs)) return say(`You need a ${WG.recipeById(r.needs).name.toLowerCase()} first.`);
@@ -38,6 +38,7 @@ const methods = {
 
     // A fire, placed in front of you.
     if (!num(x) || !num(z) || Math.hypot(x - p.x, z - p.z) > 2.6) return;
+    if (p.under || this.caveCut(x, z)) return say('There’s no air to keep a fire going down here.');
     if (heightAt(x, z) < 0.35) return say('Too wet here. Build it on dry ground.');
     if (this.fires.some(f => Math.hypot(f.x - x, f.z - z) < 1.4)) return say('There’s already a fire right there.');
     this.spend(p, r.cost);

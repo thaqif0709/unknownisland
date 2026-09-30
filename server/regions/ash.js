@@ -11,5 +11,5 @@ module.exports = {
   stilled: null,   // this region's kind of Stilled (a mob kind, P5)
   boss: null,      // this region's boss (a server/bosses file, C0)
   requests: [],    // its Sleeper request chain, in order (W8)
-  cave: null,      // its cave (W9)
+  cave: null,      // its cave, if any: see landing.js and CONTRACTS.md section 18 (W9)
 };

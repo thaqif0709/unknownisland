@@ -141,6 +141,8 @@ The Veil lifts at the next dawn.
 
 The big world is behind three flags that go together: `FEATURES=streaming,bigworld,farview`
 (chunks load around each player, the 5 km world, and the view out to 2 km).
+Caves (the Landing's sea cave, torches and the Dark) are their own flag: `caves`. It works
+with or without the big world.
 
 ## Trying it on your own computer (optional)
 

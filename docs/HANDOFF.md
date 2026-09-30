@@ -365,6 +365,11 @@ plug in with `UI.net.on`, `UI.onFrame` and `UI.panels.register` (`000-start.js`,
 With the `farview` flag, `125-far-view.js` draws a coarse ring of land out to 2 km (1 km on
 phones) around the detailed chunks, with its own shader hole where the chunks are, and pushes
 the camera range and haze out to match; the ink pass takes fog beyond its fog map from height.
+With the `caves` flag (W9), caves are walked into with no loading: `server/shared/caves.js`
+builds each region's cave (described in `server/regions/<id>.js`) for both sides,
+`server/systems/caves.js` tracks who is underground (`p.under`), the tide in sea caves, the
+Dark, torches and muffled chat, and `135-caves.js` draws the tunnel, cuts the ground at the
+mouth and keeps you (and the camera) inside it. Details: CONTRACTS.md section 18.
 
 ## Feature flags and migrations
 - **Flags:** `RULES.FEATURES` in `world-gen.js`, read with `WG.feature(name)` on both sides.

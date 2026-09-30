@@ -88,7 +88,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
     <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
     <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a>
-    <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
+    <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
     <b>History</b><a href="#changelog">Changelog</a>
   </div></nav>
 
@@ -347,6 +347,19 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <p data-feature="bigworld"><b>Charting:</b> beyond the Landing the map starts blank. It fills in wherever anyone has walked, for everyone, and stays filled in. The minimap shows the land around you.</p>
     </section>
 
+    <section id="caves" data-feature="caves"><h2>Caves</h2>
+      <p>Some of the island is hollow. Walk into a cave's mouth and you're under the ground, no loading, and your friends see you go in. Inside there's no fog, no cold wind and none of the Stilled, but it gets <b>dark</b> quickly.</p>
+      <ul>
+        <li><b>The Dark:</b> deep in a cave with no light, your dread climbs, faster than a night out in the open. A light of your own (or a friend's close by) keeps it away.</li>
+        <li><b>Torches:</b> made from wood and seeds (the recipe book has them). Hold one (keys 1 to 8) and it lights the way for you and everyone near you. A torch burns for about <span data-r="TORCH.BURN"></span> seconds in your hand underground, then the next one lights.</li>
+        <li>You can't light a fire underground, and nothing up on the ground is in reach from down there.</li>
+        <li>If you leave the island while underground, you come back just outside the cave's mouth.</li>
+        <li>Anything you say in chat from underground reaches the people up above muffled, with words lost. Whoever is down there with you hears it clearly.</li>
+      </ul>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The sea cave <span class="muted">(click to show)</span></summary>
+      <p>Under the low hill on the east shore of the Landing there's a sea cave. The way in dips below the sea, so it's under water most of the time: the tide goes out twice a day, and for a few minutes around each low tide you can wade through the dip into a wide chamber with a side passage. Watch the water. When the tide turns it fills the cave from the bottom up, and once it's deep enough where you stand the sea drags you out onto the sand.</p></details>
+    </section>
+
     <section id="world" data-feature="bigworld"><h2>Beyond the Landing</h2>
       <p>The island you arrived on is only the Landing. A sandy neck on its north shore leads to much more land: about five kilometres of it, twenty minutes' walk end to end.</p>
       <p data-feature="farview">On a clear day you can see about two kilometres (one on a phone): from the Landing you can see the Stairs climbing away to the north. Land still behind the Veil looks pale and washed out from far away.</p>
@@ -377,6 +390,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="caves"><b>Caves:</b> a sea cave on the Landing, torches to carry, and the Dark.</li>
         <li data-feature="farview"><b>Far view:</b> you can see mountains two kilometres away now.</li>
         <li><b>The map</b> can be dragged and zoomed, with buttons to centre on yourself or see it all.</li>
         <li data-feature="bigworld"><b>Charting:</b> the map fills in where anyone has walked.</li>
@@ -429,7 +443,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
   const Wt = R.WEATHER.WEIGHTS, total = Object.values(Wt).reduce((a, b) => a + b, 0);
   for (const k in Wt) if ($('w-' + k)) $('w-' + k).textContent = Math.round(Wt[k] / total * 100) + '%';
   const cost = r => Object.entries(r.cost).map(([k, n]) => `${n} ${W.ITEMS[k].toLowerCase()}`).join(', ');
-  $('recipes').insertAdjacentHTML('beforeend', W.RECIPES.map(r => `<tr><td><b>${esc(r.name)}</b></td><td>${esc(cost(r))}${r.needs ? ` <span class="muted">(needs a ${esc(W.recipeById(r.needs).name.toLowerCase())})</span>` : ''}</td><td>${esc(r.desc)}</td></tr>`).join(''));
+  $('recipes').insertAdjacentHTML('beforeend', W.RECIPES.map(r => `<tr${r.flag ? ` data-feature="${r.flag}"` : ''}><td><b>${esc(r.name)}</b></td><td>${esc(cost(r))}${r.needs ? ` <span class="muted">(needs a ${esc(W.recipeById(r.needs).name.toLowerCase())})</span>` : ''}</td><td>${esc(r.desc)}</td></tr>`).join(''));
   for (const id of ['bucket_wood', 'bucket_iron']) { const r = W.recipeById(id); if (r && $('cost-' + id)) $('cost-' + id).textContent = cost(r); }
   const oil = W.recipeById('oil'); if (oil) $('oilcost').textContent = cost(oil);
   $('oilDays').textContent = (R.LANTERN.FUEL_PER_OIL / R.DAY_LEN).toFixed(1).replace(/\.0$/, '') + ' in-game days';

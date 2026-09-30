@@ -75,7 +75,7 @@ const methods = {
     return { id: p.id, name: p.name, x: p.x, z: p.z, face: p.face, health: p.health, hunger: p.hunger,
       thirst: p.thirst, ...this.inventoryView(p), energy: p.energy, exhausted: p.exhausted, dread: p.dread, dead: p.dead, patches: p.patches, hoodDown: p.hoodDown };
   },
-  publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown, hold: p.hold || null, sit: !!p.sitting }; },
+  publicView(p) { return { id: p.id, name: p.name, x: r2(p.x), z: r2(p.z), under: p.under || 0, face: r2(p.face), dead: p.dead, patches: p.patches, hoodDown: p.hoodDown, hold: p.hold || null, sit: !!p.sitting }; },
 
   sendMe(p) {
     this.send(p, { t: 'me', health: r2(p.health), hunger: r2(p.hunger), thirst: r2(p.thirst), ...this.inventoryView(p),
@@ -83,7 +83,7 @@ const methods = {
       down: p.knockedUntil > Date.now() });
   },
 
-  onPos(p, { x, z, face, moving, sprint, cam, stand }) {
+  onPos(p, { x, z, face, moving, sprint, cam, stand, under }) {
     if (num(cam)) p.camYaw = cam;
     if (num(stand)) p.stand = Math.min(2.2, Math.max(0, stand));   // standing on a rock (just for show)
     if (p.dead || !num(x) || !num(z) || !num(face)) return;
@@ -97,17 +97,26 @@ const methods = {
       + (now - (p.lastJumpAt || 0) < 1600 ? 4.5 : 0);   // a charged leap carries you forward faster than walking
     const maxStep = speed * 1.4 * Math.min(dt, 1) + 0.6;
     const d = Math.hypot(x - p.x, z - p.z);
-    if (heightAt(x, z) <= -1) { this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }
-    if (this.veilAt(x, z) && !this.veilAt(p.x, p.z)) {   // the Veil: you're turned around, not let through
+    const wasUnder = p.under || null;
+    const cave = this.caveMove(p, x, z, under);   // in a cave (W9): its floor, not the ground, is what counts
+    if (cave === 'block') { this.send(p, { t: 'correct', x: p.x, z: p.z, under: p.under || 0 }); return; }
+    if (!cave && heightAt(x, z) <= -1) { this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }
+    if (!cave && this.veilAt(x, z) && !this.veilAt(p.x, p.z)) {   // the Veil: you're turned around, not let through
       this.veilTurned(p);
       this.send(p, { t: 'veil' });
       this.send(p, { t: 'correct', x: p.x, z: p.z });
       return;
     }
-    if (d > maxStep) {
-      // Too fast: move as far as allowed and tell the client where it really is.
-      p.x += (x - p.x) / d * maxStep; p.z += (z - p.z) / d * maxStep;
-      this.send(p, { t: 'correct', x: p.x, z: p.z });
+    // Too fast: move as far as allowed and tell the client where it really is. Stepping into or
+    // out of a cave (W9) gets some slack for a jerky connection, and is never done part-way
+    // (that could land you in the rock): you stay where you were.
+    const crossing = !!cave !== !!wasUnder;
+    if (d > maxStep * (crossing ? 2 : 1)) {
+      const qx = p.x + (x - p.x) / d * maxStep, qz = p.z + (z - p.z) / d * maxStep;
+      if (crossing || (cave && !this.caveHitOf(p, qx, qz))) p.under = wasUnder;
+      else { p.x = qx; p.z = qz; }
+      this.send(p, { t: 'correct', x: p.x, z: p.z, under: p.under || 0 });
+      if (crossing) return;
     } else { p.x = x; p.z = z; }
     p.face = face;
     p.moving = !!moving || d > 0.02;   // actually changing position counts, whatever the client says
@@ -118,6 +127,7 @@ const methods = {
     // You keep your tools; what you were carrying is lost.
     this.clearItems(p);
     const at = this.respawnPoint(p);
+    p.under = null;
     Object.assign(p, RULES.START, { x: at.x, z: at.z, face: Math.PI, dead: false, cause: '', lastPosAt: Date.now(),
       energy: 100, exhausted: false, rest: 0, dread: 10, knockedUntil: 0 });
     this.send(p, { t: 'respawned', you: this.selfView(p) });
@@ -133,15 +143,16 @@ const methods = {
         || this.lanterns.some(l => l.lit && Math.hypot(l.x - p.x, l.z - p.z) < this.lanternRadius(l) * .6 * warmMul);
       if (this.env.rain) p.thirst = Math.min(100, p.thirst + RULES.WEATHER.RAIN_WATER * dt);
       // Dread: fog, darkness and being alone push it up; light, day and friends bring it down.
-      p.fog = WG.fogAt(p.x, p.z, heightAt(p.x, p.z), this.time, lights, this.env);
+      p.fog = p.under ? 0 : WG.fogAt(p.x, p.z, heightAt(p.x, p.z), this.time, lights, this.env);   // no fog underground
       let alone = true;
       for (const q of this.players.values()) if (q !== p && !q.dead && Math.hypot(q.x - p.x, q.z - p.z) < D.FRIEND_RADIUS) { alone = false; break; }
       let dd = D.FOG * p.fog;
-      if (nf > .5 && !p.warm) dd += D.DARK * nf * (this.has(p, 'violet_charm') ? 1.5 : 1);
+      if (p.under) dd += this.caveDark(p);   // underground, the Dark instead of the night (W9)
+      else if (nf > .5 && !p.warm) dd += D.DARK * nf * (this.has(p, 'violet_charm') ? 1.5 : 1);
       if (alone) dd += nf > .5 ? D.ALONE_NIGHT : D.ALONE_DAY;
       else dd += D.FRIENDS * (this.has(p, 'conch_charm') ? 2 : 1);
       if (p.warm) dd += D.LIGHT * (p.sitting ? 2 : 1);   // resting by the fire calms you faster
-      if (nf < .5 && p.fog < .3) dd += D.DAY;
+      if (nf < .5 && p.fog < .3 && !p.under) dd += D.DAY;
       if (this.stilled.some(s => Math.hypot(s.x - p.x, s.z - p.z) < RULES.STILLED.NEAR_RADIUS)) dd += RULES.STILLED.NEAR_DREAD;
       if (dd > 0 && this.has(p, 'moon_wing')) dd *= 1.3;
       p.dread = Math.max(0, Math.min(100, p.dread + dd * dt));
@@ -154,7 +165,7 @@ const methods = {
       let hurt = 0;
       if (p.hunger <= 0) { hurt += RULES.STARVE_DMG; p.cause = 'hunger'; }
       if (p.thirst <= 0) { hurt += RULES.STARVE_DMG; p.cause = 'thirst'; }
-      if (night && !p.warm) { hurt += RULES.COLD_DMG; if (p.hunger > 0 && p.thirst > 0) p.cause = 'cold'; }
+      if (night && !p.warm && !p.under) { hurt += RULES.COLD_DMG; if (p.hunger > 0 && p.thirst > 0) p.cause = 'cold'; }
       if (hurt > 0) p.health -= hurt * dt;
       else if (p.hunger > RULES.REGEN_MIN && p.thirst > RULES.REGEN_MIN) p.health = Math.min(100, p.health + RULES.REGEN * dt);
       if (p.health <= 0) {

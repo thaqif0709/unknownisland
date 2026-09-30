@@ -22,7 +22,7 @@
   }));
 
   function renderBook() {
-    $('recipes').innerHTML = WG.RECIPES.map(r => {
+    $('recipes').innerHTML = WG.RECIPES.filter(r => !(r.flag && !WG.feature(r.flag))).map(r => {
       const owned = r.kind === 'tool' && has(r.id);
       const locked = r.needs && !has(r.needs);
       const ok = canAfford(r) && !owned && !locked;

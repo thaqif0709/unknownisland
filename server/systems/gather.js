@@ -9,6 +9,7 @@ const { REACH_SLACK, ACT_COOLDOWN } = require('./util');
 const methods = {
   onAct(p, { target }) {
     if (p.dead || typeof target !== 'string') return;
+    if (p.under) return;   // in a cave (W9): the things up on the ground are out of reach (cave finds come with the region packs)
     const now = Date.now();
     if (now < p.nextActAt || p.knockedUntil > now) return;
     p.nextActAt = now + ACT_COOLDOWN;
@@ -36,7 +37,7 @@ const methods = {
     if (m[1] === 'f') return this.tendFire(p, +m[2]);
 
     const o = this.obj(+m[2]);
-    if (!o || o.state.gone) return;
+    if (!o || o.state.gone || this.caveCut(o.x, o.z)) return;   // nothing stands where a cave mouth cuts the ground (W9)
     const u = this.useFor(o.type);
     if (!u) return;
     const size = WG.sizeOf(o, o.state, this.day, this.time);

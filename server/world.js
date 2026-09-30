@@ -14,7 +14,7 @@ const { r2 } = require('./systems/util');
 // optional hooks onTick(dt), onDawn(sunrises) and onJoin(p) (extra welcome fields) run
 // alongside the core loop. See docs/roadmap/CONTRACTS.md section 2.
 const SYSTEMS = ['journal', 'tides', 'bugs', 'weather', 'time', 'chat', 'board', 'patches', 'players',
-  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting'];
+  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves'];
 
 class Island {
   constructor(store, data) {
@@ -128,7 +128,7 @@ class Island {
     // Everyone's position, in one shared message.
     const snap = JSON.stringify({
       t: 'snap', time: this.time, day: this.day,
-      p: [...this.players.values()].map(p => [p.id, r2(p.x), r2(p.z), r2(p.face), p.moving ? (p.running ? 2 : 1) : 0, p.dead ? 1 : 0, p.stand ? r2(p.stand) : 0]),
+      p: [...this.players.values()].map(p => [p.id, r2(p.x), r2(p.z), r2(p.face), p.moving ? (p.running ? 2 : 1) : 0, p.dead ? 1 : 0, p.stand ? r2(p.stand) : 0, p.under || 0]),
       s: this.stilled.map(s => [s.id, r2(s.x), r2(s.z), r2(s.face)]),
     });
     for (const p of this.players.values()) this.sendRaw(p, snap);
@@ -159,6 +159,11 @@ class Island {
   }
   dawnHooks(sunrises) { for (const s of HOOKS.onDawn) s.call(this, sunrises); }
 
+  // Where a player is saved: underground, just outside the cave's mouth (W9).
+  savedSpot(p) {
+    const c = p.under && this.caveById && this.caveById(p.under);
+    return c ? { x: c.out.x, z: c.out.z } : { x: r2(p.x), z: r2(p.z) };
+  }
   fx(p, kind, obj) { this.broadcast({ t: 'fx', id: p.id, k: kind, o: obj }); }
 
   // ================= Networking helpers =================
@@ -176,7 +181,7 @@ class Island {
     const members = [...this.players.values(), ...extraMembers].map(p => {
       const { wood, stone, inventory } = this.inventorySave(p);
       return {
-        playerId: p.id, x: r2(p.x), z: r2(p.z), face: r2(p.face), health: r2(p.health), hunger: r2(p.hunger),
+        playerId: p.id, ...this.savedSpot(p), face: r2(p.face), health: r2(p.health), hunger: r2(p.hunger),
         thirst: r2(p.thirst), wood, stone, inventory: { ...inventory, hoodDown: !!p.hoodDown }, dread: r2(p.dread),
       };
     });

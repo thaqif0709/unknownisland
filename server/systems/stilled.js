@@ -25,7 +25,7 @@ const methods = {
     return true;
   },
   updateStilled(dt, lights) {
-    const S = RULES.STILLED, now = Date.now(), players = [...this.players.values()].filter(p => !p.dead && !this.watching(p));
+    const S = RULES.STILLED, now = Date.now(), players = [...this.players.values()].filter(p => !p.dead && !p.under && !this.watching(p));   // not underground (W9)
     // fade: gone when their spot clears (dawn, a fire) or nobody is near
     this.stilled = this.stilled.filter(s => {
       if (s.lingering) {   // left standing in daylight by the night: gone when someone walks up to it

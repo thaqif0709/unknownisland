@@ -327,3 +327,54 @@ WG.chunkOf(x, z) / WG.chunkKey(cx, cz) / WG.chunkOfId(id)   // chunks are WG.CHU
   land in parchment: one bit per 32 m chunk, `islands.seen` (migration 0006), `welcome.seen`
   (base64) and `seen { list: [[cx, cz]] }` as land is found (`server/systems/charting.js`).
 
+
+## 18. Caves (W9, done, flag `caves`)
+
+A region's cave is described in its region file and built the same way on the server and in
+the browser (`server/shared/caves.js`, `window.Caves` in the browser):
+
+```js
+// server/regions/<id>.js
+cave: {
+  id: 'seacave', sea: true,          // sea caves fill with the tide
+  x, z, dir,                         // the mouth (where the floor meets the ground) and the way in (0 = north, π/2 = east)
+  length, wander,                    // metres; how far it drifts sideways (from the cave's own seed)
+  floor:  [[s, y], ...],             // floor height along the way (s = metres from the mouth)
+  width:  [[s, halfWidth], ...],
+  height: [[s, h], ...],             // floor to the top of the arch; walls are straight up to CAVE.WALL of it
+  branch: { at, dir: ±1, length, floor, width, height, wander },   // optional side passage
+}
+Caves.generateCave(spec)      // -> { id, region, sea, nodes: [{ x, z, y, w, h, s }], segs, out, bbox }
+Caves.caveHit(cave, x, z)     // -> { floor, roof, w, h, d, s, ... } or null (outside it)
+Caves.caveAt(caves, x, z) / Caves.groundCut(caves, x, z, groundH)   // the ground is cut at the mouth
+Caves.darkness(hit) / Caves.tideLevel(t) / Caves.waterLevel(cave, t)
+island.caveList() / caveById(id) / caveHitOf(p) / caveCut(x, z) / caveLit(p)
+```
+
+- Pick the spot with a script, not by eye: past the mouth there must be at least a metre of
+  ground over the roof everywhere (W9's test checks the Landing's). Nothing stands on the
+  cut ground at the mouth: chunk objects there are never made, and the Landing's are hidden
+  in the browser and can't be used.
+- `p.under` is the id of the cave a player is in (null above ground). The browser says so on
+  `pos` (`under: id`); the server only lets you in or out at the mouth (within `CAVE.MOUTH`
+  metres), keeps you inside the walls, and never moves you part-way through rock. It's in
+  `welcome.caves`, `publicView(p).under` and the 8th field of each `snap` player entry.
+  Underground players are saved just outside the mouth (`island.savedSpot(p)`).
+- Underground: no fog, no cold, no Stilled (they skip players with `p.under`), no fires, and
+  nothing up on the ground is in reach (E does nothing yet: cave finds come with the region
+  packs, and should check `p.under`). The Dark (`RULES.DREAD.CAVE_DARK`, scaled by
+  `Caves.darkness`) builds unless you, or a friend within `FRIEND_RADIUS` in the same cave,
+  hold a lit torch (item `torch`, recipe flagged `caves`, burns `RULES.TORCH.BURN` s in hand
+  underground), or you have the firefly jar.
+- Sea caves: water inside is `Caves.tideLevel(t)` (twice a day, `CAVE.TIDE`). Deeper than
+  `CAVE.PUSH` where you stand and the sea drags you out to `cave.out`; you can't walk into
+  water that deep.
+- Global chat from underground reaches everyone not in the same cave muffled
+  (`{ muffled: true }`, some words lost). Whispers are clear.
+- Browser (`135-caves.js`): `myCave`, `caveFloorAt(id, x, z)`, `caveStep(nx, nz)` /
+  `caveCommit` (used by the movement code), `av.under` on castaways (`poseCastaway` stands
+  them on the cave floor). The sea's shader leaves out the nearest cave's footprint (a mask
+  texture); the camera stays under the roof; daylight fades with `Caves.darkness`; up to two
+  torch lights. `__dbg.cave()` for tests.
+- For C2 (the Crawler): it lives in the Landing's sea cave; use `caveHit` for where it can
+  crawl (floor, walls up to `roof`), `p.under` for who it can reach, and `caveLit` for light.

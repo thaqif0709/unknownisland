@@ -25,6 +25,7 @@
     return fx + fz <= 1 ? ha + (hd - ha) * fx + (hb - ha) * fz : hc + (hb - hc) * (1 - fx) + (hd - hc) * (1 - fz);
   }
   const terrainMat = soft(0xffffff, { vertexColors: true });
+  let caveList = [];   // the caves (W9, 135-caves.js): the ground is cut away where a cave's mouth comes up through it
   function buildTerrain(cx, cz) {
     const x0 = cx * CH, z0 = cz * CH, N = CH + 1;
     // heights with a one-cell border so normals match across chunk edges
@@ -45,6 +46,16 @@
       const c = colorAt(pos.getX(v), pos.getZ(v), h); cols[v * 3] = c.r; cols[v * 3 + 1] = c.g; cols[v * 3 + 2] = c.b;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+    // a cave mouth: leave out the triangles where the tunnel comes up through the ground
+    if (caveList.some(c => c.bbox[0] < x0 + CH && c.bbox[2] > x0 && c.bbox[1] < z0 + CH && c.bbox[3] > z0)) {
+      const idx = geo.index.array, keep = [];
+      for (let k = 0; k < idx.length; k += 3) {
+        const a = idx[k], b = idx[k + 1], c = idx[k + 2];
+        const x = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3, z = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3, y = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3;
+        if (!Caves.groundCut(caveList, x, z, y)) keep.push(a, b, c);
+      }
+      geo.setIndex(keep);
+    }
     geo.computeBoundingSphere();
     const m = new THREE.Mesh(geo, terrainMat); m.receiveShadow = true;
     return m;
