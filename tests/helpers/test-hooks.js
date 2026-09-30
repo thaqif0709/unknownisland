@@ -81,6 +81,13 @@ const COMMANDS = {
     const dmg = this.mobs.hit(m, { amount, source, from: p });
     return { dmg, hp: m.hp, gone: !!m.gone };
   },
+  // Start a minigame for this player: { type, difficulty, ms }. The reply has the game's id
+  // (`game`) and a right answer (the player gets the puzzle itself as a 'minigame' message).
+  minigame(p, { type, difficulty, ms }) {
+    const done = this.minigames.start(p, type, { difficulty, ms });
+    done.catch(() => {});
+    return this.minigames.solution(p) || { error: 'did not start' };
+  },
   mobs() { return { mobs: this.mobs.list.map(m => ({ id: m.id, kind: m.kind, x: m.x, z: m.z, state: m.state, hp: m.hp })) }; },
   // Set the time of day (0-1), e.g. for the tide in a sea cave.
   time(p, { at }) { this.time = at % 1; return { time: this.time }; },
@@ -104,7 +111,7 @@ const onMessage = Island.prototype.onMessage;
 Island.prototype.onMessage = function (p, msg) {
   if (!msg || msg.t !== 'test') return onMessage.call(this, p, msg);
   const cmd = Object.prototype.hasOwnProperty.call(COMMANDS, msg.do) ? COMMANDS[msg.do] : null;
-  const reply = r => this.send(p, { t: 'test', id: msg.id, ...r });
+  const reply = r => this.send(p, { t: 'test', ...r, id: msg.id });   // the request's id always wins
   if (!cmd) return reply({ error: `no test command "${msg.do}"` });
   return Promise.resolve().then(() => cmd.call(this, p, msg)).then(reply, e => reply({ error: e.message }));
 };

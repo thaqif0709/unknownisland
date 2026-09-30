@@ -307,6 +307,25 @@ UI.minigames.register(type, { open(puzzle, answer), close() })   // answer(paylo
 
 The answer stays on the server. Fishing (P7) and future Sleeper requests use this.
 
+As built (P8, done; the player-facing text waits behind the `fishing` flag for P7):
+`island.minigames.start(p, type, { difficulty: 'easy'|'medium'|'hard', seed, ms })` resolves
+`{ won, reason }` with reason `right`, `wrong`, `late`, `early`, `gave up` or `replaced` (a new
+game for the same player ends the old one). Types: `trivia`, `untangle`, `ripple`, `pull`,
+`water`, each a file in `server/minigames/` with `build(rng, level, island) -> { puzzle,
+check(answer), solve(), ms, minMs? }`. Messages: the server sends `{ t: 'minigame', id, type,
+name, difficulty, ms, puzzle }` and `{ t: 'minigame-result', id, won, reason }`; the client sends
+`{ t: 'minigame-answer', id, answer }` or `{ t: 'minigame-quit', id }`. Answers (all under the
+socket's 4 KB limit): trivia `{ choice }`, untangle `{ rots }` (a turn 0-3 per tile), ripple
+`{ seq }`, pull `{ flips }` (the fixed-step numbers where the button changed; the server
+replays them with `server/shared/minigame-sim.js`, which the page also loads, and an answer
+before the round is played out is `early`), water `{ marks: [[x, y], ...] }` (0-1, up to 5).
+In the browser the game shows in a panel registered as `minigame` (`285-minigames.js`), so
+Esc and the mouse behave like any panel; closing it before the result gives up. Each game
+draws from `public/js/minigames/<type>.js`: `UI.minigames.register(type, { open(puzzle,
+answer, body, game), close(), result(m) })`. Trivia questions live in the `fishing_trivia`
+table (migration 0007; defaults in `server/content/trivia.js`, answers[0] is the right one).
+Admins try a game with `/minigame <type> [difficulty]`.
+
 ## 14. Database migrations (F3, done)
 
 Each change is its own file in `server/migrations/`:

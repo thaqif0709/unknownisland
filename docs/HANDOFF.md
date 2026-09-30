@@ -166,6 +166,19 @@ planned separately by Thaqif):
   after it. `dummy` (a straw dummy that marks a circle where you stand and slams
   it 0.9 s later) is the test mob: `/spawn dummy` for admins. Details in
   CONTRACTS.md section 8; tests in `tests/server/mobs.test.js`.
+- **Minigames (P8, done; shown to players with P7's `fishing` flag).** Five short games
+  the server sets and checks (`server/minigames/`, `island.minigames.start`): trivia (from
+  the `fishing_trivia` table, 40 questions seeded from `server/content/trivia.js`), untangle
+  the line (rotate pipe pieces; the server checks the line actually connects), ripple
+  memory (repeat the carving marks), pull and ease (keep a marker in a drifting zone; the
+  page and the server run the same fixed-step physics from `server/shared/minigame-sim.js`,
+  and the server replays the button changes the page reports, so it can't be faked short
+  of actually playing well) and read the water (spot three differences). Answers stay on
+  the server; late, early, malformed or abandoned answers lose. Each game's `solve()` is
+  only for tests (the `minigame` test command). The pull controller in `solve()` keeps the
+  marker in about 86%+ of the time on hard, which is why hard asks for 70%. Admins:
+  `/minigame <type> [easy|medium|hard]`. Tests: `tests/server/minigames.test.js`,
+  `tests/browser/minigames.test.js`.
 - **Phase 3, stone lanterns (done; light only, no map gating).** 26 lanterns from
   `generateLanterns(seed)` (one near the spawn beach, one by the main spring; the
   4 highest others are great lanterns needing lamp oil from 3 different frogs).

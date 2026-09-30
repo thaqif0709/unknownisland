@@ -8,6 +8,7 @@ const FIRES_EVERY = 12;       // fire fuel sync about once a second
 const SAVE_MS = 30 * 1000;
 const { r2 } = require('./systems/util');
 const { Mobs } = require('./mobs');
+const { Minigames } = require('./minigames');
 
 // Every feature lives in server/systems/<name>.js and plugs in here: its `methods`
 // are mixed into Island.prototype, its `messages` answer msg.t from clients, its `uses`
@@ -15,7 +16,7 @@ const { Mobs } = require('./mobs');
 // optional hooks onTick(dt), onDawn(sunrises) and onJoin(p) (extra welcome fields) run
 // alongside the core loop. See docs/roadmap/CONTRACTS.md section 2.
 const SYSTEMS = ['journal', 'tides', 'bugs', 'weather', 'time', 'chat', 'board', 'patches', 'players',
-  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves', 'checkpoints'];
+  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves', 'checkpoints', 'minigames'];
 
 class Island {
   constructor(store, data) {
@@ -49,6 +50,7 @@ class Island {
     this.board = { x: r2(l0.x + 2.6), z: r2(l0.z + 1.4) };   // the driftwood board, by the beach lantern
     this.notes = [];
     this.mobs = new Mobs(this);   // the Stilled and every other creature (server/mobs/)
+    this.minigames = new Minigames(this);   // short games the server sets and checks (server/minigames/)
     this.bugs = []; this.nextBug = 1; this.washups = [];
     this.players = new Map();   // playerId -> live player
     this.dirty = new Set();     // object ids changed since the last save

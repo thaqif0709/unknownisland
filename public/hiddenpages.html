@@ -89,7 +89,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <b>Surviving</b><a href="#survival">Food, water, health</a><a href="#water">Clean water &amp; buckets</a><a href="#moving">Moving, jumping, sitting</a><a href="#time">Day, night, moon, weather</a>
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
     <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
-    <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a>
+    <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a><a href="#minigames" data-feature="fishing">Landing a fish</a>
     <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
     <b>History</b><a href="#changelog">Changelog</a>
   </div></nav>
@@ -344,6 +344,18 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <div class="scroll"><table id="patches"><tr><th>Patch</th><th>Needs</th><th>Helps</th><th>Costs</th></tr></table></div></details>
     </section>
 
+    <section id="minigames" data-feature="fishing"><h2>Landing a fish</h2>
+      <p>When something bites, a short game decides whether you land it. The bar under the title is the time you have; a wrong answer, running out of time, or closing it (<kbd>Esc</kbd>) and the fish is gone. Rarer fish give harder games.</p>
+      <table>
+        <tr><th>Game</th><th>How it goes</th></tr>
+        <tr><td>Island trivia</td><td>A question about the island (fires, tides, bugs, the Stilled, the carvings&hellip;). Pick the right answer.</td></tr>
+        <tr><td>Untangle the line</td><td>Tap the pieces to turn them (right-click turns them back) until the line runs from the arrow out of the right side. 3&times;3 up to 5&times;5.</td></tr>
+        <tr><td>Ripple memory</td><td>The carving marks light up in the water one by one. Tap them back in the same order.</td></tr>
+        <tr><td>Pull and ease</td><td>Hold (the mouse, your finger or <kbd>Space</kbd>) to pull the marker up, let go to let it sink. Keep it in the fish's pale band for most of the round.</td></tr>
+        <tr><td>Read the water</td><td>Two pictures of the same pond: tap the three things that are different on the right one, then <i>Done</i>.</td></tr>
+      </table>
+    </section>
+
     <section id="friends"><h2>Friends, chat and the board</h2>
       <h3>Chat</h3>
       <p>Press <kbd>Enter</kbd> (or <kbd>/</kbd>) to type, <kbd>Enter</kbd> to send. Messages also pop up over your head.</p>
@@ -411,6 +423,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="fishing"><b>Landing a fish:</b> five little games (trivia, untangle the line, ripple memory, pull and ease, read the water).</li>
         <li><b>Calling out:</b> press C to call to your friends. They hear it from your direction, and see where on the map.</li>
         <li data-feature="checkpoints"><b>Hearth checkpoints:</b> sleep by a lit clay hearth and you wake there after being knocked down or collapsing.</li>
         <li><b>What's new</b> on the start screen: a short list of what's changed, above "Go to the island". And if the spot you left is somewhere you can't stand any more, you come back on the beach.</li>
