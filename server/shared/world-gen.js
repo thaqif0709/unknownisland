@@ -111,7 +111,7 @@
       travel: false,     // P9 climbing (palm trunks, cliffs) and gliding with the cloak
       fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
       mouselook: false,  // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
-      slots: false,      // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts go in the bag
+      slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
       'region-stair': false,   // C3: the Stairs' own things (flint, herbs, flax, ruins, standing stones, tin), bugs, the Leaning, the old mine, its request chain
     },
     // The slot inventory (P2, flag slots). Stack sizes per kind of item are in ITEM_INFO.
@@ -156,12 +156,11 @@
     berries: 'Berries', coconut: 'Coconut',
     flint: 'Flint', herbs: 'Healing herbs', flax: 'Flax', bricks: 'Old bricks', tin: 'Tin ore' };   // (the last five: the Stairs, C3)
   // More about an item than its name (all optional): kind 'food' is eaten from a slot (food,
-  // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise),
-  // hand: used from your hand. (Every new item goes into the hotbar first, then the bag.)
+  // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise).
   const ITEM_INFO = {
     berries: { kind: 'food', food: RULES.BERRY_FOOD },
     coconut: { kind: 'food', food: RULES.COCONUT_FOOD, water: RULES.COCONUT_WATER },
-    torch: { hand: true, stack: 10 },
+    torch: { stack: 10 },
   };
   const itemInfo = key => {
     const i = ITEM_INFO[key] || {};

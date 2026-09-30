@@ -62,6 +62,7 @@ test('a lit torch drives it back', async () => {
   await a.test('time', { at: LOW });
   await a.test('give', { inv: { torch: 3 } });
   a.send({ t: 'hold', key: 'torch' });
+  a.send({ t: 'select', slot: (a.me.slots || []).findIndex(s => s && s.k === 'torch') });   // in hand, with P2's slots
   const m = await until(() => crawler(a) && crawler(a)[5] === 'lurk' && crawler(a), 20000, 'it to be lurking');
   await into(a, nodeNear(m[2], m[3]));   // right beside it
   await until(() => crawler(a) && crawler(a)[5] === 'recoil', 3000, 'it to recoil');

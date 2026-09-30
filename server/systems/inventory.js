@@ -17,10 +17,9 @@ const slotCount = () => S().HOTBAR + S().BAG;
 const range = (a, b) => Array.from({ length: b - a }, (_, i) => a + i);
 const isBucket = s => !!s && s.b != null;
 const stackOf = k => WG.itemInfo(k).stack;
-// Where a new item goes: the hotbar first (players expect to see it there), then the bag.
-function order() {
-  return range(0, slotCount());
-}
+// Where a new item goes: the hotbar first (so what you carry shows at the bottom of the
+// screen, as it did before the bag), then the bag.
+const order = () => range(0, slotCount());
 function recount(p) {
   for (const k of Object.keys(ITEMS)) p.inv[k] = 0;
   for (const s of p.slots) if (s && !isBucket(s)) p.inv[s.k] += s.n;

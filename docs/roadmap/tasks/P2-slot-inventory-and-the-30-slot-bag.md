@@ -3,7 +3,7 @@ id: P2
 title: Slot inventory and the 30-slot bag
 lane: player
 owner: edvin
-status: review
+status: done
 depends: [F2, F3, F5]
 flag: slots
 size: 2 sessions
@@ -33,9 +33,10 @@ Contract §4 real
 - [x] Existing players keep everything.
 - [x] Hidden Pages: inventory and controls updated.
 - [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
-- [ ] This file's `status` set to `done` in the PR that finishes it.
+- [x] This file's `status` set to `done` in the PR that finishes it.
 
 ## Log
 
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->
 2026-09-30 edvin: built behind `slots` (server slots and moves, the bag panel, gathering into the bag, hold E to eat, tests). No SQL migration was needed: the slots are saved in the inventory JSON and rebuilt from the counts on every join. Waiting on a try by hand (phones especially) before the flag goes on.
+2026-09-30 edvin: `slots` switched on (default true in `RULES.FEATURES`), with a "What's new" line and a Bag button for phones. New things now fill the hotbar first, then the bag, so nobody's hotbar looks emptied when the flag goes on.

@@ -43,6 +43,7 @@ test('two players walk in together at low tide, see each other down there, and t
   await a.test('time', { at: T.PHASE + .5 });   // the midday low tide
   await a.test('place', cave.out); await b.test('place', { x: cave.out.x, z: cave.out.z + .8 });
   await a.test('give', { inv: { torch: 2 } }); a.send({ t: 'hold', key: 'torch' });
+  a.send({ t: 'select', slot: (a.me.slots || []).findIndex(s => s && s.k === 'torch') });   // in hand, with P2's slots
   const [ea] = await Promise.all([walkIn(a, N.slice(0, 15)), walkIn(b, N.slice(0, 15), .8)]);
   await sleep(300);
   assert.ok(!a.messages.some(m => m.t === 'correct' && m.under === 0), 'never turned back on the way in');

@@ -60,7 +60,11 @@
   }
   UI.panels.register('inventory', { el: bagEl, onOpen() { pick = null; bagKey = ''; setTimeout(renderBag); }, onClose() { pick = null; endDrag(); } });
   UI.net.on('me', renderBag);
-  UI.net.on('welcome', () => { if (slotsOn() && selSlot >= 0 && net) net.send({ t: 'select', slot: selSlot }); });
+  UI.net.on('welcome', () => {
+    $('btnBag').hidden = !WG.feature('slots');   // phones have no I key
+    if (slotsOn() && selSlot >= 0 && net) net.send({ t: 'select', slot: selSlot });
+  });
+  $('btnBag').addEventListener('click', () => { if (slotsOn() && state === 'play') togglePanel('inventory'); });
 
   const sendMove = (from, to, count) => { if (net) net.send({ t: 'move', from, to, count }); };
   const sendDrop = (slot, count) => { if (net) { net.send({ t: 'dropitem', slot, count }); startSwing(hero, null, .25); } };
