@@ -133,7 +133,7 @@ finds, carving stones) are separate lists with their own ids and are still route
 
 ```js
 WG.regionAt(x, z)        // -> 'landing' | 'stair' | 'wood' | 'mire' | 'teeth' | 'ash' | 'hollow' | 'sea'
-                         //    stub (F5): 'landing' on land, 'sea' below sea level
+                         //    real with the `bigworld` flag (W4); without it all land is 'landing'
 island.isRegionOpen(id)  // stub: only 'landing' (plus any opened since the server started)
 island.openRegion(id)    // the Veil lifts at the next dawn. Stub: remembered in memory and
                          //    logged as a 'region_open' island event; W5 saves it properly
@@ -144,6 +144,17 @@ The stubs live in `server/systems/regions.js`. The island event log only keeps t
 60 events for loading, so W5 must store opened regions in their own table, not rely on it.
 
 Region ids are fixed now: `landing stair wood mire teeth ash hollow`.
+
+The 5 km ground (W4, flag `bigworld`, which needs `streaming` on too):
+- `WG.heightAt` and `WG.biomeAt` give the big world when the flag is on. Near the Landing,
+  any spot that was land (height 0.05 or more) keeps its exact old height; only water is
+  filled in (the neck, the new coast).
+- `WG.landingHeightAt` is the Landing's own ground, always. Anything that places the
+  Landing's things (objects, lanterns, carving stones, the spawn point) must use it, or the
+  Landing's object ids would shift.
+- `WG.WORLD` lists each region's centre and size; `WG.RIVERS` the river lines. Borders
+  between regions wander (the shapes are measured in warped space).
+- Each region's `spawn` table is in its file; they're placeholders until its pack.
 Content tasks put per-region data in `server/regions/<id>.js` (spawn tables, Stilled kind,
 boss, requests), so two region packs never edit the same file.
 

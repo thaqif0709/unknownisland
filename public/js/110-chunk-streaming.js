@@ -1,5 +1,13 @@
   // ================= Chunk streaming =================
   const chunks = new Map();
+  // The server may switch on the big world (W4), which changes the ground: rebuild anything
+  // built before it said so.
+  let builtBig = WG.feature('bigworld');
+  UI.net.on('welcome', () => {
+    if (WG.feature('bigworld') === builtBig) return;
+    builtBig = WG.feature('bigworld');
+    for (const c of [...chunks.values()]) unloadChunk(c);
+  });
   function loadChunk(cx, cz) {
     const c = { key: ckey(cx, cz), cx, cz, terrain: buildTerrain(cx, cz), crests: buildCrests(cx, cz), decor: null, props: false };
     if (c.terrain) scene.add(c.terrain);

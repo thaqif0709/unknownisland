@@ -38,10 +38,12 @@ How it's split into tasks: [README.md](README.md). How the pieces talk to each o
 Plus **The Deep**: one cave system under several regions, with shortcuts between them
 and the route down to the Sleeper.
 
-Rough layout (x east, z south, km from the centre): Landing (0, 1.75) south coast,
-Stairs (0, 0.55) middle, Wood (1.35, 0.35) east, Mire (-1.35, 0.55) west,
-Teeth (0.35, -1.35) north, Ashen Shore (-1.4, -1.2) north-west, Hollow (0.2, -0.55)
-between the Stairs and the Teeth.
+Layout as built in W4 (x east, z south, metres, the Landing stays at the origin so nothing on
+it moves): Stairs (0, -1250) straight north across a sandy neck from the Landing's north shore,
+Weeping Wood (1400, -1350) with a river valley to the east coast, Mire (-1350, -1150) with pools
+and a river, Hollow (200, -2350) a crater, Teeth (350, -3150) up to about 600 m, Ashen Shore
+(-1300, -2750) an old volcano on the north-west coast. Rivers only run through the lowlands
+(water in the game is sea level). See `WORLD` in `server/shared/world-gen.js`.
 
 ## 3. Progression: the Sleeper opens the world
 

@@ -18,6 +18,7 @@ A map that works at 5 km and fills in as people explore.
 - Charting: map areas start blank and fill in where anyone has walked (shared; a `map_seen` bitset per chunk).
 - Show streamed objects (W2 chunks) on the map, not only the Landing's.
 - A layer API other tasks can add markers to (checkpoint flags P4, boss markers C0, friend calls P11).
+- The map already covers the whole world when `bigworld` is on (W4), but the minimap shows all of it too, so the Landing is tiny: centre it on the player and zoom.
 
 ## Files it touches
 

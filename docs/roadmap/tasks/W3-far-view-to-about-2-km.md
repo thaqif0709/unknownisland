@@ -18,6 +18,7 @@ See mountains and giant trees on the horizon.
 - Longer camera range and an ink-outline pass that still works at long distances (depth precision).
 - The sea follows the player. Haze colour blends the far ring into the sky.
 - Automatic phone quality: shorter ring and fewer details on coarse pointers or low frame rates.
+- With `bigworld` on, the ground rises to about 600 m and `heightAt` costs about twice as much (about 5 microseconds a call); check terrain build time on a phone.
 
 ## Files it touches
 

@@ -5,6 +5,7 @@
   'use strict';
 
   // ================= Tuning =================
+  let activeFeatures = null;   // feature flags once the server has said (see setFeatures)
   const RULES = {
     // Real seconds per in-game day: 20 minutes, 15 of daylight (sunrise to sunset,
     // including both) and 5 of night.
@@ -100,6 +101,7 @@
     FEATURES: {
       chains: false,     // W8: Sleeper request chains per region (goes live with the first boss)
       streaming: false,  // W2: send and run only the chunks of new land near players
+      bigworld: false,   // W4: the 5 km world around the Landing (needs streaming on too)
     },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {
@@ -230,7 +232,8 @@
   const SPRING = SPRINGS[0];
   const nearestSpring = (x, z) => SPRINGS.reduce((b, s) => Math.hypot(x - s.x, z - s.z) < Math.hypot(x - b.x, z - b.z) ? s : b);
 
-  function heightAt(x, z) {
+  // The Landing's ground: today's island, exactly as it has always been.
+  function landingHeightAt(x, z) {
     // coves and headlands: big slow wobble plus a medium one, and a few carved bays
     const ang = Math.atan2(z, x);
     const warp = (fbm(x * .008 + 10, z * .008) - .47) * 110 + (fbm(x * .028 + 3, z * .028) - .47) * 30
@@ -249,6 +252,94 @@
       const k2 = smooth(2.6, 1.2, sd); h = h * (1 - k2) + 1.65 * k2;
     }
     return Math.max(h, -6);
+  }
+
+  // ================= The wider world (task W4, flag `bigworld`) =================
+  // The Landing stays at the origin, untouched. The rest of the 5 km world lies north of it
+  // (x east, z south, metres): the Stairs straight north across a sandy neck, the Weeping
+  // Wood to the north-east, the Mire to the north-west, the Hollow's crater further north,
+  // the Teeth beyond it, and the Ashen Shore's volcano on the north-west coast.
+  const WORLD = [
+    { id: 'stair', x: 0, z: -1250, r: 760 },
+    { id: 'wood', x: 1400, z: -1350, r: 850 },
+    { id: 'mire', x: -1350, z: -1150, r: 850 },
+    { id: 'hollow', x: 200, z: -2350, r: 330 },
+    { id: 'teeth', x: 350, z: -3150, r: 1000 },
+    { id: 'ash', x: -1300, z: -2750, r: 700 },
+  ];
+  const LANDING_R = 300;                  // inside this, only the Landing's own ground (and the neck)
+  const NECK = [[0, -150], [0, -640]];    // the sandy neck from the Landing's north shore to the Stairs
+  const RIVERS = [
+    [[950, -2350], [1300, -1850], [1250, -1300], [1600, -900], [2150, -650]],   // through the Weeping Wood to the east coast
+    [[-900, -1850], [-1200, -1300], [-1500, -900], [-1950, -600]],               // through the Mire
+  ];
+  function segDist(x, z, a, b) {
+    const dx = b[0] - a[0], dz = b[1] - a[1], t = clamp(((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz), 0, 1);
+    return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
+  }
+  function polyDist(x, z, pts) { let d = 1e9; for (let i = 1; i < pts.length; i++) d = Math.min(d, segDist(x, z, pts[i - 1], pts[i])); return d; }
+  // How high each region's land stands (metres above the shore), before coasts and rivers.
+  function regionProfile(id, x, z, dd, n, ridge) {
+    switch (id) {
+      case 'stair': {   // terraces climbing north, from the shore up to about 220 m
+        const H = 12 + 208 * clamp((-z - 380) / 1350, 0, 1) + (n - .5) * 24, step = 9, q = H / step, f = q - Math.floor(q);
+        return (Math.floor(q) + smooth(.7, 1, f)) * step;
+      }
+      case 'wood': return 35 + (n - .5) * 70 + ridge * 25;
+      case 'mire': return 1.4 + (n - .5) * 3 - 2.8 * smooth(.56, .64, fbm(x * .018 + 9, z * .018 - 4));   // flat and wet, with pools
+      case 'hollow': return dd < .75 ? 90 + 150 * smooth(.35, .75, dd) : 240 - 200 * smooth(.75, 1.2, dd);   // a crater
+      case 'teeth': return 180 + 420 * ridge ** 1.6 * (1 - smooth(.55, 1, dd)) + (n - .5) * 60;   // peaks to about 600 m
+      case 'ash': return 12 + 85 * Math.exp(-((dd / .45) ** 2)) - (dd < .08 ? 30 * (1 - dd / .08) : 0) + (n - .5) * 10;   // an old volcano
+    }
+    return 0;
+  }
+  // The sandy neck: 0.4 m where it leaves the Landing, rising to about 4 m at the Stairs.
+  function neckHeight(x, z) {
+    const nd = segDist(x, z, NECK[0], NECK[1]) + (fbm(x * .03, z * .03) - .5) * 20, k = 1 - nd / 38;
+    if (k <= 0) return -6;
+    return .35 + (.07 + 3.6 * clamp((-z - 150) / 490, 0, 1)) * smooth(0, .4, k);
+  }
+  // Region shapes are measured in warped space, so coasts and borders wander instead of
+  // being circles and straight lines.
+  const warpX = (x, z) => x + (fbm(x * .0011 + 3, z * .0011) - .5) * 800 + (fbm(x * .006 + 9, z * .006) - .5) * 140;
+  const warpZ = (x, z) => z + (fbm(x * .0011, z * .0011 + 8) - .5) * 800 + (fbm(x * .006, z * .006 - 5) - .5) * 140;
+  function mainlandHeightAt(x, z) {
+    const n = fbm(x * .0035 + 40, z * .0035 - 20), ridge = 1 - Math.abs(2 * fbm(x * .006 - 11, z * .006 + 5) - 1);
+    const wx = warpX(x, z), wz = warpZ(x, z);
+    let wsum = 0, hsum = 0, mask = -1;
+    for (const R of WORLD) {
+      const dd = Math.hypot(wx - R.x, wz - R.z) / R.r;
+      mask = Math.max(mask, 1 - dd / 1.3);
+      const w = Math.max(0, 1 - dd / 1.6) ** 3;
+      if (w > 0) { wsum += w; hsum += w * regionProfile(R.id, x, z, dd, n, ridge); }
+    }
+    mask += (fbm(x * .004 + 7, z * .004 + 3) - .47) * .3;   // a ragged coast
+    let h = mask > 0 && wsum > 0 ? .35 + (hsum / wsum) * smooth(0, .14, mask) : .35 + mask * 60;
+    h = Math.max(h, neckHeight(x, z));
+    for (const r of RIVERS) {   // river valleys: a 10 m bed just below the water, walls rising out
+      const rd = polyDist(x, z, r) + (fbm(x * .02 + 1, z * .02) - .5) * 14;
+      if (rd < 500) h = Math.min(h, -.4 + Math.max(0, rd - 10) * .13);
+    }
+    return Math.max(h, -6);
+  }
+  const bigOn = () => !!(activeFeatures || RULES.FEATURES).bigworld;
+  // The ground height anywhere. With the big world off it's just the Landing.
+  function heightAt(x, z) {
+    if (!bigOn()) return landingHeightAt(x, z);
+    const dl = Math.hypot(x, z);
+    if (dl >= 420) return mainlandHeightAt(x, z);
+    // Near the Landing, its land (even wet beach) keeps its exact height; only water is filled in.
+    const L = landingHeightAt(x, z);
+    if (L >= .05) return L;
+    return Math.max(L, dl < LANDING_R ? neckHeight(x, z) : mainlandHeightAt(x, z));
+  }
+  // Which region a spot is in (land only; the neck belongs to the Landing).
+  function worldRegionAt(x, z) {
+    if (Math.hypot(x, z) < LANDING_R + 40 || (z > -370 && neckHeight(x, z) > 0)) return 'landing';   // the neck, up to the Stairs' shore
+    const wx = warpX(x, z), wz = warpZ(x, z);
+    let best = 'landing', bd = 1e9;
+    for (const R of WORLD) { const dd = Math.hypot(wx - R.x, wz - R.z) / R.r; if (dd < bd) { bd = dd; best = R.id; } }
+    return best;
   }
 
   // ================= Fog =================
@@ -279,7 +370,7 @@
     if (lanternCache.has(seed)) return lanternCache.get(seed);
     const rng = mulberry32((seed ^ 0x1A7E2B) >>> 0), out = [];
     const ok = (x, z) => {
-      const h = heightAt(x, z), b = biomeAt(x, z, h);
+      const h = landingHeightAt(x, z), b = landingBiomeAt(x, z, h);
       return h > 1.3 && b !== 'spring' && b !== 'beach' && out.every(l => Math.hypot(l.x - x, l.z - z) > 30);
     };
     // one by the south beach where everyone arrives, one at the main spring
@@ -292,7 +383,7 @@
       if (ok(x, z)) out.push({ x, z });
     }
     // the highest few become great lanterns
-    const byHeight = out.map((l, i) => [heightAt(l.x, l.z), i]).filter(x => x[1] >= fixed.length).sort((a, b) => b[0] - a[0]);   // the first two stay small
+    const byHeight = out.map((l, i) => [landingHeightAt(l.x, l.z), i]).filter(x => x[1] >= fixed.length).sort((a, b) => b[0] - a[0]);   // the first two stay small
     const big = new Set(byHeight.slice(0, 4).map(x => x[1]));
     const list = out.map((l, i) => ({ id: i, x: +l.x.toFixed(2), z: +l.z.toFixed(2), big: big.has(i) }));
     lanternCache.set(seed, list);
@@ -305,10 +396,10 @@
   function generateCarvings(seed) {
     if (carvingCache.has(seed)) return carvingCache.get(seed);
     const L = generateLanterns(seed), rng = mulberry32((seed ^ 0x51EE9) >>> 0);
-    const free = (x, z) => heightAt(x, z) > 1.2 && L.every(l => Math.hypot(l.x - x, l.z - z) > 3.5);
+    const free = (x, z) => landingHeightAt(x, z) > 1.2 && L.every(l => Math.hypot(l.x - x, l.z - z) > 3.5);
     const near = (x0, z0) => { for (let r = 0; r < 14; r += .5) { const a = rng() * Math.PI * 2, x = x0 + Math.cos(a) * r, z = z0 + Math.sin(a) * r; if (free(x, z)) return [x, z]; } return [x0, z0]; };
     let best = [0, 0], bh = -1;   // the highest walkable point (coarse search)
-    for (let x = -ISL; x <= ISL; x += 4) for (let z = -ISL; z <= ISL; z += 4) { const h = heightAt(x, z); if (h > bh && h < 24) { bh = h; best = [x, z]; } }
+    for (let x = -ISL; x <= ISL; x += 4) for (let z = -ISL; z <= ISL; z += 4) { const h = landingHeightAt(x, z); if (h > bh && h < 24) { bh = h; best = [x, z]; } }
     const spots = [['shore', ...near(L[0].x - 3.5, L[0].z + 2.5)], ['spring', ...near(SPRING.x - 7, SPRING.z - 5)], ['ridge', ...near(best[0] + 3, best[1] + 3)]];
     const list = spots.map(([key, x, z], id) => ({ id, key, x: +x.toFixed(2), z: +z.toFixed(2), face: Math.atan2(SPAWN.x - x, SPAWN.z - z) }));
     carvingCache.set(seed, list);
@@ -318,6 +409,21 @@
   // Biomes: what grows where.
   const forestMask = (x, z) => fbm(x * .022 + 3, z * .022 - 7);
   function biomeAt(x, z, h = heightAt(x, z)) {
+    if (!bigOn() || Math.hypot(x, z) < LANDING_R) return landingBiomeAt(x, z, h);
+    if (h < .05) return 'sea';
+    if (h < .95) return 'beach';
+    switch (worldRegionAt(x, z)) {   // placeholders until each region pack brings its own ground
+      case 'stair': return h > 160 ? 'highland' : 'meadow';
+      case 'wood': return 'forest';
+      case 'teeth': return h > 420 ? 'peak' : 'highland';
+      case 'hollow': return 'highland';
+      case 'ash': return 'beach';
+      case 'mire': return h > 30 ? 'highland' : forestMask(x, z) > .55 ? 'forest' : 'meadow';
+    }
+    return landingBiomeAt(x, z, h);
+  }
+  // The Landing's biomes, as they have always been.
+  function landingBiomeAt(x, z, h) {
     if (h < .05) return 'sea';
     if (h < .95) return 'beach';
     if (Math.hypot(x - nearestSpring(x, z).x, z - nearestSpring(x, z).z) < 9) return 'spring';
@@ -330,7 +436,7 @@
 
   // Spawn on the south beach.
   function findSpawn() {
-    for (let r = ISL + 60; r > 0; r -= .3) { const x = 3, z = r; if (heightAt(x, z) > .55) return { x, z: z - 1 }; }
+    for (let r = ISL + 60; r > 0; r -= .3) { const x = 3, z = r; if (landingHeightAt(x, z) > .55) return { x, z: z - 1 }; }
     return { x: 0, z: 0 };
   }
   const SPAWN = findSpawn();
@@ -358,8 +464,8 @@
     function place(type, count, test, extra, pad = .8) {
       let tries = 0;
       while (count > 0 && tries++ < count * 400) {
-        const x = (rng() - .5) * ISL * 2.3, z = (rng() - .5) * ISL * 2.3, h = heightAt(x, z);
-        if (!test(h, biomeAt(x, z, h), x, z) || blocked(x, z, pad)) continue;
+        const x = (rng() - .5) * ISL * 2.3, z = (rng() - .5) * ISL * 2.3, h = landingHeightAt(x, z);
+        if (!test(h, landingBiomeAt(x, z, h), x, z) || blocked(x, z, pad)) continue;
         const o = { id: objects.length, type, x: +x.toFixed(2), z: +z.toFixed(2), r: .5 };
         if (type === 'palm') o.r = .35;
         else if (type === 'bush') o.r = .6;
@@ -463,7 +569,6 @@
 
   // Feature flags. The server resolves RULES.FEATURES plus the FEATURES env var once at
   // start-up and sends the result to each client when it joins, so both sides agree.
-  let activeFeatures = null;
   const setFeatures = f => { activeFeatures = { ...f }; };
   const features = () => ({ ...(activeFeatures || RULES.FEATURES) });
   const feature = name => !!(activeFeatures || RULES.FEATURES)[name];
@@ -490,9 +595,9 @@
     { id: 'ash', name: 'The Ashen Shore', stage: 5 },
     { id: 'hollow', name: 'The Hollow', stage: 6 },
   ];
-  // Which region a spot belongs to. Placeholder until the 5 km world (task W4): all land
-  // is the Landing, everything below sea level is 'sea'.
-  const regionAt = (x, z) => (heightAt(x, z) < 0 ? 'sea' : 'landing');
+  // Which region a spot belongs to: 'sea' below sea level. With the big world off, all land
+  // is the Landing.
+  const regionAt = (x, z) => (heightAt(x, z) < 0 ? 'sea' : bigOn() ? worldRegionAt(x, z) : 'landing');
   // A climbable surface at this spot, or null (section 12). Placeholder until task P9.
   const climbAt = (x, y, z) => null;
 
@@ -502,7 +607,7 @@
   // way every time on the server and in the browser. Chunk objects get ids from
   // CHUNK_ID_BASE up, which encode their chunk, so they never collide with the Landing's.
   const CHUNK = 32;
-  const CHUNK_ID_BASE = 10000000, CHUNK_SPAN = 256, CHUNK_OFF = 128, CHUNK_MAX = 512;   // chunks -128..127 each way (±4 km)
+  const CHUNK_ID_BASE = 10000000, CHUNK_SPAN = 320, CHUNK_OFF = 160, CHUNK_MAX = 512;   // chunks -160..159 each way (±5 km)
   const chunkOf = (x, z) => ({ cx: Math.floor(x / CHUNK), cz: Math.floor(z / CHUNK) });
   const chunkKey = (cx, cz) => cx + ',' + cz;
   const chunkObjectId = (cx, cz, i) => CHUNK_ID_BASE + ((cx + CHUNK_OFF) * CHUNK_SPAN + (cz + CHUNK_OFF)) * CHUNK_MAX + i;
@@ -551,7 +656,7 @@
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
     generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
     feature, features, setFeatures, resolveFeatures,
-    REGIONS, regionAt, climbAt,
+    REGIONS, regionAt, climbAt, landingHeightAt, WORLD, RIVERS,
     CHUNK, CHUNK_ID_BASE, chunkOf, chunkKey, chunkObjectId, chunkOfId, generateChunk,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;

@@ -3,7 +3,7 @@ id: W4
 title: The 5 km world shape
 lane: world
 owner: thaqif
-status: todo
+status: done
 depends: [W2]
 flag: bigworld
 size: 2 sessions
@@ -29,11 +29,12 @@ Contract §6 real `regionAt`
 
 ## Done when
 
-- [ ] Walking off the Landing reaches the Veil (W5) or, with the Veil off for testing, all seven regions.
-- [ ] Existing fires, lanterns and sacks on the Landing are where they were.
-- [ ] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
-- [ ] This file's `status` set to `done` in the PR that finishes it.
+- [x] Walking off the Landing reaches the Veil (W5) or, with the Veil off for testing, all seven regions.
+- [x] Existing fires, lanterns and sacks on the Landing are where they were.
+- [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
+- [x] This file's `status` set to `done` in the PR that finishes it.
 
 ## Log
 
+- 2026-09-30 thaqif: done, behind flag `bigworld` (with `streaming`). Changed from the plan: the Landing stays at the origin and the world is laid out north of it (moving the Landing would have moved every saved thing on it). Six regions with their own height profiles (Stairs terraces, Wood hills, Mire pools, Hollow crater, Teeth to ~600 m, Ashen Shore volcano), warped borders, a neck to the Landing, two river valleys (lowlands only: game water is sea level). Real `regionAt`, region biomes and placeholder spawn tables. Chunk ids widened to ±5 km (no chunk rows existed yet). Map covers the world; terrain rebuilds when the flag arrives. Hidden Pages section flag-gated. Tests: the Landing's objects, lanterns, carving stones and spawn are identical with the flag on (both islands), all 77,854 Landing land points at 1 m keep their exact height, heights everywhere unchanged with the flag off; in a browser at the Stairs (126 m), Wood and Teeth (490 m) streamed objects are drawn and the drawn ground matches; all 187 checks pass with the flags off. Minimap zoom left for W7.
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->

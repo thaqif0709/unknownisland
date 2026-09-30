@@ -18,6 +18,7 @@ Locked regions sit behind a fog wall that turns you around, and lift at dawn whe
 - Walking in raises dread quickly and turns you round to face back out (server-checked so you can't walk through).
 - Real `isRegionOpen` / `openRegion` with a `regions_open` record, an island event, and the Veil lifting at the next dawn.
 - The map hatches locked regions.
+- Region borders come from `WG.regionAt` (W4): the Landing includes the neck up to the Stairs' shore (about z = -370).
 
 ## Files it touches
 

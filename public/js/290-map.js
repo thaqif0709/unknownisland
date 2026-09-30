@@ -3,21 +3,28 @@
   // markers for springs, lanterns, carving stones, the board, fires and players
   // are redrawn on top of a scaled copy of that cache for both the full panel
   // (opened with M) and the always-on minimap in the top-right corner.
-  const MAP_PX = 480, MINI_PX = 190, MINI_DOT = .68, MAP_HALF = WG.ISL * 1.15;
+  const MAP_PX = 480, MINI_PX = 190, MINI_DOT = .68;
+  // What the map covers: the Landing, or the whole world when the big world is on (W4).
+  // Proper zooming and panning for the big world is task W7.
+  let MAP_HALF = WG.ISL * 1.15, MAP_CX = 0, MAP_CZ = 0;
+  UI.net.on('welcome', () => {
+    const big = WG.feature('bigworld'), half = big ? 2600 : WG.ISL * 1.15, cz = big ? -1900 : 0;
+    if (half !== MAP_HALF || cz !== MAP_CZ) { MAP_HALF = half; MAP_CZ = cz; mapBase = null; }
+  });
   const BIOME_COL = { sea: '#4A6F91', beach: '#D8C9A0', meadow: '#8FAE72', forest: '#5C7A4B', highland: '#9C8A6A', peak: '#D9D3C4', spring: '#7FC9D6' };
   let mapBase = null, mapTimer = 0;
   function buildMapBase() {
     const c = document.createElement('canvas'); c.width = c.height = MAP_PX;
     const g = c.getContext('2d'), STEP = 4, n = MAP_PX / STEP;
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-      const x = (i + .5) / n * MAP_HALF * 2 - MAP_HALF, z = (j + .5) / n * MAP_HALF * 2 - MAP_HALF;
+      const x = MAP_CX + (i + .5) / n * MAP_HALF * 2 - MAP_HALF, z = MAP_CZ + (j + .5) / n * MAP_HALF * 2 - MAP_HALF;
       const h = WG.heightAt(x, z);
       g.fillStyle = BIOME_COL[WG.biomeAt(x, z, h)] || BIOME_COL.sea;
       g.fillRect(i * STEP, j * STEP, STEP, STEP);
     }
     mapBase = c;
   }
-  const mapCoord = (v, size) => (v + MAP_HALF) / (MAP_HALF * 2) * size;
+  const mapCoord = (v, size, c = 0) => (v - c + MAP_HALF) / (MAP_HALF * 2) * size;
   // Marker shapes, shared by the map and its legend so the two always match.
   const MARK = {
     spring: { name: 'Spring (fresh water)', col: '#4FA9C9' }, lanternLit: { name: 'Lantern, lit', col: '#F2B33D' },
@@ -61,7 +68,7 @@
   // Players on the map use a brighter version of their cloak colour so they pop.
   const mapCol = id => { const c = new THREE.Color(colorFor(id)), h = {}; c.getHSL(h); c.setHSL(h.h, Math.max(.6, h.s * 1.9), .56); return '#' + c.getHexString(); };
   function drawMapMarkers(g, size, dotScale, full) {
-    const at = (x, z) => [mapCoord(x, size), mapCoord(z, size)];
+    const at = (x, z) => [mapCoord(x, size, MAP_CX), mapCoord(z, size, MAP_CZ)];
     const mark = (kind, x, z, k = 1) => { const [cx, cy] = at(x, z); markerShape(g, kind, cx, cy, dotScale * k); };
     WG.SPRINGS.forEach(sp => mark('spring', sp.x, sp.z));
     if (board) mark('board', board.x, board.z);

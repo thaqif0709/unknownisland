@@ -338,6 +338,11 @@ Default content is in `server/content/<topic>.js`.
   0003). With the `streaming` flag on, `systems/streaming.js` loads the chunks around each
   player, sends them (`chunk`/`unchunk`), and unloads unused ones once saved; object changes
   go out through `sendObjs`. CONTRACTS.md section 16.
+- **The 5 km world (flag `bigworld`, W4):** the Landing stays at the origin; the other six
+  regions lie north of it (`WORLD`, `mainlandHeightAt` in `world-gen.js`), joined by a sandy
+  neck, with river valleys through the Wood and the Mire. Near the Landing, old land keeps
+  its exact height (`landingHeightAt`, used for all Landing placement). The browser rebuilds
+  terrain and the map when the server switches it on. Placeholder colours and spawn tables.
 - **Placeholders for later work:** `WG.REGIONS`, `WG.regionAt`, `WG.climbAt`,
   `isRegionOpen/openRegion`, `summonBoss`, `respawnPoint` (`systems/regions.js`), and one file
   per region in `server/regions/<id>.js` for region packs to fill in.
