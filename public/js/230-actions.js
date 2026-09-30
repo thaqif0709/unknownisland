@@ -49,17 +49,11 @@
     }
   }
   const has = tool => stats.tools.includes(tool);
-  // Which tool (if any) shows in hand while swinging at this target. Chopping and
-  // mining rock work bare-handed too (a tool just yields more), so this only shows
-  // one when it's actually owned; ore requires a pickaxe, so it's always shown there.
-  function swingToolFor(o) {
-    if (!o) return null;
-    if (o.type === 'tree') return has('axe') ? 'axe' : null;
-    if (o.type === 'palm') return (o.state && o.state.coconuts > 0) ? null : (has('axe') ? 'axe' : null);
-    if (o.type === 'rock') return has('pickaxe') ? 'pickaxe' : null;
-    if (o.type === 'ore') return 'pickaxe';
-    return null;
-  }
+  // Which swing a hit gets: chopping (axe, swept sideways) for trees and palms with
+  // no coconuts left, mining (pickaxe, brought down) for rocks and ore.
+  const swingKindFor = o => !o ? null
+    : (o.type === 'tree' || (o.type === 'palm' && !(o.state && o.state.coconuts > 0))) ? 'chop'
+    : (o.type === 'rock' || o.type === 'ore') ? 'mine' : null;
   function targetKey(o) {
     if (o.type === 'spring' || o.type === 'sea') return o.type;
     return ({ fire: 'f', drop: 'd', lantern: 'l', wash: 'w', bug: 'b' }[o.type] || 'o') + o.id;
@@ -84,7 +78,7 @@
     if (ba) {
       cooldown = .45;
       if (ba.hint) { toast(ba.hint); return; }
-      hero.swingT = .35;
+      startSwing(hero);
       if (ba.fireAct) { net.send({ t: 'act', target: 'f' + ba.fireAct.id }); return; }
       net.send({ t: 'bucket', id: heldBucket().id, action: ba.action, fire: ba.fire });
       return;
@@ -93,8 +87,7 @@
     cooldown = .45;
     if (target.type === 'board') { togglePanel('board'); return; }
     if (target.type === 'carving') { readCarving(target); return; }
-    if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig', 'lantern'].includes(target.type)) hero.swingT = .35;
-    if (['tree', 'palm', 'rock', 'ore'].includes(target.type)) setSwingTool(hero, swingToolFor(target));
+    if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig', 'lantern'].includes(target.type)) startSwing(hero, swingKindFor(target));
     net.send({ t: 'act', target: targetKey(target) });
   }
   // Build a recipe: tools are made on the spot, fires are placed in front of you.

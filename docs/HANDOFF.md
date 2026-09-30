@@ -285,13 +285,21 @@ planned separately by Thaqif):
 - **Energy:** 0-100, not persisted. `stepEnergy` in world-gen is shared by the
   server (authoritative: hunger cost, speed check) and the client (prediction).
 - **Decorative flowers** are client-only instanced meshes, not in the database.
-- **Chop/mine animation (client-only).** `swingToolFor(o)` decides whether an axe or
-  pickaxe shows in hand for the swing at a tree/palm/rock/ore: it's optional for
-  chopping and rock (a tool just yields more, per the existing server rule) so it
-  only shows one you actually own, but ore always shows a pickaxe since mining it
-  requires one. `setSwingTool` attaches `heldModel('axe'|'pickaxe')` to the swinging
-  arm for the swing's 0.35s (hiding whatever hotbar item was in hand) and
-  `poseCastaway` puts it away the instant `swingT` reaches 0. The server's `fx`
+- **Chop/mine animation (client-only).** `swingKindFor(o)` picks the swing for a
+  hit: `'chop'` for trees and palms with no coconuts left, `'mine'` for rocks and
+  ore, otherwise null (the plain reach used for fires, lanterns, digging, building).
+  `startSwing(av, kind)` (in `public/js/120-castaways.js`) sets `swingT`/`swingKind`
+  and attaches `heldModel('axe'|'pickaxe')` to the swinging arm for the swing's
+  0.35s (hiding whatever hotbar item was in hand). The tool always shows, owned or
+  not: it's only the look, and yields still follow the server rule. In
+  `poseCastaway`, 'mine' lifts the arm overhead and brings it straight down
+  (rotation.x) and 'chop' holds it level and sweeps it sideways (rotation.y, with
+  the shoulders turning a little). That needs `armR.rotation.order = 'YXZ'` so yaw
+  applies after pitch; with y at 0 the pose is the same as before. The axe blade's
+  edge faces -x and the pick's points lie along z so each tool lines up with its
+  swing. Start swings with `startSwing`, not by setting `swingT` directly, so the
+  kind and any leftover yaw get reset. The tool is put away the instant `swingT`
+  reaches 0. The server's `fx`
   broadcast (already carrying the object id for these hits) now also triggers a
   small burst of wood/stone/ore-coloured debris cubes (`spawnChips`/`updateChips`,
   a small reused pool like the smoke puffs) on every player's hit, not just your
