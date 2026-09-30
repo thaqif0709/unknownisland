@@ -3,15 +3,15 @@
 // sleeper_requests table, carved at dawn (also during offline catch-up).
 // Answer it and it gives something back; ignore it and the fog presses harder.
 // Everything that happens is logged in island_events.
-const WG = require('./shared/world-gen');
-const CONTENT = require('./content');
+const WG = require('../shared/world-gen');
+const CONTENT = require('../content');
 const { RULES, heightAt, isNight } = WG;
 
 const r2 = v => Math.round(v * 100) / 100;
 const KINDS = new Set(['offer', 'lanterns_lit', 'lantern_fed', 'gather', 'fires_dawn', 'fog_walk', 'bugs', 'find']);
 const need = c => c.type === 'offer' || c.type === 'lanterns_lit' || c.type === 'gather' || c.type === 'fires_dawn' || c.type === 'bugs' ? Math.max(1, c.count | 0) : 1;
 
-module.exports = {
+const methods = {
   // Rebuild state from the event log.
   sleeperLoad(events) {
     this.carvings = WG.generateCarvings(this.seed);
@@ -219,3 +219,5 @@ module.exports = {
     this.sleeperProgress(give);
   },
 };
+
+module.exports = { methods };

@@ -72,7 +72,7 @@ automatically from `main`. Env vars are set in Render.
   position; the server rejects impossible jumps and sends a correction.
 - **World model: catch-up simulation.** The server doesn't need to run 24/7. When
   the first player joins after a quiet period it computes the elapsed time since
-  `islands.last_tick_at` and fast-forwards (`Island.advance` in `server/world.js`):
+  `islands.last_tick_at` and fast-forwards (`advance` in `server/systems/time.js`):
   clock and day counter, fire fuel, coconut/berry refills, tree and rock regrowth.
   Regrowth depends only on the final day number, so any length of downtime is O(1).
 - **Offline characters vanish.** Stats and inventory freeze until the player returns;
@@ -141,7 +141,7 @@ planned separately by Thaqif):
   toggle in Settings). `Island.knock(p)` knocks a player down (health, dread,
   half the inventory into a sack saved in the `drops` table; anyone can pick it up).
   The Stilled call it.
-- **Phase 2, the Stilled (done).** Server-side (`updateStilled` in world.js,
+- **Phase 2, the Stilled (done).** Server-side (`updateStilled` in `server/systems/stilled.js`,
   tuning in `RULES.STILLED`): at night they spawn in fog 22-42 units from players
   (2 per player, +1 if alone, +1 if dread > 70, max 12, doubled on Drowning
   nights), never in plain sight. Clients send their camera yaw with position; a
@@ -173,7 +173,7 @@ planned separately by Thaqif):
   without redeploying: `journal_entries` (key, category bugs/shells/glass/tide/
   strange, name, description, rarity) and `tide_table` (weight, min_day, kind
   resource/food/collectible/strange, gives JSON, entry_key). Defaults are in
-  `server/content.js` and only inserted if missing; the server reloads content
+  `server/content/` and only inserted if missing; the server reloads content
   every 5 minutes (on join). Each sunrise `tide()` clears the old `washups` and
   washes 8-12 new ones onto beaches (at most one strange thing per tide; the
   footprints lead to the nearest fire/lit lantern). Bugs (`CONTENT.BUGS`) spawn
@@ -209,7 +209,7 @@ planned separately by Thaqif):
   beach camp, near the main spring, on the highest ground). One request at a
   time from `sleeper_requests` (editable in Neon: text, conditions, reward,
   penalty, min_day, weight, days, stone, done_text, fail_text, enabled). Code in
-  `server/sleeper.js`, mixed into `Island`. At dawn (also during catch-up) an
+  `server/systems/sleeper.js`, mixed into `Island`. At dawn (also during catch-up) an
   expired request fails and applies its penalty; a resolved request is replaced
   at the next dawn. Condition types: `offer {item,count}` (bring items to the
   stone), `lanterns_lit {count,minHeight}`, `lantern_fed {which,fuel}`,
@@ -305,6 +305,17 @@ away from a lit fire (radius 5.5); +0.8/s regen when both > 35 and unhurt; sprin
 rocks 2 stone each; trees/palms 3 chops (1 wood each); fire 4 wood + 3 stone, 110 fuel burning 0.2/s (about 9 real minutes),
 +55 per wood (max 200); coconuts and berries refill each sunrise; felled trees
 regrow after 2 days, mined rocks after 3.
+
+## Server layout
+`server/world.js` is only the Island core: constructor and loading, the tick loop and
+snapshots, the message registry, networking helpers and saving. Everything else is a
+system in `server/systems/<name>.js` that exports `methods` (mixed into `Island.prototype`),
+`messages` (client `msg.t` handlers) and optional `onTick`, `onDawn`, `onJoin` hooks; see
+`docs/roadmap/CONTRACTS.md` section 2. Systems: journal, tides, bugs, weather, time (clock,
+regrowth, catch-up, overnight), chat, board, patches, players (join/leave, views, movement,
+survival loop, show-only messages), gather (E on things), crafting, fires, stilled (and
+knockdowns), lanterns (and `lights()`), buckets, drops, sleeper. Default content is in
+`server/content/<topic>.js`.
 
 ## Infrastructure
 

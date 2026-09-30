@@ -145,9 +145,10 @@ temporary in-memory island (nothing is saved) and the invite code is `dev`.
 ```
 server/index.js           Web server: game files, login API, game connection
 server/auth.js            Sign-up with invite code, login, sessions
-server/world.js           The island simulation, catch-up, saving
-server/sleeper.js         The carving stones (the island's requests)
-server/content.js         Default journal, tide, bug and request content
+server/world.js           The island core: loop, snapshots, messages, saving
+server/systems/           One file per feature (players, gathering, crafting, fires,
+                          lanterns, the Stilled, tides, bugs, chat, the Sleeper...)
+server/content/           Default journal, tide, bug and request content, by topic
 server/store.js           Database access (Neon), or in-memory for testing
 server/shared/world-gen.js Island shape, object placement, survival rules
                           (used by both the server and the browser)

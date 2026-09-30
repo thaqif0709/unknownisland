@@ -26,22 +26,24 @@ Each task names its flag. Flip it on (in `RULES.FEATURES`) in the task's last PR
 ## 2. Server feature modules and the message registry (F1)
 
 `server/world.js` keeps only the Island core (loop, players, broadcast, persistence glue).
-Every feature lives in `server/systems/<name>.js` and plugs in the same way `sleeper.js`
-does today:
+Every feature lives in `server/systems/<name>.js` (done in F1):
 
 ```js
 // server/systems/fishing.js
 module.exports = {
   messages: { cast(p, msg) {...}, reel(p, msg) {...} },   // msg.t -> handler, `this` is the Island
-  onTick(dt) {...},            // optional, called every tick
-  onDawn() {...},              // optional
+  onTick(dt) {...},            // optional, every tick after players are updated, before the snapshot
+  onDawn(sunrises) {...},      // optional, after the Sleeper and the tide at sunrise
   onJoin(p) {...},             // optional, extra state for the join message
   methods: { ... },            // optional, mixed into Island.prototype
 };
 ```
 
 `onMessage` looks up `msg.t` in the merged registry instead of one big `switch`.
-Two modules may not register the same message name (checked at start-up).
+Two modules may not register the same message name or define the same method name
+(both checked at start-up, so a clash fails loudly instead of silently overwriting).
+Add a new module's name to `SYSTEMS` in `server/world.js`. Shared helpers (`r2`, `num`,
+`REACH_SLACK`...) are in `server/systems/util.js`.
 
 ## 3. Client feature modules (F2)
 

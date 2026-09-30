@@ -3,7 +3,7 @@ id: F1
 title: Split the server into feature modules
 lane: foundations
 owner: thaqif
-status: doing
+status: done
 depends: []
 flag: none
 size: 1 session
@@ -30,11 +30,11 @@ Contract §2 (server modules and message registry), §15 (content files)
 
 ## Done when
 
-- [ ] The game plays exactly as before (all current tests pass).
-- [ ] `server/world.js` holds only the Island core (under ~400 lines).
-- [ ] HANDOFF.md describes the new layout.
-- [ ] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
-- [ ] This file's `status` set to `done` in the PR that finishes it.
+- [x] The game plays exactly as before (all current tests pass).
+- [x] `server/world.js` holds only the Island core (under ~400 lines).
+- [x] HANDOFF.md describes the new layout.
+- [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
+- [x] This file's `status` set to `done` in the PR that finishes it.
 
 ## Notes
 
@@ -42,4 +42,5 @@ Do this before any feature work on the server. Tell Edvin before merging so he c
 
 ## Log
 
+- 2026-09-30 thaqif: done. world.js is 213 lines; 17 systems in server/systems/, content in server/content/. Same 124 server checks pass before and after; browser smoke test clean. No Hidden Pages change (nothing players can see).
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->
