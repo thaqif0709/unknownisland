@@ -58,7 +58,7 @@ const methods = {
       else { s.gone = true; s.swallowed = true; s.felledDay = s.goneDay = this.day; }
       this.dirty.add(o.id); changed.push(o);
     }
-    if (changed.length && this.players.size) this.broadcast({ t: 'objs', list: changed.map(o => [o.id, o.state]) });
+    if (changed.length) this.sendObjs(changed);
     for (const f of this.fires.filter(f => Math.hypot(f.x - l.x, f.z - l.z) < R)) {
       this.fires = this.fires.filter(x => x !== f);
       if (f.pot) this.sackAt(f.x, f.z, { buckets: [this.potToBucket(f.pot)] });

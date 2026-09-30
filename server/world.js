@@ -14,7 +14,7 @@ const { r2 } = require('./systems/util');
 // optional hooks onTick(dt), onDawn(sunrises) and onJoin(p) (extra welcome fields) run
 // alongside the core loop. See docs/roadmap/CONTRACTS.md section 2.
 const SYSTEMS = ['journal', 'tides', 'bugs', 'weather', 'time', 'chat', 'board', 'patches', 'players',
-  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions'];
+  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming'];
 
 class Island {
   constructor(store, data) {
@@ -111,7 +111,7 @@ class Island {
     const regrown = this.advance(dt);
     if (this.day !== dayBefore) {
       this.broadcast({ t: 'dawn', day: this.day });
-      if (regrown.length) this.broadcast({ t: 'objs', list: regrown.map(o => [o.id, o.state]) });
+      if (regrown.length) this.sendObjs(regrown);
     }
 
     const night = isNight(this.time);
@@ -185,12 +185,16 @@ class Island {
     this.dirty.clear();
     const lanterns = [...this.lanternsDirty].map(id => { const l = this.lanterns[id]; return { id, lit: l.lit, fuel: r2(l.fuel), offerings: [...l.offerings], litBy: l.litBy, clearedSince: l.clearedSince, reclaim: r2(l.reclaim) }; });
     this.lanternsDirty = new Set();
+    // Every loaded chunk is saved as of today (see unloadChunk).
+    const chunkDays = this.chunks ? [...this.chunks.values()].map(c => [c.key, this.day]) : [];
     const snap = {
       id: this.id, day: this.day, time: this.time, lastTickAt: this.lastTickAt, moonDay: WG.moonPhase(this.day), weather: this.weather, chains: this.chains,
       objects, fires: this.fires.map(f => ({ id: f.id, fuel: r2(f.fuel), pot: f.pot ? { ...f.pot } : null })), members,
-      lanterns,
+      lanterns, chunkDays,
     };
-    this.saving = this.saving.then(() => this.store.saveIsland(snap)).catch(e => {
+    this.saving = this.saving.then(() => this.store.saveIsland(snap)).then(() => {
+      for (const [key, day] of chunkDays) { const c = this.chunks.get(key); if (c) c.savedDay = day; }
+    }).catch(e => {
       console.error(`[island ${this.id}] save failed:`, e.message);
       for (const o of objects) this.dirty.add(o.id);   // try again next time
       for (const l of lanterns) this.lanternsDirty.add(l.id);

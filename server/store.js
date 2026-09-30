@@ -98,6 +98,11 @@ function createPgStore(url) {
           clearedSince: l.cleared_since ? new Date(l.cleared_since).getTime() : null, reclaim: l.reclaim_progress })),
       };
     },
+    // The island day a chunk was last saved on, or null.
+    async loadChunkDay(islandId, chunk) {
+      const r = await q('SELECT day FROM chunk_days WHERE island_id = $1 AND chunk = $2', [islandId, chunk]);
+      return r.rows.length ? r.rows[0].day : null;
+    },
     // Saved changes to the objects of one chunk ("cx,cz"): [{ id, state }].
     async loadChunkStates(islandId, chunk) {
       const r = await q('SELECT obj_id, state FROM world_objects WHERE island_id = $1 AND chunk = $2', [islandId, chunk]);
@@ -125,6 +130,10 @@ function createPgStore(url) {
           }
         }
         for (const f of snap.fires) await c.query('UPDATE fires SET fuel = $2, pot = $3 WHERE id = $1', [f.id, f.fuel, f.pot ? JSON.stringify(f.pot) : null]);
+        for (const [chunk, day] of snap.chunkDays || []) {
+          await c.query(`INSERT INTO chunk_days (island_id, chunk, day) VALUES ($1, $2, $3)
+                         ON CONFLICT (island_id, chunk) DO UPDATE SET day = EXCLUDED.day`, [snap.id, chunk, day]);
+        }
         for (const l of snap.lanterns || []) {
           await c.query(`INSERT INTO lanterns (island_id, lantern_id, lit, fuel, offerings, lit_by, lit_at, cleared_since, reclaim_progress)
                          VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $3 THEN now() END, $7, $8)
@@ -273,6 +282,7 @@ function createMemoryStore() {
         lanterns: [...i.lanterns.values()].map(clone),
       };
     },
+    async loadChunkDay(islandId, chunk) { const d = (islands.get(islandId).chunkDays || new Map()).get(chunk); return d == null ? null : d; },
     async loadChunkStates(islandId, chunk) {
       const i = islands.get(islandId), m = i.chunkOf || new Map();
       return [...i.objects].filter(([oid]) => m.get(oid) === chunk).map(([oid, state]) => ({ id: oid, state: clone(state) }));
@@ -286,6 +296,8 @@ function createMemoryStore() {
       const i = islands.get(snap.id);
       Object.assign(i, { day: snap.day, time: snap.time, lastTickAt: snap.lastTickAt, weather: snap.weather, chains: clone(snap.chains || {}) });
       i.chunkOf = i.chunkOf || new Map();
+      i.chunkDays = i.chunkDays || new Map();
+      for (const [chunk, day] of snap.chunkDays || []) i.chunkDays.set(chunk, day);
       for (const o of snap.objects) { if (o.state) { i.objects.set(o.id, clone(o.state)); i.chunkOf.set(o.id, o.chunk); } else i.objects.delete(o.id); }
       for (const f of snap.fires) { const x = i.fires.find(y => y.id === f.id); if (x) { x.fuel = f.fuel; x.pot = f.pot ? clone(f.pot) : null; } }
       for (const l of snap.lanterns || []) i.lanterns.set(l.id, clone({ id: l.id, lit: l.lit, fuel: l.fuel, offerings: l.offerings,

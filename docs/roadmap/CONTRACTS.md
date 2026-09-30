@@ -273,3 +273,22 @@ WG.chunkOf(x, z) / WG.chunkKey(cx, cz) / WG.chunkOfId(id)   // chunks are WG.CHU
 - Saved changes are `world_objects` rows tagged with their `chunk`; an object back to how
   the seed made it has no row.
 
+### Streaming (W2, done, flag `streaming`)
+
+- Every half second the server works out the chunks within 3 of each player (7 x 7), loads
+  them and sends `{ t: 'chunk', key, objects: [{ id, type, x, z, ..., state }] }` for any with
+  objects; chunks further than 4 away get `{ t: 'unchunk', key }`. `p.chunks` is what a player
+  is in range of, `p.sentChunks` what they were actually sent.
+- `this.sendObjs(list)` is how object changes go out: the Landing's to everyone, a chunk's
+  only to players who have it. Don't `broadcast({ t: 'objs' })` directly.
+- `this.regrow(o)` is what sunrise does to one object. A chunk that wakes up after a dawn
+  runs it for its objects; `chunk_days` (migration 0004) records the day each loaded chunk
+  was last saved, and a chunk only unloads once its changes and today's date are saved.
+- Browser: `105-chunk-objects.js` adds streamed objects into the same per-chunk buckets the
+  Landing's objects use, so drawing, targeting and collisions need nothing else;
+  `objectById(id)` finds either kind.
+- Fires, lanterns and sacks are still sent to everyone (there are few of them). The
+  Stilled already only exist near players.
+- `SPAWN_TEST=1` (server env, testing only) scatters extra trees, rocks and bushes over the
+  Landing's chunks so streaming can be seen before any region has land.
+

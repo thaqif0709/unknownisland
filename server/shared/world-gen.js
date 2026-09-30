@@ -99,6 +99,7 @@
     // See docs/roadmap/CONTRACTS.md section 1.
     FEATURES: {
       chains: false,     // W8: Sleeper request chains per region (goes live with the first boss)
+      streaming: false,  // W2: send and run only the chunks of new land near players
     },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {

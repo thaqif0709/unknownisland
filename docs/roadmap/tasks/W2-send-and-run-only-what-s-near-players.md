@@ -3,7 +3,7 @@ id: W2
 title: Send and run only what's near players
 lane: world
 owner: thaqif
-status: todo
+status: done
 depends: [W1]
 flag: streaming
 size: 1–2 sessions
@@ -32,11 +32,12 @@ Scale for the 5 km world
 
 ## Done when
 
-- [ ] Two players far apart only receive their own area.
-- [ ] Leaving an area for an in-game day and coming back shows the right regrowth.
-- [ ] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
-- [ ] This file's `status` set to `done` in the PR that finishes it.
+- [x] Two players far apart only receive their own area.
+- [x] Leaving an area for an in-game day and coming back shows the right regrowth.
+- [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
+- [x] This file's `status` set to `done` in the PR that finishes it.
 
 ## Log
 
+- 2026-09-30 thaqif: done, behind flag `streaming`. Server works out each player's 7 x 7 chunks every half second and sends streamed objects (`chunk`/`unchunk`); changes go only to players with that chunk (`sendObjs`); unused chunks unload once saved. Catch-up: `regrow(o)` (moved out of `dawn`) runs when a chunk wakes after a dawn; `chunk_days` (migration 0004) stops a chunk regrowing twice on the same day. Browser: `105-chunk-objects.js`, objects found with `objectById`. Not streamed yet (few of them, fine for now): fires, lanterns, sacks. The minimap doesn't show streamed objects (added to W7). Tests: 13 server checks with two players 294 m apart, 3 in the browser (with `SPAWN_TEST=1`), and all 187 existing checks with the flag off.
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->

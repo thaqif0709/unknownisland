@@ -95,21 +95,21 @@
         break;
       }
       case 'objs':
-        for (const [id, s] of m.list) { const o = objects[id]; if (o) { o.state = s; applyState(o); } }
+        for (const [id, s] of m.list) { const o = objectById(id); if (o) { o.state = s; applyState(o); } }
         break;
       case 'fire': if (!fires.has(m.fire.id)) addFire(m.fire); break;
       case 'fires': for (const [id, fuel, left] of m.list) { const f = fires.get(id); if (!f) continue; f.fuel = fuel;
         if (left == null && f.pot) setPot(f, null); else if (left != null && f.pot) f.pot.left = left; } break;
       case 'pot': { const f = fires.get(m.id); if (f) setPot(f, m.pot); break; }
       case 'fx': {
-        if (m.o != null && objects[m.o] && objects[m.o].mesh) {
-          const o = objects[m.o];
+        if (m.o != null && objectById(m.o) && objectById(m.o).mesh) {
+          const o = objectById(m.o);
           o.mesh.rotation.z = .06;
           if (['tree', 'palm', 'rock', 'ore'].includes(o.type)) spawnChips(o);
         }
         if (me && m.id !== me.id) {
           const r = remotes.get(m.id);
-          if (r) { r.av.swingT = .35; if (m.o != null && objects[m.o]) setSwingTool(r.av, swingToolFor(objects[m.o])); }
+          if (r) { r.av.swingT = .35; if (m.o != null && objectById(m.o)) setSwingTool(r.av, swingToolFor(objectById(m.o))); }
         }
         if (m.k === 'bell') Sound.bell(m.x, m.z);
         break;

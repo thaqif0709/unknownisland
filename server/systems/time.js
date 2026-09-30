@@ -37,25 +37,7 @@ const methods = {
 
   dawn() {
     const changed = [];
-    for (const o of this.eachObject()) {
-      const was = JSON.stringify(o.state);
-      let s = o.state;
-      // Felled trees and palms come back as saplings. They sprouted on the
-      // morning they were due, which matters after a long catch-up.
-      if ((o.type === 'tree' || o.type === 'palm') && s.gone && this.day - s.felledDay >= RULES.TREE_REGROW_DAYS) {
-        s = o.state = { ...WG.defaultState(o.type), planted: s.felledDay + RULES.TREE_REGROW_DAYS };
-        if (o.type === 'palm') s.coconuts = 0;
-      }
-      if (o.type === 'rock' && s.gone && this.day - s.goneDay >= RULES.ROCK_REGROW_DAYS) s = o.state = WG.defaultState(o.type);
-      if (o.type === 'bush' && s.gone && this.day - s.goneDay >= RULES.TREE_REGROW_DAYS) s = o.state = WG.defaultState(o.type);
-      if (o.type === 'ore' && s.gone && this.day - s.goneDay >= RULES.ORE_REGROW_DAYS) s = o.state = WG.defaultState(o.type);
-      if (o.type === 'dig' && s.dug) s = o.state = WG.defaultState(o.type);
-      const g = WG.growth(o.type, s, this.day, 0.25);
-      if (o.type === 'palm' && !s.gone && g >= 1) s.coconuts = RULES.COCONUTS;
-      if (o.type === 'bush' && g >= RULES.FRUIT_AT) s.berries = true;
-      if (s.planted != null && g >= 1) delete s.planted;
-      if (JSON.stringify(o.state) !== was) { changed.push(o); this.dirty.add(o.id); }
-    }
+    for (const o of this.eachObject()) if (this.regrow(o)) changed.push(o);
     return changed;
   },
 

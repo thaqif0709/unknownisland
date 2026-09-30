@@ -335,7 +335,9 @@ Default content is in `server/content/<topic>.js`.
   `eachObject()`, `loadChunk`, `unloadChunk`). The Landing's objects (ids 0..N) are always
   loaded; new land comes in 32 m chunks from `WG.generateChunk` and each region's `spawn`
   table, with ids from 10,000,000 up. `world_objects` rows carry their `chunk` (migration
-  0003). Nothing loads chunks automatically yet (W2). CONTRACTS.md section 16.
+  0003). With the `streaming` flag on, `systems/streaming.js` loads the chunks around each
+  player, sends them (`chunk`/`unchunk`), and unloads unused ones once saved; object changes
+  go out through `sendObjs`. CONTRACTS.md section 16.
 - **Placeholders for later work:** `WG.REGIONS`, `WG.regionAt`, `WG.climbAt`,
   `isRegionOpen/openRegion`, `summonBoss`, `respawnPoint` (`systems/regions.js`), and one file
   per region in `server/regions/<id>.js` for region packs to fill in.
@@ -384,7 +386,8 @@ messages are kept in memory and sent in `welcome.chat`; nothing is saved).
 
 Server → client: `welcome` (you, island, objects, fires, players, rules), `snap`
 (time, day, `[id,x,z,face,moving,dead]` per player), `me` (own stats ≈4 Hz),
-`join`, `leave`, `objs` (object state changes), `fire` (new fire), `fires`
+`join`, `leave`, `objs` (object state changes), `chunk {key, objects}` / `unchunk {key}`
+(streamed land, flag `streaming`), `fire` (new fire), `fires`
 (fuel sync ≈1 Hz), `fx` (swing animation), `toast`, `dawn`, `died`,
 `respawned`, `correct`, `kicked`, `auth-failed`, plus `knocked`, `drop`/`undrop`/
 `movedrop`, `unfire`, `lanterns`, `wash`/`unwash`, `bugs`, `journal`,

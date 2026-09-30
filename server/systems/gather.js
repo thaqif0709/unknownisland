@@ -41,7 +41,7 @@ const methods = {
     if (!u) return;
     const size = WG.sizeOf(o, o.state, this.day, this.time);
     if (Math.hypot(o.x - p.x, o.z - p.z) - o.r * Math.max(size, 1) > (u.reach ?? RULES.REACH) + REACH_SLACK) return;
-    const changed = () => { this.dirty.add(o.id); this.broadcast({ t: 'objs', list: [[o.id, o.state]] }); this.sendMe(p); };
+    const changed = () => { this.dirty.add(o.id); this.sendObjs([o]); this.sendMe(p); };
     return u.use.call(this, p, o, { say, changed });
   },
 };

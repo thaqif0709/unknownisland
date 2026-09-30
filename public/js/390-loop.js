@@ -223,7 +223,7 @@
         r.tag.style.transform = `translate(${(tagV.x * .5 + .5) * innerWidth}px,${(-tagV.y * .5 + .5) * innerHeight}px) translate(-50%,-100%)`;
       }
     });
-    if ((growTimer -= dt) <= 0) { growTimer = 1; objects.forEach(o => { if (o.mesh) resize1(o); }); }
+    if ((growTimer -= dt) <= 0) { growTimer = 1; objects.forEach(o => { if (o.mesh) resize1(o); }); chunkObjs.forEach(o => { if (o.mesh) resize1(o); }); }
     nearbyObjects(px, pz, o => { if (o.mesh && o.mesh.rotation.z > 0) o.mesh.rotation.z = Math.max(0, o.mesh.rotation.z - dt * .4); });
 
     // HUD
