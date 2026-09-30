@@ -54,6 +54,8 @@ code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--chip);bo
 .log li{margin:4px 0}
 /* Parts about features that are switched off (RULES.FEATURES) stay hidden until they go live. */
 [data-feature]:not(.live){display:none}
+/* ...and what those features replace disappears once they do. */
+[data-feature-off].gone-live{display:none}
 details.spoiler{border:2px dashed var(--line);border-radius:12px;margin:8px 0;padding:0 12px}
 details.spoiler[open]{border-style:solid;padding-bottom:8px}
 details.spoiler summary{cursor:pointer;padding:8px 0;list-style:none;font-weight:500}
@@ -123,7 +125,10 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td><kbd>M</kbd></td><td>Map (the minimap in the corner opens it too)</td></tr>
         <tr><td><kbd>Enter</kbd> or <kbd>/</kbd></td><td>Chat</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>Settings / close a panel</td></tr>
-        <tr><td>Mouse drag, scroll</td><td>Look around, zoom. Drag down past the lowest angle to look up at the sky</td></tr>
+        <tr data-feature-off="mouselook"><td>Mouse drag, scroll</td><td>Look around, zoom. Drag down past the lowest angle to look up at the sky</td></tr>
+        <tr data-feature="mouselook"><td>Click the island, then move the mouse</td><td>Look around. The mouse stays with the game until you press <kbd>Esc</kbd> (which also opens Settings); any panel or the chat frees it too. Move it up to look up at the sky</td></tr>
+        <tr data-feature="mouselook"><td>Mouse wheel</td><td>Next / previous item slot</td></tr>
+        <tr data-feature="mouselook"><td><kbd>Ctrl</kbd> + wheel, or pinch</td><td>Zoom in and out</td></tr>
       </table></div>
       <p><b>On a phone:</b> drag the left side to walk, the right side to look, and use the buttons (Act, Run, Jump &ndash; hold it to charge &ndash;, Drop, Hood, Chat, Journal, Recipes). Tap a slot to hold it.</p>
     </section>
@@ -134,6 +139,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li><b>Top right:</b> who's on the island (in their map colours) and the minimap.</li>
         <li><b>Bottom left:</b> your eight item slots and your tools.</li>
         <li><b>Bottom middle:</b> what <kbd>E</kbd> will do right now.</li>
+        <li data-feature="mouselook"><b>The crosshair</b> (with a mouse) floats just in front of you, and rings whatever <kbd>E</kbd> would use.</li>
         <li><b>Red glow at the screen edges:</b> your health is below half (stronger as it drops, pulsing below a quarter), or you just got hurt.</li>
         <li>Dropped sacks glow white on the ground so they're easy to spot.</li>
       </ul>
@@ -218,6 +224,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td>Clay</td><td>Soft dirt patches, with a shovel (<span data-r="DIG_CLAY"></span> each). Sometimes seeds too.</td><td>Every sunrise</td></tr>
         <tr><td>Seeds</td><td>From coconuts, berries, digging and crates on the beach. Used for lamp oil.</td><td>&ndash;</td></tr>
       </table>
+      <p>You swing an axe sideways into trees and bare palms, and bring a pickaxe down onto rocks and ore. The tool shows in your hand while you swing even before you've made one, but you only get the bigger yield once you have it.</p>
       <p>Every tree, palm and bush has its own full-grown size, and felled ones regrow as saplings (trees in <span data-r="FLORA.tree.growDays"></span> days, palms <span data-r="FLORA.palm.growDays"></span>, bushes <span data-r="FLORA.bush.growDays"></span>). Palms only fruit when fully grown.</p>
     </section>
 
@@ -391,6 +398,8 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <p class="muted">Newest first.</p>
       <ul class="log">
         <li data-feature="caves"><b>Caves:</b> a sea cave on the Landing, torches to carry, and the Dark.</li>
+        <li data-feature="mouselook"><b>Mouse-look:</b> click the island and the mouse turns the camera, with a crosshair on what you can use. The wheel picks your item; Ctrl + wheel zooms.</li>
+        <li><b>Chopping and mining look different:</b> an axe sweeps sideways into trees, and a pickaxe comes down onto rocks and ore.</li>
         <li data-feature="farview"><b>Far view:</b> you can see mountains two kilometres away now.</li>
         <li><b>The map</b> can be dragged and zoomed, with buttons to centre on yourself or see it all.</li>
         <li data-feature="bigworld"><b>Charting:</b> the map fills in where anyone has walked.</li>
@@ -463,6 +472,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     $('tideList').innerHTML = d.tide.map(t => `<div>${esc(t.label)} <span class="muted">(${esc(t.kind)}${t.minDay > 1 ? `, from day ${t.minDay}` : ''})</span></div>`).join('');
     if (d.requests) $('reqCount').textContent = d.requests;
     document.querySelectorAll('[data-feature]').forEach(el => el.classList.toggle('live', !!(d.features || {})[el.dataset.feature]));
+    document.querySelectorAll('[data-feature-off]').forEach(el => el.classList.toggle('gone-live', !!(d.features || {})[el.dataset.featureOff]));
     if (d.chains && d.chains.landing) $('chainLen').textContent = d.chains.landing;
     $('liveNote').textContent = `(Live numbers; the island is on day ${d.day}.)`;
   }).catch(() => { $('liveNote').textContent = '(The island is asleep; the journal list will show once it wakes.)'; });

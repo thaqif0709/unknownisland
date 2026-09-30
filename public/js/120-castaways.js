@@ -82,12 +82,14 @@
         g.userData.flame = fl;
         break; }
       case 'oil': add(new THREE.SphereGeometry(.07, 10, 8), softShared(0xE0A33A), 0, 0, 0); add(new THREE.CylinderGeometry(.025, .03, .07, 8), logM, 0, .09, 0); break;
-      // Swung tools: a handle hanging from the fist with the head at the tip, so the
-      // existing overhead swing motion reads as a real chop or pickaxe strike.
+      // Swung tools: a handle hanging from the fist with the head at the tip. The axe
+      // blade's edge faces -x, the way the sideways chop sweeps (the right arm sits at +x);
+      // the pick's two points lie along z, the plane the overhead strike comes down in.
       case 'axe': add(new THREE.CylinderGeometry(.022, .026, .42, 6), logM, 0, -.24, 0);
-        add(new THREE.BoxGeometry(.05, .17, .11), softShared(0x8C6B4A), .02, -.44, 0).rotation.z = .3; break;
+        add(new THREE.BoxGeometry(.14, .15, .04), softShared(0x8C6B4A), -.06, -.42, 0); break;
       case 'pickaxe': add(new THREE.CylinderGeometry(.02, .024, .42, 6), logM, 0, -.24, 0);
-        { const bar = add(new THREE.CylinderGeometry(.017, .017, .36, 5), rockM[1], 0, -.45, 0); bar.rotation.z = Math.PI / 2; } break;
+        add(new THREE.ConeGeometry(.022, .2, 5), rockM[1], 0, -.45, .1).rotation.x = Math.PI / 2;
+        add(new THREE.ConeGeometry(.022, .2, 5), rockM[1], 0, -.45, -.1).rotation.x = -Math.PI / 2; break;
       default: add(new THREE.BoxGeometry(.12, .12, .12), sackM, 0, 0, 0);
     }
     shadows(g);
@@ -112,6 +114,15 @@
       av.armR.add(av.swingTool);
     }
     if (av.held) av.held.visible = !key;
+  }
+  // Start a swing. 'mine' raises a pickaxe overhead and brings it straight down;
+  // 'chop' holds an axe out level and sweeps it sideways; anything else is the
+  // plain bare-handed reach used for fires, lanterns and digging.
+  function startSwing(av, kind, t = .35) {
+    if (!av) return;
+    av.swingT = t; av.swingKind = kind || null;
+    av.armR.rotation.y = 0; if (av.body) av.body.rotation.y = 0;   // a swing cut short by the next starts square
+    setSwingTool(av, kind === 'chop' ? 'axe' : kind === 'mine' ? 'pickaxe' : null);
   }
 
   // A frog castaway in a simple hooded cloak: part wizard, part wanderer.
@@ -187,6 +198,7 @@
 
     const av = { root, body, head, legL, legR, armL, armR, walk: 0, swingT: 0, hoodUp, hoodDown, sit: 0 };
     av.armL.rotation.z = -.18; av.armR.rotation.z = .18;
+    av.armR.rotation.order = 'YXZ';   // yaw applies after the pitch, so a chop can sweep sideways (same pose as before while y is 0)
     shadows(root);
     scene.add(root);
     return av;
@@ -219,8 +231,28 @@
     av.legL.rotation.x = s; av.legR.rotation.x = -s;
     av.armL.rotation.x = -s * .9;
     if (av.swingT > 0) {
-      av.swingT -= dt; const k = av.swingT / .35; av.armR.rotation.x = -2.4 * Math.sin(k * Math.PI);
-      if (av.swingT <= 0 && av.swingTool) setSwingTool(av, null);   // put the tool away once the swing ends
+      av.swingT -= dt;
+      const k = Math.max(0, av.swingT) / .35, p = 1 - k, ease = x => x * x * (3 - 2 * x);
+      if (av.swingKind === 'mine') {
+        // raise the pickaxe up over the head, then bring it straight down onto the stone
+        av.armR.rotation.x = p < .45 ? -2.9 * ease(p / .45)
+          : p < .62 ? -2.9 + 2.5 * ((p - .45) / .17) ** 2
+          : -.4 * (1 - ease((p - .62) / .38));
+      } else if (av.swingKind === 'chop') {
+        // arm out level in front, drawn back to the side, then swept across into the trunk
+        const side = Math.sign(av.armR.position.x) || 1;
+        const lift = p < .2 ? ease(p / .2) : p > .8 ? 1 - ease((p - .8) / .2) : 1;
+        const yaw = p < .4 ? 1.2 * ease(p / .4)
+          : p < .62 ? 1.2 - 2.2 * ((p - .4) / .22) ** 2
+          : -(1 - ease((p - .62) / .38));
+        av.armR.rotation.x = -1.45 * lift;
+        av.armR.rotation.y = side * yaw;
+        av.body.rotation.y = side * yaw * .25;   // the shoulders turn into it a little
+      } else av.armR.rotation.x = -2.4 * Math.sin(k * Math.PI);
+      if (av.swingT <= 0) {   // swing over: square up and put the tool away
+        av.armR.rotation.y = 0; av.body.rotation.y = 0; av.swingKind = null;
+        if (av.swingTool) setSwingTool(av, null);
+      }
     }
     else av.armR.rotation.x = av.held ? -.6 + s * .25 : s * .9;   // holding something: arm forward
     // bouncy walk, gentle breathing when idle

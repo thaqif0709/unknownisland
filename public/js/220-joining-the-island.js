@@ -109,7 +109,7 @@
         }
         if (me && m.id !== me.id) {
           const r = remotes.get(m.id);
-          if (r) { r.av.swingT = .35; if (m.o != null && objectById(m.o)) setSwingTool(r.av, swingToolFor(objectById(m.o))); }
+          if (r) startSwing(r.av, m.o != null && objectById(m.o) ? swingKindFor(objectById(m.o)) : null);
         }
         if (m.k === 'bell') Sound.bell(m.x, m.z);
         break;

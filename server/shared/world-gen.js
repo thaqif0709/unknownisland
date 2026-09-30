@@ -106,6 +106,7 @@
       bigworld: false,   // W4: the 5 km world around the Landing (needs streaming on too)
       farview: false,    // W3: see out to about 2 km (1 km on phones)
       caves: false,      // W9: caves you walk into (the Landing's sea cave), torches and the Dark
+      mouselook: false,  // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
     },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {

@@ -180,6 +180,21 @@ UI.panels.open(name) / close(name) / isOpen()
 Any open panel frees the pointer and shows the cursor; closing the last one locks again.
 New panels (inventory, minigames, carvings) register here and get this for free.
 
+As built (P1, flag `mouselook`, `305-mouse-look.js`): `close()` with no name closes whatever
+is open (one panel is open at a time); `close(name)` only if that one is open; `isOpen(name)`
+asks about one, `isOpen()` about any (chat and the intro count as open too). `onClose` runs
+whenever a panel closes, however it was closed. Only desktop mice lock (`(any-pointer: fine)`);
+phones are unchanged. The browser may refuse to lock again without a click (always right
+after Esc); then a "Click to continue" pill shows. With the flag on, the wheel cycles the
+hotbar and Ctrl + wheel zooms.
+
+Crosshair: it snaps onto `target` (what E would use). For things you can hit (P6), push a
+function that says whether one is aimed at right now; the crosshair turns red while any does:
+
+```js
+UI.crosshair.hittable.push(() => aimedMob != null);
+```
+
 ## 8. Mobs: the enemy framework (P5)
 
 One framework for the Stilled kinds, the Crawler and bosses.

@@ -42,7 +42,8 @@ a 40 m tunnel that dips to 2.6 m below the sea, a chamber and a side passage, pl
 search script so there's at least a metre of ground over the roof (5.5 m at the thinnest).
 Two tides a day; the way in is open for a few minutes around low tide, and the rising water
 drags you out. The Dark, torches (wood 2 + seeds 1, about 5 min each), no fog, cold, fires or
-Stilled underground, muffled chat, saved at the mouth. Server test: 26 checks. Browser test:
+Stilled underground, muffled chat, saved at the mouth. In the repo: `tests/server/caves.test.js`
+(3 tests; `npm test` 38/38, with and without Postgres) and a `time` test command. Scratch server test: 26 checks. Browser test:
 two players walk in together at low tide, each sees both torches, it's dark, and the tide
 pushes them out about a minute later; no page errors; flag off leaves everything as it was.
 Suite: 247 server checks pass. Not done here: the Stairs' and other regions' caves (region
