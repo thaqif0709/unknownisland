@@ -3,7 +3,7 @@
   const ACTIONS = [
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
-    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'], ['jump', 'Jump (hold to leap higher and forward)', 'Space'], ['cycle', 'Next item slot (Shift: back)', 'KeyQ'], ['sit', 'Sit down / get up', 'KeyV'],
+    ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'], ['jump', 'Jump (hold to leap higher and forward)', 'Space'], ['cycle', 'Next item slot (Shift: back)', 'KeyQ'], ['sit', 'Sit down / get up', 'KeyV'], ['call', 'Call out to friends', 'KeyC'],
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -75,6 +75,7 @@
     if (e.code === prefs.binds.journal) togglePanel('journal');
     if (e.code === prefs.binds.hood) toggleHood();
     if (e.code === prefs.binds.sit) setSitting(!sitting);
+    if (e.code === prefs.binds.call) callOut();
     if (/^Digit[1-8]$/.test(e.code) || /^Numpad[1-8]$/.test(e.code)) selectSlot(+e.code.slice(-1) - 1);
     if (e.code === prefs.binds.drop) dropHeld(e.shiftKey);
     if (e.code === prefs.binds.cycle) cycleSlot(e.shiftKey ? -1 : 1);

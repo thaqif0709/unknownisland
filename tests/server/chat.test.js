@@ -49,3 +49,18 @@ test('newcomers see the recent messages', async () => {
   const b = await server.join('new');
   assert.ok(b.welcome.chat.some(m => m.text === 'remember me'));
 });
+
+test('calling out: everyone is told where from, and only one call every few seconds', async () => {
+  const { WG } = require('../helpers/world');
+  const a = await server.join('caller'), b = await server.join('hearer');
+  await a.test('place', { x: WG.SPAWN.x + 5, z: WG.SPAWN.z - 10 });
+  const heard = b.next(m => m.t === 'call');
+  a.send({ t: 'call' });
+  const c = await heard;
+  assert.equal(c.id, a.id); assert.equal(c.name, a.name);
+  assert.ok(Math.abs(c.x - (WG.SPAWN.x + 5)) < .2 && Math.abs(c.z - (WG.SPAWN.z - 10)) < .2, 'from where they stand');
+  // again straight away: nothing
+  a.send({ t: 'call' });
+  await new Promise(r => setTimeout(r, 600));
+  assert.equal(b.messages.filter(m => m.t === 'call' && m.id === a.id).length, 1, `at most one call every ${WG.RULES.CALL.GAP} s`);
+});

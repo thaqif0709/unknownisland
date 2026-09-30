@@ -5,13 +5,14 @@
   // since the start screen comes before the welcome). Put the newest notes here when you
   // switch something on for players; the full history is the Hidden Pages changelog.
   const NEWS = {
-    id: '2026-09-30',
+    id: '2026-09-30b',
     when: '30 Sept',
     lines: [
       { flag: 'bigworld', html: '<b>The island is much bigger.</b> Where you arrive is only the Landing: cross the sandy neck on its north shore. Some new lands are open; the rest wait behind a wall of fog, the Veil.' },
       { flag: 'bigworld', html: '<b>A first look:</b> the new lands are bare for now. Their creatures and stories come later.' },
       { flag: 'farview', html: '<b>You can see for kilometres</b>, out to the mountains.' },
       { flag: 'bigworld', html: '<b>The map</b> (M) fills in wherever anyone walks. Drag it and zoom it.' },
+      { html: '<b>Call out</b> (C, or Call on a phone): friends hear you from your direction and see where on the map.' },
       { flag: 'caves', html: '<b>Caves.</b> There’s one somewhere on the Landing, open only at low tide. It’s dark in there: make a <b>torch</b> (wood and seeds).' },
       { flag: 'checkpoints', html: '<b>Camp out:</b> sit (V) by a lit clay hearth to sleep there. You wake beside it after a knockdown.' },
       { html: '<b>A day is 20 minutes:</b> 15 of daylight and 5 of night.' },

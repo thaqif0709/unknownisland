@@ -68,6 +68,7 @@
       CAVE_DARK: 2.2,    // the Dark: deep in a cave with no light (yours or a friend's)
     },
     TORCH: { BURN: 300 },  // seconds a torch burns in your hand underground
+    CALL: { GAP: 8, HEAR: 160, SHOW: 60 },  // calling out (P11): seconds between calls, metres it carries, seconds on the map
     KNOCK: { HEALTH: 20, DREAD: 25, DROP: .5, DOWN_MS: 3000 },
     // Old stone lanterns. Oil keeps them lit; lit, they clear the fog around them.
     LANTERN: {

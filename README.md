@@ -62,6 +62,8 @@ Environment*). Existing players aren't affected.
   campfire, **Esc** for settings.
   With mouse-look switched on (the `mouselook` flag), click the island and the mouse turns the
   camera (**Esc** frees it), the wheel picks your item, and **Ctrl + wheel** zooms.
+- **Calling out:** press **C** (phones: **Call**) and friends nearby hear you from your
+  direction; everyone sees where you called from on the map for a minute.
 - **Chat:** press **Enter** (or **/**) to type, Enter to send, Esc to close. Plain
   text goes to everyone. `/w name message` whispers to one person (their number
   from `/who` works too), `/r message` replies to your last whisper, `/who` lists

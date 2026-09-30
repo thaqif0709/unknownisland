@@ -383,6 +383,10 @@ to a flag, read from `/api/hiddenpages` since it shows before the welcome; a new
 again for everyone). With the `checkpoints` flag (P4), sitting by a lit clay hearth for 3 s saves it as where you
 wake (`server/systems/checkpoints.js`, `respawnPoint`; browser `145-hearth-checkpoints.js`:
 the sleep pose, the pennant, the map flag). Details: CONTRACTS.md section 11.
+Calling out (P11, no flag): `call` message, rate-limited in `server/systems/chat.js`
+(`RULES.CALL`), broadcast as `{ t: 'call', id, name, x, z, under }`; `285-calling-out.js`
+plays a panned, distance-faded call (muffled through a cave), a bubble, a compass note for
+far players, and a fading ring on the map (a `UI.mapLayers` entry).
 On joining, `island.safeSpot(x, z)` (players.js) puts anyone whose saved
 spot is sea, behind the Veil or a cave mouth back on the beach, so flags can be switched off.
 With the `mouselook` flag (P1), `305-mouse-look.js` locks the pointer on a click on the island

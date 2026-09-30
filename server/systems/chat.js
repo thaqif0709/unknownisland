@@ -50,6 +50,15 @@ const methods = {
     const muffled = JSON.stringify({ ...msg, text: this.muffle(clean), muffled: true }), clear = JSON.stringify(msg);
     for (const q of this.players.values()) this.sendRaw(q, q.under === p.under ? clear : muffled);
   },
+  // Calling out (P11): everyone is told where you called from (nearby players hear it, from
+  // your direction, and it shows on everyone's map for a minute). At most one every
+  // RULES.CALL.GAP seconds.
+  onCall(p) {
+    const now = Date.now();
+    if (p.dead || now - (p.lastCallAt || 0) < WG.RULES.CALL.GAP * 1000) return;
+    p.lastCallAt = now;
+    this.broadcast({ t: 'call', id: p.id, name: p.name, x: Math.round(p.x * 10) / 10, z: Math.round(p.z * 10) / 10, under: p.under || 0 });
+  },
   // A name (any case) or a number (with or without #).
   findPlayer(who) {
     const w = String(who).replace(/^#/, '').toLowerCase();
@@ -69,6 +78,7 @@ const methods = {
 // Messages from the client this system answers (msg.t -> handler; `this` is the Island).
 const messages = {
   chat(p, msg) { return this.onChat(p, msg); },
+  call(p) { return this.onCall(p); },
 };
 
 module.exports = { methods, messages };
