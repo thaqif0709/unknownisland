@@ -294,6 +294,28 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
 .err{color:var(--rose);font-size:16px;min-height:1.3em;margin:0}
 .view{display:none}
 .view.on{display:block}
+/* mouse-look (flag mouselook): the crosshair, "Click to continue", and an inked cursor */
+.xhair{position:fixed;left:0;top:0;width:40px;height:40px;margin:-20px 0 0 -20px;pointer-events:none;z-index:4}
+.xhair svg{width:100%;height:100%;overflow:visible;display:block}
+.xhair .tk,.xhair .ring{fill:none;stroke-linecap:round}
+.xhair .tk-bg,.xhair .ring-bg{stroke:var(--ink);stroke-width:4.4}
+.xhair .tk,.xhair .ring{stroke:#F5ECD7;stroke-width:2}
+.xhair .dot{fill:#F5ECD7;stroke:var(--ink);stroke-width:1.6}
+.xhair .ring,.xhair .ring-bg{opacity:0;transform:scale(.55);transition:opacity .15s,transform .15s}
+.xhair .tk,.xhair .tk-bg{transition:opacity .15s}
+.xhair.use .ring,.xhair.use .ring-bg,.xhair.hit .ring,.xhair.hit .ring-bg{opacity:1;transform:none}
+.xhair.use .tk,.xhair.use .tk-bg{opacity:0}
+.xhair.hit .ring,.xhair.hit .tk{stroke:var(--rose)}
+.xhair.hit .dot{fill:var(--rose)}
+.lockpill{position:fixed;left:50%;top:58%;transform:translate(-50%,-50%);z-index:5;font-family:var(--hand);font-weight:600;font-size:18px;
+  color:var(--ink);background:rgba(245,236,215,.94);border:2px solid var(--ink);border-radius:18px;padding:6px 18px;box-shadow:3px 3px 0 var(--ink);cursor:pointer}
+html.inkcursor,html.inkcursor *{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M3 2L3 19L7.8 14.6L11.2 21.6L14.4 20.1L11 13.2L17.6 13.2Z' fill='%23F5ECD7' stroke='%232B211F' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") 3 2,auto!important}
+html.inkcursor :is(button,a,select,summary,label.check,input[type=checkbox],input[type=range],.slot,.minimap,.lockpill,[data-close]),
+html.inkcursor :is(button,a,.slot,.minimap,[data-close]) *{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M3 2L3 19L7.8 14.6L11.2 21.6L14.4 20.1L11 13.2L17.6 13.2Z' fill='%23C4574F' stroke='%232B211F' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E") 3 2,pointer!important}
+html.inkcursor :is(input:not([type=checkbox]):not([type=range]),textarea){cursor:text!important}
+html.inkcursor button:disabled{cursor:not-allowed!important}
+html.inkcursor #mapCanvas{cursor:grab!important}
+html.inkcursor #mapCanvas.dragging{cursor:grabbing!important}
 </style>
 </head>
 <body>
@@ -325,6 +347,10 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
   <div class="chat-log" id="chatLog" aria-live="polite"></div>
   <form id="chatForm" hidden autocomplete="off"><input id="chatInput" maxlength="240" enterkeyhint="send" placeholder="Say something, or /help" aria-label="Chat message"></form>
 </div>
+<div class="xhair hidden" id="xhair" aria-hidden="true"><svg viewBox="-20 -20 40 40">
+  <path class="tk tk-bg" d="M0 -15V-10M0 10V15M-15 0H-10M10 0H15"/><path class="tk" d="M0 -15V-10M0 10V15M-15 0H-10M10 0H15"/>
+  <circle class="ring ring-bg" r="9"/><circle class="ring" r="9"/><circle class="dot" r="2"/></svg></div>
+<button class="lockpill hidden" id="lockPill" type="button">Click to look around</button>
 <div class="prompt hidden" id="prompt"></div>
 <div class="toast" id="toast"></div>
 <div class="banner hidden" id="banner">Reconnecting&hellip;</div>
@@ -416,6 +442,7 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
     <h3>Camera</h3>
     <label class="row">Look sensitivity <input type="range" id="sens" min="0.3" max="2.5" step="0.1"></label>
     <label class="row check"><input type="checkbox" id="invertY"> Invert up and down</label>
+    <p class="note" id="mouseNote" hidden>With a mouse: click the island and the mouse turns the camera. Esc frees it again (and opens this page). The wheel picks the next or previous item; Ctrl + wheel (or a pinch on a trackpad) zooms.</p>
     <h3>Sound</h3>
     <label class="row check"><input type="checkbox" id="sounds"> Creepy sounds (footsteps and whispers when your dread is high)</label>
     <h3>Graphics</h3>

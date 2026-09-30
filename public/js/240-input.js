@@ -26,12 +26,15 @@
   const PANELS = ['book', 'settings', 'journal', 'board', 'carvingPanel', 'map'];
   const panelOpen = () => PANELS.some(k => !ui[k].classList.contains('gone')) || Cut.on || chatOpen();
   const panelHooks = {};
+  const isShown = which => !!ui[which] && !ui[which].classList.contains('gone');
   UI.panels = {
-    // A new panel: el is its element (starts with class "gone"); onOpen runs each time it opens.
-    register(name, { el, onOpen } = {}) { if (!PANELS.includes(name)) PANELS.push(name); ui[name] = el; panelHooks[name] = { onOpen }; },
+    // A new panel: el is its element (starts with class "gone"); onOpen runs each time it
+    // opens, onClose each time it closes. Any open panel frees the mouse (mouse-look).
+    register(name, { el, onOpen, onClose } = {}) { if (!PANELS.includes(name)) PANELS.push(name); ui[name] = el; panelHooks[name] = { onOpen, onClose }; },
+    open: which => { if (ui[which] && !isShown(which)) togglePanel(which); },
     toggle: which => togglePanel(which),
-    close: () => closePanels(),
-    isOpen: () => panelOpen(),
+    close: which => { if (!which || isShown(which)) closePanels(); },   // one panel is open at a time
+    isOpen: which => (which ? isShown(which) : panelOpen()),
   };
   // The map is a glance-at-while-walking overlay, not a modal: unlike the other panels
   // it doesn't freeze movement or block key handling.
@@ -52,7 +55,12 @@
     }
     if (state !== 'play' && state !== 'dead') return;
     if (Cut.on) { if (['Escape', 'Enter', 'Space'].includes(e.code)) { e.preventDefault(); endCutscene(true); } return; }
-    if (e.code === 'Escape') { e.preventDefault(); if (panelOpen()) closePanels(); else if (state === 'play') togglePanel('settings'); return; }
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      if (performance.now() - lookFreedAt < 300) return;   // this Esc freed the mouse and already opened settings
+      if (panelOpen()) closePanels(); else if (state === 'play') togglePanel('settings');
+      return;
+    }
     if (blocksInput()) {
       if ((e.code === prefs.binds.book && !ui.book.classList.contains('gone')) || (e.code === prefs.binds.journal && !ui.journal.classList.contains('gone'))) closePanels();
       return;

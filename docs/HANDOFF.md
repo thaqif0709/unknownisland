@@ -373,6 +373,18 @@ plug in with `UI.net.on`, `UI.onFrame` and `UI.panels.register` (`000-start.js`,
 With the `farview` flag, `125-far-view.js` draws a coarse ring of land out to 2 km (1 km on
 phones) around the detailed chunks, with its own shader hole where the chunks are, and pushes
 the camera range and haze out to match; the ink pass takes fog beyond its fog map from height.
+With the `mouselook` flag (P1), `305-mouse-look.js` locks the pointer on a click on the island
+(desktop mice only, `(any-pointer: fine)`) and turns `yaw`/`pitch` from `movementX/Y` with the
+same sensitivity and invert settings as dragging. A frame hook frees the pointer whenever
+`state !== 'play'` or `panelOpen()` (panels, chat, the intro), and after the last panel closes
+tries to lock again; browsers refuse that without a click (always right after Esc), so a
+"Click to continue" pill (`#lockPill`) shows instead. Esc while locked never reaches the page:
+`pointerlockchange` sees an unlock we didn't ask for (`freeingByUs`) and opens settings, and
+`lookFreedAt` keeps a late Esc keydown from closing it again. The ink crosshair (`#xhair`) is
+projected each frame onto `target` (what E would use), or 2.2 m in front of you, with
+`UI.crosshair.hittable` for P6. `html.inkcursor` swaps every cursor for an inked one. The wheel
+cycles the hotbar (`wheelSlot`, 40 units per step) and Ctrl + wheel zooms. Tests:
+`tests/browser/mouselook.test.js` (runs its server with `FEATURES=mouselook`).
 
 ## Feature flags and migrations
 - **Flags:** `RULES.FEATURES` in `world-gen.js`, read with `WG.feature(name)` on both sides.
