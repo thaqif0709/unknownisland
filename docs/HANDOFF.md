@@ -14,7 +14,7 @@ three-tone cel shading, muted earthy palette on cream paper, curly swirl clouds.
 
 Rendering: toon materials with a 3-step gradient; the scene is drawn once for
 colour+depth and once with MeshNormalMaterial, then a full-screen pass inks
-depth jumps and normal creases (`inkMat` in public/game.js). The sea is drawn
+depth jumps and normal creases (`inkMat` in public/js/020-ink-pass.js). The sea is drawn
 into the normal buffer in pure red so the shoreline gets a line. Tiny
 decorations (flowers, tufts) have depthWrite off and are hidden from the normal
 pass so they stay as uninked dabs; swirl clouds are canvas sprites with their
@@ -339,6 +339,13 @@ Default content is in `server/content/<topic>.js`.
 - **Placeholders for later work:** `WG.REGIONS`, `WG.regionAt`, `WG.climbAt`,
   `isRegionOpen/openRegion`, `summonBoss`, `respawnPoint` (`systems/regions.js`), and one file
   per region in `server/regions/<id>.js` for region packs to fill in.
+
+## Client layout
+The browser code is `public/js/NNN-name.js`, one file per part, joined in number order into
+`/game.js` by `server/client-bundle.js` (with `/game.js.map`, so errors point at the right
+file). They share one scope as if they were one file. New parts are new numbered files and
+plug in with `UI.net.on`, `UI.onFrame` and `UI.panels.register` (`000-start.js`,
+`240-input.js`). Details: `docs/roadmap/CONTRACTS.md` section 3.
 
 ## Feature flags and migrations
 - **Flags:** `RULES.FEATURES` in `world-gen.js`, read with `WG.feature(name)` on both sides.

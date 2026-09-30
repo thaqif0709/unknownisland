@@ -53,17 +53,31 @@ Two modules may not register the same message name or define the same method nam
 Add a new module's name to `SYSTEMS` in `server/world.js`. Shared helpers (`r2`, `num`,
 `REACH_SLACK`...) are in `server/systems/util.js`.
 
-## 3. Client feature modules (F2)
+## 3. Client parts and hooks (F2, done)
 
-`public/game.js` is split into files under `public/js/` loaded in order by `index.html`,
-sharing one namespace `window.UI` (renderer, scene, camera, state, helpers). A feature
-file registers:
+The browser code is in `public/js/NNN-name.js`, one file per part (renderer, terrain,
+castaways, input, map, loop...). The server joins them in number order into the one
+`/game.js` the page loads (`server/client-bundle.js`, re-read when a file changes), with a
+source map so errors and the debugger show the real file and line.
+
+- All parts share **one scope**, exactly as when they were one file: a part can use any
+  function, and any `const`/`let` from a part numbered before it. (Function declarations
+  work from anywhere; a `const` from a later part only works inside functions that run
+  after loading.)
+- `000-start.js` opens the scope and `999-end.js` closes it. Add a new part as a new file
+  with a free number in the right place (numbers go up in tens, so there's room), e.g.
+  `255-inventory.js`. Keep parts under ~600 lines.
+- New features plug in through hooks instead of editing shared code:
 
 ```js
-UI.net.on('fish-bite', msg => {...});   // server message handlers
-UI.onFrame(dt => {...});                 // per-frame update
-UI.panels.register('inventory', {...});  // panels (see 7)
+UI.net.on('fish-bite', m => {...});   // after the core has handled each message of that type
+UI.onFrame(dt => {...});               // every frame, before drawing
+UI.panels.register('inventory', { el, onOpen });   // Esc, closing and "a panel is open" include it
+UI.panels.toggle(name) / UI.panels.close() / UI.panels.isOpen()
 ```
+
+`UI.panels.register` must run from a part numbered after `240-input.js` (or inside a
+function). `window.UI` is also handy in the browser console.
 
 ## 4. Items and inventory (F5 done as a stub → P2 real)
 

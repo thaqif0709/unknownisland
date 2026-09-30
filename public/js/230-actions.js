@@ -1,0 +1,122 @@
+  // ================= Actions =================
+  function findTarget() {
+    let bestO = null, bd = 1e9;
+    const check = o => {
+      if (o.state.gone) return;
+      const d = Math.hypot(o.x - px, o.z - pz) - radius(o);
+      if (d < RULES.REACH && d < bd) { bd = d; bestO = o; }
+    };
+    nearbyObjects(px, pz, check); fires.forEach(check); drops.forEach(check); lanterns.forEach(check); washups.forEach(check);
+    if (board) check(board);
+    carvings.forEach(check);
+    bugs.forEach(b => { const d = Math.hypot((b.cx ?? b.x) - px, (b.cz ?? b.z) - pz); if (d < 1.9 && d < bd) { bd = d; bestO = b; } });
+    if (bestO) return bestO;
+    const sn = WG.nearestSpring(px, pz);
+    if (Math.hypot(px - sn.x, pz - sn.z) < RULES.SPRING_REACH) return { type: 'spring' };
+    if (heightAt(px, pz) < .25) return { type: 'sea' };
+    return null;
+  }
+  function label(o) {
+    if (!o) return '';
+    switch (o.type) {
+      case 'spring': return 'Drink from the spring';
+      case 'sea': return 'Drink seawater';
+      case 'palm': return o.state.coconuts > 0 ? 'Pick a coconut' : o.state.planted != null ? 'Chop the young palm' : 'Chop the palm';
+      case 'tree': return o.state.planted != null ? 'Chop the young tree' : 'Chop the tree';
+      case 'bush': return o.state.berries ? 'Eat berries' : 'Bush (picked clean)';
+      case 'rock': return o.species === 'pebble' ? 'Pick up stones' : 'Gather stone';
+      case 'ore': return has('pickaxe') ? `Mine ${o.ore === 'iron' ? 'iron' : 'copper'} ore` : `${o.ore === 'iron' ? 'Iron' : 'Copper'} ore (needs a pickaxe)`;
+      case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
+      case 'drop': {
+        const list = o.items ? Object.entries(o.items).filter(([k, n]) => k !== 'buckets' && n > 0).map(([k, n]) => `${n} ${(WG.ITEMS[k] || k).toLowerCase()}`) : [];
+        if (o.items && o.items.buckets && o.items.buckets.length) list.unshift(o.items.buckets.length > 1 ? `${o.items.buckets.length} buckets` : 'a bucket');
+        return list.length ? `Pick up the sack (${list.slice(0, 3).join(', ')}${list.length > 3 ? ', ...' : ''})` : 'Pick up the sack';
+      }
+      case 'carving': return o.offer && o.tally ? `Read the ${o.key} stone (it wants ${WG.ITEMS[o.offer].toLowerCase()})` : `Read the ${o.key} stone`;
+      case 'board': return notes.length ? `Read the driftwood board (${notes.length} note${notes.length > 1 ? 's' : ''})` : 'The driftwood board (pin a note)';
+      case 'wash': return o.kind === 'strange' ? (o.key === 'door_in_sand' ? 'Try the door' : o.key === 'ringing_bell' ? 'Touch the bell' : o.key === 'footprints' ? 'Look at the footprints' : 'Pick it up') : `Pick up: ${o.label.replace(/^A /, 'a ')}`;
+      case 'bug': { const e = journal.entries.find(e => e.key === o.key); return `Catch the ${(e ? e.name : 'bug').toLowerCase()}`; }
+      case 'lantern': {
+        const oil = (stats.inv.oil || 0) > 0;
+        if (o.lit) return oil ? `Add lamp oil (burns ${Math.ceil(o.fuel / RULES.DAY_LEN * 24)} more hours)` : 'A lit stone lantern';
+        if (!oil && o.reclaim < 1) return `Gone cold. The fog is creeping back (${Math.round(o.reclaim * 100)}%)`;
+        if (!oil) return o.big ? `Great stone lantern (needs lamp oil from ${o.need} frogs)` : 'Old stone lantern (needs lamp oil)';
+        return o.big ? `Offer lamp oil (${o.have}/${o.need} frogs)` : 'Light it with lamp oil';
+      }
+      case 'fire': { const n = o.kind === 'hearth' ? 'hearth' : 'fire';
+        if (o.pot) return o.pot.left <= 0 ? 'Take the bucket of clean water' : (stats.inv.wood || 0) > 0 ? `Add wood (the bucket is boiling)` : 'Take the bucket back (not boiled yet)';
+        return (stats.inv.wood || 0) > 0 ? (o.fuel > 0 ? `Add wood to the ${n}` : 'Relight with wood') : `${n[0].toUpperCase() + n.slice(1)} (needs wood)`; }
+    }
+  }
+  const has = tool => stats.tools.includes(tool);
+  // Which tool (if any) shows in hand while swinging at this target. Chopping and
+  // mining rock work bare-handed too (a tool just yields more), so this only shows
+  // one when it's actually owned; ore requires a pickaxe, so it's always shown there.
+  function swingToolFor(o) {
+    if (!o) return null;
+    if (o.type === 'tree') return has('axe') ? 'axe' : null;
+    if (o.type === 'palm') return (o.state && o.state.coconuts > 0) ? null : (has('axe') ? 'axe' : null);
+    if (o.type === 'rock') return has('pickaxe') ? 'pickaxe' : null;
+    if (o.type === 'ore') return 'pickaxe';
+    return null;
+  }
+  function targetKey(o) {
+    if (o.type === 'spring' || o.type === 'sea') return o.type;
+    return ({ fire: 'f', drop: 'd', lantern: 'l', wash: 'w', bug: 'b' }[o.type] || 'o') + o.id;
+  }
+  // What E does with the bucket in your hand here, or null to act normally.
+  function bucketAction() {
+    const b = heldBucket();
+    if (!b) return null;
+    // with a bucket in hand, a fire in reach (and the sea you're standing in) win over trees and rocks
+    let fire = null, fd = 1e9;
+    fires.forEach(f => { const d = Math.hypot(f.x - px, f.z - pz) - f.r; if (d < RULES.REACH && d < fd) { fd = d; fire = f; } });
+    if (b.water === 'clean') return { action: 'drink', label: `Drink clean water (${b.drinks} left)` };   // a full clean bucket: E always drinks
+    if (fire && fire.pot) return { fireAct: fire, label: label(fire) };   // take it / feed it
+    if (b.water === 'none' && heightAt(px, pz) < .25) return { action: 'fill', label: `Fill the ${bucketName(b).toLowerCase()} with seawater` };
+    if (b.water === 'sea' && fire) return { action: 'place', fire: fire.id, label: `Set the bucket on the fire to boil (${RULES.BUCKET[b.mat].boil} s)` };
+    if (b.water === 'clean') return { action: 'drink', label: `Drink clean water (${b.drinks} left)` };
+    if (!target) return { hint: b.water === 'sea' ? 'Seawater: take it to a fire and press E to boil it.' : 'Wade into the sea to fill the bucket.' };
+    return null;
+  }
+  function act() {
+    const ba = state === 'play' && cooldown <= 0 && net && knockT <= 0 ? bucketAction() : null;
+    if (ba) {
+      cooldown = .45;
+      if (ba.hint) { toast(ba.hint); return; }
+      hero.swingT = .35;
+      if (ba.fireAct) { net.send({ t: 'act', target: 'f' + ba.fireAct.id }); return; }
+      net.send({ t: 'bucket', id: heldBucket().id, action: ba.action, fire: ba.fire });
+      return;
+    }
+    if (state !== 'play' || cooldown > 0 || !target || !net || knockT > 0) return;
+    cooldown = .45;
+    if (target.type === 'board') { togglePanel('board'); return; }
+    if (target.type === 'carving') { readCarving(target); return; }
+    if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig', 'lantern'].includes(target.type)) hero.swingT = .35;
+    if (['tree', 'palm', 'rock', 'ore'].includes(target.type)) setSwingTool(hero, swingToolFor(target));
+    net.send({ t: 'act', target: targetKey(target) });
+  }
+  // Build a recipe: tools are made on the spot, fires are placed in front of you.
+  function build(id) {
+    if (state !== 'play' || !net) return;
+    const r = WG.recipeById(id);
+    if (!r) return;
+    if (r.kind !== 'fire') { net.send({ t: 'build', recipe: id }); return; }   // made in your hands, not placed
+    const fx = px + Math.sin(face) * 1.6, fz = pz + Math.cos(face) * 1.6;
+    if (heightAt(fx, fz) < .35) { toast('Too wet here. Build it on dry ground.'); return; }
+    net.send({ t: 'build', recipe: id, x: fx, z: fz });
+  }
+  const canAfford = r => Object.entries(r.cost).every(([k, n]) => (stats.inv[k] || 0) >= n);
+  $('btnAct').addEventListener('click', act);
+  $('btnBook').addEventListener('click', () => togglePanel('book'));
+  $('btnJournal').addEventListener('click', () => togglePanel('journal'));
+  $('btnMap').addEventListener('click', () => togglePanel('map'));
+  $('btnSettings').addEventListener('click', () => togglePanel('settings'));
+  $('btnHood').addEventListener('click', () => toggleHood());
+  $('btnDrop').addEventListener('click', () => dropHeld(false));
+  // phones: hold the Jump button to charge
+  $('btnJump').addEventListener('pointerdown', e => { e.preventDefault(); jumpBtnHeld = true; startCharge(); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => $('btnJump').addEventListener(ev, () => { jumpBtnHeld = false; releaseJump(); }));
+  $('btnRun').addEventListener('click', () => { runToggle = !runToggle; $('btnRun').setAttribute('aria-pressed', String(runToggle)); });
+

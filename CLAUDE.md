@@ -30,3 +30,11 @@ The big expansion is planned in `docs/roadmap/`: `DESIGN.md` (decisions), `CONTR
   as soon as it merges.
 - If a design decision changes, update `DESIGN.md` in the same PR.
 - `npm run roadmap -- --check` must pass.
+
+## Where code lives
+- Server: `server/world.js` is only the core; each feature is `server/systems/<name>.js`
+  (see `docs/roadmap/CONTRACTS.md` section 2). Database changes are numbered files in
+  `server/migrations/`.
+- Browser: `public/js/NNN-name.js`, one part per file, joined in number order into `/game.js`
+  (one shared scope). Add new parts as new numbered files and plug in with `UI.net.on`,
+  `UI.onFrame` and `UI.panels.register` (section 3). There is no `public/game.js` to edit.

@@ -160,7 +160,8 @@ server/store.js           Database access (Neon), or in-memory for testing
 server/shared/world-gen.js Island shape, object placement, survival rules
                           (used by both the server and the browser)
 public/index.html         Login screens, HUD and styles
-public/game.js            Drawing the island, controls, recipe book, settings
+public/js/                The browser game, one file per part (drawing, controls, map, recipe
+                          book, settings...), joined into /game.js by server/client-bundle.js
 public/net.js             Connection to the server, smoothing other players
 db/schema.sql             Database tables (already created on Neon)
 render.yaml               Render setup

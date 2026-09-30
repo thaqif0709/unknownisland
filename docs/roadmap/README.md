@@ -25,8 +25,8 @@ Owners are proposals: change the `owner:` line in a task file if you swap.
 
 ### Why the Foundations come first
 
-Today `public/game.js` (3,600 lines) and `server/world.js` (1,200 lines) hold almost
-everything, so any two features collide there. F1 and F2 split them into one file per
+Before the Foundations, `public/game.js` (3,700 lines) and `server/world.js` (1,200 lines) held almost
+everything, so any two features collided there. F1 and F2 split them into one file per
 feature, and F5 puts every cross-lane interface in place as a stub. After that, most tasks
 only add new files or touch their own lane's files.
 

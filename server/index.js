@@ -8,6 +8,7 @@ const { WebSocketServer } = require('ws');
 const { createStore } = require('./store');
 const { createAuth } = require('./auth');
 const { Island } = require('./world');
+const { buildClient } = require('./client-bundle');
 const WG = require('./shared/world-gen');
 
 // Feature flags: RULES.FEATURES, overridden by the FEATURES env var ("slots,combat", "-slots").
@@ -76,6 +77,11 @@ function bearer(req) {
 function serveStatic(req, res) {
   let urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (urlPath === '/vendor/three.min.js') return sendFile(res, THREE_JS, 'public, max-age=86400');
+  if (urlPath === '/game.js' || urlPath === '/game.js.map') {   // joined from public/js/*.js
+    const b = buildClient(), map = urlPath.endsWith('.map');
+    res.writeHead(200, { 'Content-Type': map ? 'application/json; charset=utf-8' : TYPES['.js'], 'Cache-Control': 'no-cache' });
+    return res.end(map ? b.map : b.js);
+  }
   let base = PUBLIC;
   if (urlPath.startsWith('/shared/')) { base = SHARED; urlPath = urlPath.slice('/shared'.length); }
   if (urlPath === '/') urlPath = '/index.html';
