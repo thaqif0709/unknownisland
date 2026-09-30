@@ -13,7 +13,10 @@ const errors = [];
 before(async () => {
   server = await startServer({ env: { ADMINS: NAME } });
   browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, args: ['--no-sandbox'] });
-  page = await browser.newPage({ viewport: { width: 1100, height: 760 } });
+  // Low graphics and a modest window: the games run on the clock, and a headless page that
+  // renders the island slowly can run out of time before the clicks land
+  page = await browser.newPage({ viewport: { width: 900, height: 700 } });
+  await page.addInitScript(() => { try { localStorage.setItem('unknown-island-prefs', JSON.stringify({ quality: 'low' })); } catch (e) {} });
   page.on('pageerror', e => errors.push(`pageerror: ${e.message}`));
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(`console: ${m.text()}`); });
   await page.goto(server.base + '/?debug', { waitUntil: 'load' });
