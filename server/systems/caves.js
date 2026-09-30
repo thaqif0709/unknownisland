@@ -62,7 +62,7 @@ const methods = {
   },
   // Is there light down here for p: their own torch, a friend's close by, or a firefly jar?
   caveLit(p) {
-    const lit = q => q.hold === 'torch' && this.count(q, 'torch') > 0;
+    const lit = q => { const h = this.held(q); return !!h && h.key === 'torch' && this.count(q, 'torch') > 0; };   // (held: the hand, with or without P2's slots)
     if (lit(p) || this.has(p, 'firefly_jar')) return true;
     for (const q of this.players.values()) {
       if (q !== p && !q.dead && q.under === p.under && lit(q) && Math.hypot(q.x - p.x, q.z - p.z) < RULES.DREAD.FRIEND_RADIUS) return true;
@@ -96,7 +96,8 @@ function onTick(dt) {
       continue;
     }
     // a torch in your hand burns down while you're underground
-    if (p.hold === 'torch' && this.count(p, 'torch') > 0 && (p.torchT = (p.torchT || 0) + dt) >= RULES.TORCH.BURN) {
+    const h = this.held(p);
+    if (h && h.key === 'torch' && this.count(p, 'torch') > 0 && (p.torchT = (p.torchT || 0) + dt) >= RULES.TORCH.BURN) {
       p.torchT = 0;
       this.take(p, 'torch', 1);
       this.send(p, { t: 'toast', msg: this.count(p, 'torch') > 0 ? 'Your torch burns out. You light another.' : 'Your torch burns out. It is very dark.' });

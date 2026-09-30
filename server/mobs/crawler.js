@@ -78,7 +78,7 @@ function goTo(mob, cave, island, x, z) {
 
 // ---- what it notices ----
 const inCave = (p, cave) => p.under === cave.id && !(p.knockedUntil > Date.now());
-const torchLit = (island, p) => p.hold === 'torch' && island.count(p, 'torch') > 0;
+const torchLit = (island, p) => { const h = island.held(p); return !!h && h.key === 'torch' && island.count(p, 'torch') > 0; };
 // The loudest thing it can hear right now: { p, x, z } or null.
 function listen(mob, island, cave, players) {
   const now = Date.now();
