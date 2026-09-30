@@ -154,6 +154,27 @@ npm start
 Then open http://localhost:3000. Without a `DATABASE_URL` it runs with a
 temporary in-memory island (nothing is saved) and the invite code is `dev`.
 
+## Tests
+
+```
+npm test               # the server, over WebSocket (about a minute)
+npm run test:browser   # the game in a real browser: loads, sign-up, intro, jump, sit
+```
+
+`npm test` starts a real server for each file in `tests/server/` (joining, moving,
+gathering, building, lanterns, tides, the Sleeper, buckets, chat) and plays it with test
+players. It keeps everything in memory unless `TEST_DATABASE_URL` points at a Postgres
+database. Give the tests their own database, never the live one: they make accounts and
+change the island. An empty database gets `db/schema.sql` automatically. The tests always
+start the island at midday in clear weather, so the Stilled stay away.
+
+GitHub runs `npm test` against a fresh Postgres on every pull request
+(`.github/workflows/test.yml`), so check that it passes before merging.
+
+The browser tests need Playwright's Chromium once (`npx playwright install chromium`), or
+set `CHROMIUM_PATH` to a Chrome or Chromium that's already installed. Set
+`TEST_SERVER_LOG=1` to see the game server's own output while the tests run.
+
 ## What's in the repository
 
 ```
@@ -171,6 +192,9 @@ public/js/                The browser game, one file per part (drawing, controls
                           book, settings...), joined into /game.js by server/client-bundle.js
 public/net.js             Connection to the server, smoothing other players
 db/schema.sql             Database tables (already created on Neon)
+tests/                    npm test (server, tests/server/) and npm run test:browser
+                          (tests/browser/); helpers/ starts servers and test players
+.github/workflows/        GitHub Actions: npm test on every pull request
 render.yaml               Render setup
 docs/HANDOFF.md           Design decisions and status, for picking up work later
 docs/roadmap/             The plan for the 5 km world: design, contracts, one file per task

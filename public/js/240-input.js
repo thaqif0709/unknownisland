@@ -124,7 +124,7 @@
     const hb = bucketOf(k);
     if (hb) net.send({ t: 'dropitem', bucket: hb.id });
     else net.send({ t: 'dropitem', key: k, count: all ? stats.inv[k] : 1 });
-    if (hero) hero.swingT = .25;
+    startSwing(hero, null, .25);
   }
   $('invList').addEventListener('click', e => { const sl = e.target.closest('[data-slot]'); if (sl) selectSlot(+sl.dataset.slot); });
   // Small inked icons for carried things and tools, drawn once on a canvas.

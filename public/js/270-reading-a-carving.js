@@ -23,7 +23,7 @@
     b.disabled = n <= 0;
     b.textContent = n > 0 ? `Leave ${Math.min(n, need - have)} ${WG.ITEMS[c.offer].toLowerCase()} at its foot` : `You have no ${c.offer ? WG.ITEMS[c.offer].toLowerCase() : ''}`;
   }
-  $('carveOffer').addEventListener('click', () => { if (reading && net) { net.send({ t: 'act', target: 'c' + reading.id }); if (hero) hero.swingT = .35; } });
+  $('carveOffer').addEventListener('click', () => { if (reading && net) { net.send({ t: 'act', target: 'c' + reading.id }); startSwing(hero); } });
 
   let stampT = null;
   function stamp(msg) { const el = $('stamp'); el.textContent = msg; el.classList.add('on'); clearTimeout(stampT); stampT = setTimeout(() => el.classList.remove('on'), 3200); }

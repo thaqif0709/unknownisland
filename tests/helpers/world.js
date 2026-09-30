@@ -1,0 +1,47 @@
+// Finding things on the island for the tests: objects by type, a spot to stand next to
+// one, dry land, the sea. Uses the same shared world code the server and browser use.
+const WG = require('../../server/shared/world-gen');
+
+const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+
+// The layout from /api/world with each object's current state from the welcome.
+function objectsWithState(layout, welcome) {
+  const states = new Map(welcome.states || []);
+  return layout.map(o => ({ ...o, state: { ...WG.defaultState(o.type), ...(states.get(o.id) || {}) } }));
+}
+
+// The nearest object to `from` that passes `ok` (by default: not gone).
+function nearest(list, from, ok = o => !o.state.gone) {
+  let best = null, bd = Infinity;
+  for (const o of list) { if (!ok(o)) continue; const d = dist(o, from); if (d < bd) { bd = d; best = o; } }
+  return best;
+}
+
+// A spot close enough to use `o` with E (the server allows its radius plus reach), on the
+// side facing `from`.
+function besideSpot(o, from = WG.SPAWN) {
+  const a = Math.atan2(from.z - o.z, from.x - o.x), r = (o.r || .5) + 1;
+  return { x: o.x + Math.cos(a) * r, z: o.z + Math.sin(a) * r };
+}
+
+// Search outwards from `from` for a spot where `ok(height)` holds.
+function spotNear(from, ok, { step = 1, max = 120 } = {}) {
+  for (let r = 0; r <= max; r += step) {
+    for (let i = 0, n = Math.max(1, Math.round(r * 2)); i < n; i++) {
+      const a = i / n * Math.PI * 2, x = from.x + Math.cos(a) * r, z = from.z + Math.sin(a) * r;
+      if (ok(WG.heightAt(x, z), x, z)) return { x, z };
+    }
+  }
+  return null;
+}
+
+// Dry, flat-ish land (a fire can be built 1.6 in front of it), at least 4 away from the
+// fires in `avoid` (a database kept between runs remembers the last run's fires).
+const landNear = (from, avoid = []) => spotNear(from, (h, x, z) => h > .6 && h < 3 && WG.heightAt(x + 1.6, z) > .6
+  && avoid.every(f => Math.hypot(f.x - x, f.z - z) > 4 && Math.hypot(f.x - x - 1.6, f.z - z) > 4));
+// How many more chops a tree or palm takes to come down.
+const chopsLeft = (o, island) => WG.chopsFor(o, o.state, island.day, island.time) - (o.state.hits || 0);
+// Shallow sea, where a bucket can be filled (and a player can stand).
+const seaNear = from => spotNear(from, h => h < .5 && h > -.6, { step: 2, max: 400 });
+
+module.exports = { WG, dist, objectsWithState, nearest, besideSpot, spotNear, landNear, seaNear, chopsLeft };
