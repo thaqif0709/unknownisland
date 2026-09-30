@@ -323,7 +323,7 @@ In the browser the game shows in a panel registered as `minigame` (`285-minigame
 Esc and the mouse behave like any panel; closing it before the result gives up. Each game
 draws from `public/js/minigames/<type>.js`: `UI.minigames.register(type, { open(puzzle,
 answer, body, game), close(), result(m) })`. Trivia questions live in the `fishing_trivia`
-table (migration 0007; defaults in `server/content/trivia.js`, answers[0] is the right one).
+table (migration 0008; defaults in `server/content/trivia.js`, answers[0] is the right one).
 Admins try a game with `/minigame <type> [difficulty]`.
 
 ## 14. Database migrations (F3, done)

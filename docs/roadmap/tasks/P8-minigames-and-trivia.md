@@ -36,5 +36,5 @@ Contract §13
 
 ## Log
 
-- 2026-09-30 edvin: done. `server/minigames/` (engine + 5 games), `server/shared/minigame-sim.js` (pull physics and the untangle check, shared with the page), `fishing_trivia` (migration 0007, 40 questions), `public/js/285-minigames.js` + `public/js/minigames/`. "Debug" is the admin `/minigame` command. Also touched: world.js (constructor), store.js (seed and load trivia), chat.js (`/minigame`), index.html (loads the sim, styles). The Hidden Pages section waits behind `fishing` (off until P7). Tests: 10 server, 6 browser.
+- 2026-09-30 edvin: done. `server/minigames/` (engine + 5 games), `server/shared/minigame-sim.js` (pull physics and the untangle check, shared with the page), `fishing_trivia` (migration 0008, 40 questions), `public/js/285-minigames.js` + `public/js/minigames/`. "Debug" is the admin `/minigame` command. Also touched: world.js (constructor), store.js (seed and load trivia), chat.js (`/minigame`), index.html (loads the sim, styles). The Hidden Pages section waits behind `fishing` (off until P7). Tests: 10 server, 6 browser.
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->
