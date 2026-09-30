@@ -161,11 +161,16 @@
     add(ball(.3, frogM, 24, 16), 0, .06, 0, head).scale.set(1.3, .78, 1.05);
     add(ball(.27, throatM, 18, 12), 0, -.04, .04, head).scale.set(1.18, .45, 1);
     [[-.28, .06, -.02, .04], [.26, .08, -.04, .045]].forEach(([x, y, z, r]) => add(ball(r, spotM, 10, 8), x, y, z, head).scale.set(1, .45, 1));
+    const eyesOpen = [], eyesShut = [];
     for (const sx of [-1, 1]) {
       add(ball(.125, frogM, 16, 12), sx * .2, .24, .08, head);
-      add(ball(.1, ringM, 14, 10), sx * .215, .26, .155, head).scale.z = .6;
-      add(ball(.07, irisM, 12, 8), sx * .22, .26, .2, head).scale.z = .5;
-      add(ball(.022, shineM, 6, 4), sx * .22 + .03, .29, .235, head);
+      eyesOpen.push(add(ball(.1, ringM, 14, 10), sx * .215, .26, .155, head)); eyesOpen[eyesOpen.length - 1].scale.z = .6;
+      eyesOpen.push(add(ball(.07, irisM, 12, 8), sx * .22, .26, .2, head)); eyesOpen[eyesOpen.length - 1].scale.z = .5;
+      eyesOpen.push(add(ball(.022, shineM, 6, 4), sx * .22 + .03, .29, .235, head));
+      // asleep: a lid over the eye, and a closed, contented curve
+      const lid = add(ball(.1, frogM, 14, 10), sx * .215, .26, .158, head); lid.scale.z = .62; lid.visible = false; eyesShut.push(lid);
+      const shut = add(new THREE.Mesh(new THREE.TorusGeometry(.055, .011, 5, 16, Math.PI * .8), mouthM), sx * .215, .255, .222, head);
+      shut.rotation.set(-.1, sx * .25, Math.PI + Math.PI * .1); shut.visible = false; eyesShut.push(shut);
     }
     // a small smile on the front of the face, just under the eyes
     const mouth = add(new THREE.Mesh(new THREE.TorusGeometry(.13, .012, 5, 24, Math.PI * .56), mouthM), 0, .2, .29, head);
@@ -196,14 +201,19 @@
     }
     const armL = arm(-.27), armR = arm(.27);
 
-    const av = { root, body, head, legL, legR, armL, armR, walk: 0, swingT: 0, hoodUp, hoodDown, sit: 0 };
+    // asleep (P4): a blanket in the cloak's colour, pulled up to the neck, with a turned-down edge
+    const blanket = new THREE.Group(); body.add(blanket); blanket.visible = false;
+    add(new THREE.Mesh(new THREE.SphereGeometry(.5, 20, 14), cloakM), 0, .6, .14, blanket).scale.set(.92, 1.14, 1.12);
+    const edge = add(new THREE.Mesh(new THREE.TorusGeometry(.34, .05, 8, 24), patchM), 0, 1.1, .1, blanket); edge.rotation.x = Math.PI / 2 - .15; edge.scale.set(1.05, 1, 1);
+
+    const av = { root, body, head, legL, legR, armL, armR, walk: 0, swingT: 0, hoodUp, hoodDown, sit: 0, eyesOpen, eyesShut, blanket };
     av.armL.rotation.z = -.18; av.armR.rotation.z = .18;
     av.armR.rotation.order = 'YXZ';   // yaw applies after the pitch, so a chop can sweep sideways (same pose as before while y is 0)
     shadows(root);
     scene.add(root);
     return av;
   }
-  function removeCastaway(av) { scene.remove(av.root); }
+  function removeCastaway(av) { scene.remove(av.root); sleepZs(av, 0, 0); }
   // Cloak patches: small stitched squares in the colour of what they were made from.
   const PATCH_COL = { moon_wing: 0xF3EAD6, violet_charm: 0xA88BD8, firefly_jar: 0xE8F27A, silverfin_scale: 0xB9C3C6, conch_charm: 0xE3A89A };
   // [angle round the robe from the front, height]; placed on the robe's surface
@@ -297,14 +307,46 @@
       av.head.rotation.x = .25 * k;
     }
     // asleep by a hearth (P4): curled up on your side, knees tucked, head down
-    av.sleepK = (av.sleepK || 0) + ((av.sleeping && !moving ? 1 : 0) - (av.sleepK || 0)) * Math.min(1, dt * 3);
-    const q = av.sleepK;
+    av.sleepK = (av.sleepK || 0) + ((av.sleeping && !moving ? 1 : 0) - (av.sleepK || 0)) * Math.min(1, dt * 7);   // settled in about half a second
+    const q = av.sleepK, shut = q > .5;
+    if (av.eyesShut && av.eyesShut[0].visible !== shut) { av.eyesShut.forEach(m => { m.visible = shut; }); av.eyesOpen.forEach(m => { m.visible = !shut; }); }
+    if (av.blanket) { av.blanket.visible = q > .05; if (av.blanket.visible) av.blanket.scale.setScalar(.6 + .4 * q); }
+    sleepZs(av, q, dt);
     if (q > .01) {
       av.root.rotation.z = -1.3 * q;
       av.root.position.y += .3 * q;
       av.head.rotation.x = .25 * k + .35 * q;
-      av.armL.rotation.x = -1.3 * q; if (!av.held) av.armR.rotation.x = -1.3 * q;
+      av.armL.rotation.x = -.45 * q; if (!av.held) av.armR.rotation.x = -.45 * q;   // hands tucked in under the blanket
       av.body.position.y += Math.sin(elapsed * 1.4) * .01 * q;   // slow breathing
     }
+  }  // A few small z's drifting up from a sleeper's head, fading as they rise.
+  let zTex = null;
+  function zTexture() {
+    if (zTex) return zTex;
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d');
+    g.font = 'bold 52px "Patrick Hand", "Comic Sans MS", cursive'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 7; g.strokeStyle = '#2B211F'; g.strokeText('z', 32, 34);
+    g.fillStyle = '#F5ECD7'; g.fillText('z', 32, 34);
+    zTex = new THREE.CanvasTexture(c);
+    return zTex;
   }
+  const zPos = new THREE.Vector3();
+  function sleepZs(av, q, dt) {
+    if (q < .5) { if (av.zs) { av.zs.forEach(z => { scene.remove(z); noInk.delete(z); }); av.zs = null; } return; }
+    if (!av.zs) {
+      av.zs = [0, 1, 2].map(i => {
+        const z = new THREE.Sprite(new THREE.SpriteMaterial({ map: zTexture(), transparent: true, depthWrite: false }));
+        z.userData.t = i / 3; scene.add(z); noInk.add(z); return z;
+      });
+    }
+    av.head.getWorldPosition(zPos);
+    for (const z of av.zs) {
+      const t = z.userData.t = (z.userData.t + dt / 2.4) % 1;   // each one rises for 2.4 s
+      z.position.set(zPos.x + Math.sin(t * 5 + z.id) * .15 + t * .3, zPos.y + .45 + t * 1.3, zPos.z);
+      z.scale.setScalar(.3 + t * .3);
+      z.material.opacity = Math.min(1, t * 5) * (1 - t);
+    }
+  }
+
 

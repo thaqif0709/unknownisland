@@ -457,7 +457,9 @@ The start screen's "What's new" box is `215-whats-new.js` (`NEWS`: lines, each o
 to a flag, read from `/api/hiddenpages` since it shows before the welcome; a new `id` opens it
 again for everyone). With the `checkpoints` flag (P4), sitting by a lit clay hearth for 3 s saves it as where you
 wake (`server/systems/checkpoints.js`, `respawnPoint`; browser `145-hearth-checkpoints.js`:
-the sleep pose, the pennant, the map flag). Details: CONTRACTS.md section 11.
+the pennant, the map flag). The sleep look is in `120-castaways.js` `poseCastaway`: `sleepK`
+eases in over about half a second, then the blanket (`av.blanket`, cloak colour), shut eyes
+(`av.eyesShut`) and drifting z sprites (`sleepZs`). Details: CONTRACTS.md section 11.
 Calling out (P11, no flag): `call` message, rate-limited in `server/systems/chat.js`
 (`RULES.CALL`), broadcast as `{ t: 'call', id, name, x, z, under }`; `285-calling-out.js`
 plays a panned, distance-faded call (muffled through a cave), a bubble, a compass note for
