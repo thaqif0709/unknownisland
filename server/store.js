@@ -24,6 +24,8 @@ function createPgStore(url) {
       [e.key, e.category, e.name, e.description, e.rarity]);
     for (const t of C.TIDE) await q(`INSERT INTO tide_table (item_key, weight, min_day, conditions, kind, label, gives, entry_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING`,
       [t.key, t.weight, t.minDay || 1, t.conditions || {}, t.kind, t.label, t.gives || {}, t.entry || null]);
+    for (const t of C.TRIVIA) await q(`INSERT INTO fishing_trivia (question_key, question, answers, topic) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+      [t.key, t.q, JSON.stringify(t.answers), t.topic || null]);
   }
 
   return {
@@ -179,7 +181,9 @@ function createPgStore(url) {
       const j = await q('SELECT entry_key, category, name, description, rarity FROM journal_entries ORDER BY category, entry_key');
       const t = await q('SELECT item_key, weight, min_day, conditions, kind, label, gives, entry_key FROM tide_table');
       const sl = await q('SELECT request_key, text, conditions, reward, penalty, min_day, weight, days, stone, done_text, fail_text, in_pool FROM sleeper_requests WHERE enabled');
+      const tv = await q('SELECT question_key, question, answers, topic FROM fishing_trivia WHERE enabled');
       return {
+        trivia: tv.rows.map(r => ({ key: r.question_key, q: r.question, answers: r.answers, topic: r.topic })),
         sleeper: sl.rows.map(r => ({ key: r.request_key, text: r.text, conditions: r.conditions, reward: r.reward, penalty: r.penalty, minDay: r.min_day,
           weight: r.weight, days: r.days, stone: r.stone, doneText: r.done_text, failText: r.fail_text, inPool: r.in_pool })),
         journal: j.rows.map(r => ({ key: r.entry_key, category: r.category, name: r.name, description: r.description, rarity: r.rarity })),
@@ -331,7 +335,7 @@ function createMemoryStore() {
     async updateDrop(id, items) { for (const i of islands.values()) for (const d of i.drops) if (d.id === id) d.items = clone(items); },
     async loadContent() {
       const C = require('./content');
-      return { journal: clone(C.JOURNAL), tide: C.TIDE.map(t => ({ minDay: 1, gives: {}, conditions: {}, ...clone(t) })),
+      return { trivia: clone(C.TRIVIA), journal: clone(C.JOURNAL), tide: C.TIDE.map(t => ({ minDay: 1, gives: {}, conditions: {}, ...clone(t) })),
         sleeper: C.SLEEPER.map(({ pool, ...r }) => ({ minDay: 1, weight: 1, days: 3, stone: null, reward: [], penalty: [], ...clone(r), inPool: pool !== false })) };
     },
     async setSeenIntro(playerId, seen) { const p = players.get(playerId); if (p) p.seenIntro = !!seen; },

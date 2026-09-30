@@ -108,6 +108,7 @@
       farview: false,    // W3: see out to about 2 km (1 km on phones)
       caves: false,      // W9: caves you walk into (the Landing's sea cave), torches and the Dark
       checkpoints: false, // P4: sleep by a lit hearth to wake there after a knockdown or dying
+      fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
       mouselook: false,  // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
     },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.

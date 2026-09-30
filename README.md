@@ -121,9 +121,9 @@ you were carrying.
   things. Answer and it gives something back; ignore it and the fog gets worse.
 - **The intro** plays the first time you arrive (Settings → Rewatch the intro).
 
-Journal entries, tide items and the carving stones' requests live in database
-tables (`journal_entries`, `tide_table`, `sleeper_requests`), so you can add or
-change them in Neon without touching the code.
+Journal entries, tide items, the carving stones' requests and the fishing trivia questions
+live in database tables (`journal_entries`, `tide_table`, `sleeper_requests`,
+`fishing_trivia`), so you can add or change them in Neon without touching the code.
 
 ## Changing the rules
 
@@ -142,7 +142,8 @@ when it starts.
 To open a region by hand (for testing the big world), put your username in an `ADMINS`
 environment variable on Render (comma-separated for several) and type `/open stair` in chat.
 The Veil lifts at the next dawn. Admins can also type `/spawn dummy` to put the test creature
-(a straw dummy that warns before it strikes) in front of them.
+(a straw dummy that warns before it strikes) in front of them, and `/minigame trivia hard`
+(or `untangle`, `ripple`, `pull`, `water`; `easy`, `medium`, `hard`) to try the fishing games.
 
 The big world is behind three flags that go together: `FEATURES=streaming,bigworld,farview`
 (chunks load around each player, the 5 km world, and the view out to 2 km).
@@ -200,6 +201,7 @@ server/world.js           The island core: loop, snapshots, messages, saving
 server/systems/           One file per feature (players, gathering, crafting, fires,
                           lanterns, the Stilled, tides, bugs, chat, the Sleeper...)
 server/mobs/              Creatures: the engine (index.js) and one file per kind
+server/minigames/         The fishing minigames: the engine (index.js) and one file per game
 server/content/           Default journal, tide, bug and request content, by topic
 server/store.js           Database access (Neon), or in-memory for testing
 server/shared/world-gen.js Island shape, object placement, survival rules

@@ -308,6 +308,44 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
 .err{color:var(--rose);font-size:16px;min-height:1.3em;margin:0}
 .view{display:none}
 .view.on{display:block}
+/* minigames (P8): a sheet sitting just above the hotbar, big tap targets */
+.mg{place-items:end center;padding-bottom:calc(var(--invH,80px) + 24px);background:rgba(43,33,31,.18)}
+.mg .sheet{width:min(560px,100%);max-height:calc(100vh - var(--invH,80px) - 48px)}
+.mgtime{height:8px;border:2px solid var(--ink);border-radius:6px;background:var(--field);margin:8px 0 10px;overflow:hidden}
+.mgtime i{display:block;height:100%;background:var(--leaf);transform-origin:left}
+.mgtime i.low{background:var(--rose)}
+.mgbody{outline:none}
+.mgq{font-size:19px;margin:4px 0 12px}
+.mgnote{font-size:14px;color:var(--soft);margin:8px 0 0}
+.mgchoices{display:grid;gap:8px}
+.mgbtn{font-family:var(--hand);font-weight:600;font-size:17px;min-height:48px;padding:8px 14px;border:2px solid var(--ink);border-radius:14px;background:var(--field);color:var(--card-ink);box-shadow:2px 2px 0 var(--ink);cursor:pointer;text-align:left}
+.mgbtn:disabled{opacity:.65;cursor:default}
+.mgbtn.picked{background:var(--ochre);opacity:1}
+.mgres{min-height:1.4em;margin:10px 0 0;font-size:20px;font-weight:600;text-align:center}
+.mgres.won{color:var(--leaf)} .mgres.lost{color:var(--rose)}
+.mguntangle{position:relative;display:flex;align-items:flex-start;justify-content:center;gap:6px}
+.mggrid{display:grid;grid-template-columns:repeat(var(--n),var(--px));gap:3px;padding:6px;background:#5F7FA8;border:2px solid var(--ink);border-radius:10px}
+.mgtile{width:var(--px);height:var(--px);padding:0;border:0;border-radius:6px;background:#7E9CB9;cursor:pointer}
+.mgtile canvas{width:100%;height:100%;display:block}
+.mgend{width:0;height:0;border:9px solid transparent;border-left:14px solid var(--ink)}
+.mgend.in{align-self:flex-start;margin-top:calc(9px + var(--row) * (var(--px) + 3px) + var(--px) / 2 - 9px)}
+.mgmarks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:330px;margin:0 auto}
+.mgmark{aspect-ratio:1;border:2px solid var(--ink);border-radius:50%;background:#5F7FA8;box-shadow:2px 2px 0 var(--ink);cursor:pointer;padding:14px;transition:transform .12s,background .12s}
+.mgmark svg{width:100%;height:100%;fill:none;stroke:#F5ECD7;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.mgmark.lit,.mgmark.tap{background:var(--ochre);transform:scale(1.08)}
+.mgmark:disabled{cursor:default}
+.mgdots{display:flex;justify-content:center;gap:8px;margin-top:12px}
+.mgdots i{width:12px;height:12px;border:2px solid var(--ink);border-radius:50%}
+.mgdots i.on{background:var(--ink)}
+.mgpull{display:flex;gap:16px;align-items:center;justify-content:center}
+.mgpull canvas{width:90px;height:270px;border:2px solid var(--ink);border-radius:10px;touch-action:none;cursor:pointer}
+.mgpullside{max-width:220px}
+.mgscore{height:14px;border:2px solid var(--ink);border-radius:8px;background:var(--field);overflow:hidden}
+.mgscore i{display:block;height:100%;width:0;background:var(--ochre)}
+.mgwater{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+.mgwater canvas{border:2px solid var(--ink);border-radius:10px;max-width:calc(50% - 6px)}
+.mgwater canvas.tap{cursor:crosshair}
+#mgWaterDone{display:block;margin:0 auto}
 /* mouse-look (flag mouselook): the crosshair, "Click to continue", and an inked cursor */
 .xhair{position:fixed;left:0;top:0;width:40px;height:40px;margin:-20px 0 0 -20px;pointer-events:none;z-index:4}
 .xhair svg{width:100%;height:100%;overflow:visible;display:block}
@@ -524,6 +562,7 @@ html.inkcursor #mapCanvas.dragging{cursor:grabbing!important}
 <script src="/vendor/three.min.js"></script>
 <script src="/shared/world-gen.js"></script>
 <script src="/shared/caves.js"></script>
+<script src="/shared/minigame-sim.js"></script>
 <script src="/net.js"></script>
 <script src="/game.js"></script>
 </body>

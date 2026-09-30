@@ -47,6 +47,14 @@ const methods = {
         const m = this.mobs.spawn(kind, p.x + Math.sin(p.face) * 6, p.z + Math.cos(p.face) * 6, { face: p.face + Math.PI });
         return sys(`A ${kind} (#${m.id}) appears.`);
       }
+      // ...and play a minigame (P8): /minigame trivia hard
+      if (cmd === 'minigame' && isAdmin(p)) {
+        const type = String(rest[0] || '').toLowerCase(), types = this.minigames.constructor.types();
+        if (!types.includes(type)) return sys(`Which one? ${types.join(', ')}`);
+        const difficulty = ['easy', 'medium', 'hard'].includes(rest[1]) ? rest[1] : 'easy';
+        this.minigames.start(p, type, { difficulty }).then(r => sys(r.won ? 'You won.' : `You lost (${r.reason}).`));
+        return;
+      }
       if (cmd === 'help' || cmd === '?') return sys('Commands: /w name message (whisper), /r message (reply to a whisper), /who (who is here). Anything else goes to everyone.');
       return sys(`There's no /${cmd0} command. Type /help for the list.`);
     }
