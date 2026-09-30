@@ -309,8 +309,14 @@
       av.root.rotation.z = -1.3 * q;
       av.root.position.y += .3 * q;
       av.head.rotation.x = .25 * k + .35 * q;
-      av.armL.rotation.x = -.45 * q; if (!av.held) av.armR.rotation.x = -.45 * q;   // hands tucked in under the blanket
+      av.armL.rotation.x = -.1 * q; if (!av.held) av.armR.rotation.x = -.1 * q;   // arms down by the sides, under the blanket
       av.body.position.y += Math.sin(elapsed * 1.4) * .01 * q;   // slow breathing
+      // legs along the body, lightly curled, instead of knees up as when sitting
+      const r = 1 - q, kL2 = av.legL.userData.knee, kR2 = av.legR.userData.knee;
+      av.legL.rotation.x = av.legR.rotation.x = av.legL.rotation.x * r - .45 * q;
+      kL2.rotation.x = kR2.rotation.x = kL2.rotation.x * r + .7 * q;
+      av.legL.position.z = av.legR.position.z = av.legL.position.z * r;
+      av.legL.rotation.z *= r; av.legR.rotation.z *= r;
     }
     sleepBlanket(av, q, dt);   // (after the pose, so they fit the frog lying down)
     sleepZs(av, q, dt);
@@ -329,7 +335,7 @@
     av.body.traverse(m => { if (m.isMesh && !isIn(m, av.head)) parts.push(m); });
     av.head.getWorldPosition(hp);
     const headU = (hp.x - ox) * cy - (hp.z - oz) * sy;   // how far along the body the head is
-    const U0 = -.55, U1 = headU - .2, W0 = -.9, W1 = .9, NU = 30, NW = 24;
+    const U0 = -.62, U1 = headU - .14, W0 = -.42, W1 = .55, NU = 32, NW = 22;
     // the body's height under each point of a grid
     const H = [];
     for (let i = 0; i <= NU; i++) {
@@ -342,7 +348,7 @@
       }
     }
     // cloth: laid over the body, falling away at a slope, never lower than the ground
-    const du = (U1 - U0) / NU, dw = (W1 - W0) / NW, SLOPE = 1.35, R = 7;
+    const du = (U1 - U0) / NU, dw = (W1 - W0) / NW, SLOPE = 1.9, R = 6;
     const pos = [], top = [];
     for (let i = 0; i <= NU; i++) for (let j = 0; j <= NW; j++) {
       let h = 0;
