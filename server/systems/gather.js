@@ -64,6 +64,12 @@ const uses = {
       const s = o.state;
       if (!(s.coconuts > 0)) return chop.call(this, p, o, ctx);
       s.coconuts--;
+      if (WG.feature('slots')) {   // into the bag, to eat later (P2)
+        this.give(p, 'coconut', 1); this.give(p, 'seeds', 1);
+        this.fx(p, 'swing');
+        ctx.say('A coconut, into your bag. Hold E with it in hand to eat it. (+1 seeds)');
+        return ctx.changed();
+      }
       p.hunger = Math.min(100, p.hunger + RULES.COCONUT_FOOD);
       p.thirst = Math.min(100, p.thirst + RULES.COCONUT_WATER);
       p.dread = Math.max(0, p.dread + RULES.DREAD.EAT);
@@ -79,6 +85,11 @@ const uses = {
       const s = o.state;
       if (!s.berries) return say('Nothing left. It’ll grow back by morning.');
       s.berries = false;
+      if (WG.feature('slots')) {   // into the bag, to eat later (P2)
+        this.give(p, 'berries', 1); this.give(p, 'seeds', 1);
+        say(`${o.species === 'blueberry' ? 'Blueberries' : 'Berries'}, into your bag. Hold E with them in hand to eat them. (+1 seeds)`);
+        return changed();
+      }
       p.hunger = Math.min(100, p.hunger + RULES.BERRY_FOOD);
       p.dread = Math.max(0, p.dread + RULES.DREAD.EAT);
       this.give(p, 'seeds', 1);

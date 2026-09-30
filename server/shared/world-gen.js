@@ -111,6 +111,16 @@
       travel: false,     // P9 climbing (palm trunks, cliffs) and gliding with the cloak
       fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
       mouselook: false,  // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
+      slots: false,      // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts go in the bag
+    },
+    // The slot inventory (P2, flag slots). Stack sizes per kind of item are in ITEM_INFO.
+    SLOTS: {
+      HOTBAR: 8,               // slots 0-7, keys 1-8
+      BAG: 30,                 // slots 8-37, the bag on I
+      STACK: 50,               // most things stack this high
+      FOOD_STACK: 10,          // food
+      EAT_TIME: 1,             // seconds holding E (or Act) with food in hand to eat it
+      EAT_GAP: .7,             // seconds between two bites, at least
     },
     // Climbing and gliding (P9, flag travel). Speeds in m/s, energy per second.
     TRAVEL: {
@@ -141,7 +151,20 @@
   };
 
   // Things you can carry (inventory keys and their names).
-  const ITEMS = { wood: 'Wood', stone: 'Stone', clay: 'Clay', copper: 'Copper ore', iron: 'Iron ore', seeds: 'Seeds', oil: 'Lamp oil', torch: 'Torch' };
+  const ITEMS = { wood: 'Wood', stone: 'Stone', clay: 'Clay', copper: 'Copper ore', iron: 'Iron ore', seeds: 'Seeds', oil: 'Lamp oil', torch: 'Torch',
+    berries: 'Berries', coconut: 'Coconut' };
+  // More about an item than its name (all optional): kind 'food' is eaten from a slot (food,
+  // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise),
+  // hand: goes into the hotbar first, because it's used from your hand.
+  const ITEM_INFO = {
+    berries: { kind: 'food', food: RULES.BERRY_FOOD },
+    coconut: { kind: 'food', food: RULES.COCONUT_FOOD, water: RULES.COCONUT_WATER },
+    torch: { hand: true, stack: 10 },
+  };
+  const itemInfo = key => {
+    const i = ITEM_INFO[key] || {};
+    return { ...i, stack: i.stack || (i.kind === 'food' ? RULES.SLOTS.FOOD_STACK : RULES.SLOTS.STACK) };
+  };
 
   // Things you can build. Add new entries here; the recipe book lists them all.
   // kind 'fire' places a fire of that type in front of you; kind 'tool' is kept forever.
@@ -717,7 +740,7 @@
   }
 
   const WorldGen = {
-    RULES, ITEMS, RECIPES, FIRES, PATCHES, MOON_NAMES, moonPhase, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
+    RULES, ITEMS, ITEM_INFO, itemInfo, RECIPES, FIRES, PATCHES, MOON_NAMES, moonPhase, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
     generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
     feature, features, setFeatures, resolveFeatures,

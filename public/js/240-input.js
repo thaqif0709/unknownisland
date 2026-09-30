@@ -4,6 +4,7 @@
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
     ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'], ['jump', 'Jump (hold to leap higher and forward)', 'Space'], ['cycle', 'Next item slot (Shift: back)', 'KeyQ'], ['sit', 'Sit down / get up', 'KeyV'], ['call', 'Call out to friends', 'KeyC'],
+    ['inventory', 'Open the bag', 'KeyI', 'slots'],   // a 4th value: only shown while that flag is on
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -62,7 +63,8 @@
       return;
     }
     if (blocksInput()) {
-      if ((e.code === prefs.binds.book && !ui.book.classList.contains('gone')) || (e.code === prefs.binds.journal && !ui.journal.classList.contains('gone'))) closePanels();
+      if ((e.code === prefs.binds.book && !ui.book.classList.contains('gone')) || (e.code === prefs.binds.journal && !ui.journal.classList.contains('gone'))
+        || (e.code === prefs.binds.inventory && isShown('inventory'))) closePanels();
       return;
     }
     if (state !== 'play') return;
@@ -81,6 +83,7 @@
     if (e.code === prefs.binds.cycle) cycleSlot(e.shiftKey ? -1 : 1);
     if (e.code === prefs.binds.jump) { e.preventDefault(); startCharge(); }
     if (e.code === prefs.binds.map) togglePanel('map');
+    if (e.code === prefs.binds.inventory && slotsOn()) togglePanel('inventory');
     if (e.code.startsWith('Arrow') || e.code === 'Space' || e.code === 'Tab') e.preventDefault();
   });
   window.addEventListener('keyup', e => { keys[e.code] = false; if (e.code === prefs.binds.jump) releaseJump(); });
@@ -89,12 +92,19 @@
 
   let lastInv = '', lastCounts = {};
   // Hotbar: slotKeys[i] is the item in slot i+1. selSlot is the one in your hand (-1: empty hands).
+  // With the slot inventory (P2, flag slots) the server keeps the slots (stats.slots: 0-7 the
+  // hotbar, 8-37 the bag) and slotKeys just mirrors the first eight; without it, each thing
+  // you carry takes the first free slot and keeps it until you run out.
   const slotKeys = Array(8).fill(null);
+  const slotsOn = () => WG.feature('slots') && Array.isArray(stats.slots);
+  const slotKey = s => (!s ? null : s.b != null ? 'b' + s.b : s.k);
+  const slotCountAt = i => (slotsOn() ? (stats.slots[i] && stats.slots[i].n) || 0 : stats.inv[slotKeys[i]] || 0);
   let selSlot = -1, sentHold = null;
   // each bucket has its own slot, keyed "b<id>"
   const bucketOf = k => k && k[0] === 'b' && k !== 'bucket' ? (stats.buckets || []).find(b => 'b' + b.id === k) : null;
   const haveKey = k => bucketOf(k) || (stats.inv[k] || 0) > 0;
   function syncSlots() {
+    if (slotsOn()) { for (let i = 0; i < 8; i++) slotKeys[i] = slotKey(stats.slots[i]); return; }
     for (let i = 0; i < 8; i++) if (slotKeys[i] && !haveKey(slotKeys[i])) slotKeys[i] = null;
     const want = [...Object.keys(WG.ITEMS).filter(k => (stats.inv[k] || 0) > 0), ...(stats.buckets || []).map(b => 'b' + b.id)];
     for (const k of want) if (!slotKeys.includes(k)) { const e = slotKeys.indexOf(null); if (e >= 0) slotKeys[e] = k; }
@@ -111,9 +121,11 @@
   function selectSlot(i) {
     if (state !== 'play') return;
     selSlot = selSlot === i ? -1 : i;   // same number again: put it away
+    if (slotsOn() && net) net.send({ t: 'select', slot: selSlot });
     lastInv = ''; renderInventory();
     const k = heldKey(), hb = heldBucket();
     if (hb) toast(`${bucketName(hb)} in hand. ${hb.water === 'none' ? 'Wade into the sea and press E to fill it.' : hb.water === 'sea' ? 'Seawater: press E at a fire to boil it.' : 'Clean water: press E to drink.'}`);
+    else if (k && slotsOn() && WG.itemInfo(k).kind === 'food') toast(`${WG.ITEMS[k]} in hand. Hold ${keyLabel(prefs.binds.act)} to eat.`);
     else if (k) toast(`${WG.ITEMS[k]} in hand. ${keyLabel(prefs.binds.drop)} drops one, Shift+${keyLabel(prefs.binds.drop)} drops them all.`);
   }
   // Q: the next slot that has something in it (wrapping round); Shift+Q goes back.
@@ -131,7 +143,8 @@
     if (state !== 'play' || !net) return;
     if (!k) { toast('Pick something to hold first (keys 1-8).'); return; }
     const hb = bucketOf(k);
-    if (hb) net.send({ t: 'dropitem', bucket: hb.id });
+    if (slotsOn()) net.send({ t: 'dropitem', slot: selSlot, count: all ? slotCountAt(selSlot) : 1 });
+    else if (hb) net.send({ t: 'dropitem', bucket: hb.id });
     else net.send({ t: 'dropitem', key: k, count: all ? stats.inv[k] : 1 });
     startSwing(hero, null, .25);
   }
@@ -167,6 +180,15 @@
         g.lineWidth = 6; g.beginPath(); g.moveTo(20, 56); g.lineTo(38, 24); g.stroke(); g.lineWidth = 3.5; g.strokeStyle = '#A57A55'; g.beginPath(); g.moveTo(20, 56); g.lineTo(38, 24); g.stroke(); g.strokeStyle = INK; g.lineWidth = 3;
         fill('#8A6A52', () => g.ellipse(39, 22, 7, 5, -1, 0, 7));
         fill('#F2A541', () => { g.moveTo(34, 18); g.quadraticCurveTo(34, 6, 44, 2); g.quadraticCurveTo(42, 10, 48, 14); g.quadraticCurveTo(48, 22, 40, 22); g.closePath(); }); break;
+      case 'berries':   // a little cluster on a stalk
+        g.beginPath(); g.moveTo(32, 10); g.quadraticCurveTo(36, 18, 32, 24); g.stroke();
+        fill('#6F9A55', () => g.ellipse(40, 16, 8, 4, -.5, 0, 7));
+        [[24, 34], [38, 32], [30, 46], [44, 44], [20, 48]].forEach(([x, y]) => fill('#B8475A', () => g.arc(x, y, 8, 0, 7)));
+        g.fillStyle = 'rgba(255,245,235,.7)'; [[22, 31], [36, 29], [28, 43]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2, 0, 7); g.fill(); }); break;
+      case 'coconut':
+        fill('#7A5238', () => g.arc(32, 36, 20, 0, 7));
+        g.lineWidth = 1.5; [[-.6, 12], [.2, 16], [1, 12]].forEach(([a, r]) => { g.beginPath(); g.arc(32, 36, r, a, a + 1.4); g.stroke(); });
+        g.fillStyle = INK; [[26, 30], [36, 29], [31, 38]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2.6, 0, 7); g.fill(); }); break;
       default:
         if (key.startsWith('bucket:')) {
           const [, mat, water] = key.split(':'), body = mat === 'iron' ? '#8E96A0' : '#A57A55';
@@ -190,10 +212,10 @@
   }
   function renderInventory() {
     syncSlots();
-    const key = JSON.stringify([stats.inv, stats.tools, stats.buckets, prefs.binds.book, slotKeys, selSlot]);
+    const key = JSON.stringify([stats.inv, stats.tools, stats.buckets, stats.slots, prefs.binds.book, slotKeys, selSlot]);
     if (key === lastInv) return;
     lastInv = key;
-    // eight slots, numbered 1-8. Each thing keeps its slot until you run out of it.
+    // eight slots, numbered 1-8
     $('invList').innerHTML = slotKeys.map((k, i) => {
       const sel = i === selSlot ? ' sel' : '', num = `<i>${i + 1}</i>`;
       if (!k) return `<div class="slot empty${sel}" data-slot="${i}">${num}</div>`;
@@ -204,7 +226,7 @@
         return `<div class="slot bucket${sel}" data-slot="${i}" title="${esc(bucketName(bk))}: ${esc(what)}. ${bk.uses} of ${max} boils left.">${num}<img src="${itemIcon(bucketLook(bk))}" alt="${esc(bucketName(bk))}">`
           + (bk.water === 'clean' ? `<b>${bk.drinks}</b>` : '') + `<u style="--w:${Math.round(wear * 100)}%" class="${wear < .25 ? 'low' : ''}"></u></div>`;
       }
-      const n = stats.inv[k], fresh = (lastCounts[k] || 0) < n ? ' new' : '';
+      const n = slotCountAt(i), fresh = (lastCounts[k] || 0) < (stats.inv[k] || 0) ? ' new' : '';
       return `<div class="slot${fresh}${sel}" data-slot="${i}" title="${esc(WG.ITEMS[k])}: ${n}">${num}<img src="${itemIcon(k)}" alt="${esc(WG.ITEMS[k])}"><b>${n}</b></div>`;
     }).join('');
     updateHeld();

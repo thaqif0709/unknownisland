@@ -23,13 +23,13 @@ const methods = {
     if (this.players.size === 0) this.start();
 
     const saved = m.inventory || {};
-    const { inv, tools, buckets } = this.loadInventory(m);
+    const { inv, tools, buckets, slots, over, slotsSaved } = this.loadInventory(m);
     const at = this.safeSpot(m.x ?? SPAWN.x, m.z ?? SPAWN.z);
     const p = {
       id: account.id, name: account.username, ws,
       x: at.x, z: at.z, face: m.face,
       health: m.health, hunger: m.hunger, thirst: m.thirst, inv,
-      tools, buckets,
+      tools, buckets, slots, sel: -1, slotsOver: over, slotsSaved,
       dead: m.health <= 0, cause: '', moving: false, warm: false,
       energy: 100, exhausted: false, rest: 0, wantSprint: false, running: false,
       dread: m.dread || 0, fog: 0, knockedUntil: 0, camYaw: null, lastKnockAt: 0, patches, hoodDown: !!saved.hoodDown,
