@@ -26,7 +26,8 @@ const methods = {
         const sp = WG.nearestSpring(x, z), nearWater = Math.hypot(x - sp.x, z - sp.z) < 20 || biome === 'beach';
         const kinds = CONTENT.BUGS.filter(k => (k.when === 'any' || (k.when === 'night') === night) && k.biomes.includes(biome) && (!k.nearWater || nearWater)
           && (!k.weather || (k.weather === 'rain' && this.env.rain)) && (!k.moon || (k.moon === 'full' && this.env.fullMoon))
-          && (!k.shallow || (h > -1.3 && h < -.15)) && (k.shallow || h > .2));
+          && (!k.shallow || (h > -1.3 && h < -.15)) && (k.shallow || h > .2)
+          && (!k.region || WG.regionAt(x, z) === k.region) && (!k.flag || WG.feature(k.flag)) && (!k.minH || h >= k.minH));   // a region's own (C3 ...)
         if (!kinds.length) continue;
         const total = kinds.reduce((a, k) => a + k.weight * (k.key === 'moon_moth' && this.env.fullMoon ? 6 : 1), 0);
         let roll = Math.random() * total, kind = kinds[0];

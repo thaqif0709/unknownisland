@@ -5,6 +5,11 @@ const JOURNAL = [
   { key: 'dragonfly', category: 'bugs', name: 'Spring dragonfly', rarity: 'uncommon', description: 'Hovers over fresh water. Its wings are glass with ink veins.' },
   { key: 'cricket', category: 'bugs', name: 'Meadow cricket', rarity: 'common', description: 'Sings in the grass until the moment you look for it.' },
   { key: 'moon_moth', category: 'bugs', name: 'Moon moth', rarity: 'rare', description: 'Pale as paper, only out at night. The dust on its wings glows.' },
+  // the Stairs (C3). `flag`: hidden (journal, Hidden Pages) until that feature is on.
+  { key: 'stone_beetle', flag: 'region-stair', category: 'bugs', name: 'Stone beetle', rarity: 'common', description: 'Grey and ridged, like a pebble that changed its mind. Warm from the sun.' },
+  { key: 'terrace_grasshopper', flag: 'region-stair', category: 'bugs', name: 'Terrace grasshopper', rarity: 'common', description: 'Jumps from one step to the next and never falls. Show-off.' },
+  { key: 'wind_moth', flag: 'region-stair', category: 'bugs', name: 'Wind moth', rarity: 'rare', description: 'Only flies high on the steps at night, sideways on the wind. It never lands where you think.' },
+  { key: 'leaning_seen', flag: 'region-stair', category: 'stilled', name: 'The Leaning', rarity: 'rare', description: 'Pale shapes on the steps that lean into the wind and only move when it blows. You stood behind a stone and it went past.' },
   // shells
   { key: 'spiral_shell', category: 'shells', name: 'Spiral shell', rarity: 'common', description: 'Hold it to your ear and it hums. Everything here hums.' },
   { key: 'cowrie', category: 'shells', name: 'Cowrie', rarity: 'common', description: 'Smooth and speckled, like a small closed mouth.' },

@@ -13,7 +13,7 @@ const { CAVE } = Caves;
 // Every region's cave, built once. The same on every island (each cave has its own seed).
 const ALL = WG.REGIONS.map(r => ({ region: r.id, spec: require(`../regions/${r.id}`).cave }))
   .filter(c => c.spec).map(c => Caves.generateCave({ region: c.region, ...c.spec }));
-const caves = () => (WG.feature('caves') ? ALL : []);
+const caves = () => (WG.feature('caves') ? ALL.filter(c => !c.flag || WG.feature(c.flag)) : []);   // (a region pack's cave waits for its flag)
 // Just outside a cave's mouth (a lagging connection can skip from there to well inside).
 const nearMouth = (c, x, z) => !!c && Math.hypot(x - c.nodes[0].x, z - c.nodes[0].z) < 3 && !Caves.caveHit(c, x, z);
 

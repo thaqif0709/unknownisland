@@ -13,4 +13,7 @@ const { BUGS } = require('./bugs');
 const { ISLAND_NOTES } = require('./notes');
 const { TRIVIA } = require('./trivia');
 
-module.exports = { JOURNAL, TIDE, BUGS, ISLAND_NOTES, SLEEPER, SLEEPER_IDLE, SLEEPER_NOTES, TRIVIA };
+// Journal entries that wait for a feature flag (a region pack's): key -> flag.
+const JOURNAL_FLAGS = Object.fromEntries(JOURNAL.filter(e => e.flag).map(e => [e.key, e.flag]));
+
+module.exports = { JOURNAL_FLAGS, JOURNAL, TIDE, BUGS, ISLAND_NOTES, SLEEPER, SLEEPER_IDLE, SLEEPER_NOTES, TRIVIA };

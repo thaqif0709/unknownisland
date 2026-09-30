@@ -16,7 +16,7 @@ const { Minigames } = require('./minigames');
 // optional hooks onTick(dt), onDawn(sunrises) and onJoin(p) (extra welcome fields) run
 // alongside the core loop. See docs/roadmap/CONTRACTS.md section 2.
 const SYSTEMS = ['journal', 'tides', 'bugs', 'weather', 'time', 'chat', 'board', 'patches', 'players',
-  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves', 'checkpoints', 'minigames'];
+  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves', 'checkpoints', 'stair', 'minigames'];
 
 class Island {
   constructor(store, data) {
@@ -86,7 +86,12 @@ class Island {
 
   // Journal entries and the tide table live in the database so they can be
   // edited without a code change; reloaded every few minutes.
-  setContent(c) { this.content = c; this.contentAt = Date.now(); this.journalKeys = new Set(c.journal.map(e => e.key)); }
+  setContent(c) {
+    // entries for a feature that's switched off stay out of sight (content/journal.js `flag`)
+    const flags = require('./content').JOURNAL_FLAGS;
+    c = { ...c, journal: c.journal.filter(e => !flags[e.key] || WG.feature(flags[e.key])) };
+    this.content = c; this.contentAt = Date.now(); this.journalKeys = new Set(c.journal.map(e => e.key));
+  }
   async refreshContent() {
     if (Date.now() - (this.contentAt || 0) < 5 * 60 * 1000) return;
     try { this.setContent(await this.store.loadContent()); } catch (e) { console.error('[island] content reload failed', e.message); }

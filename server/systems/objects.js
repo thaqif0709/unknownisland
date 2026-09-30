@@ -9,10 +9,15 @@ const WG = require('../shared/world-gen');
 const { RULES } = WG;
 
 // Spawn tables from the region files: { region: [rule] } (plain data, see WG.generateChunk).
-const SPAWN_TABLES = Object.fromEntries(WG.REGIONS.map(r => [r.id, require(`../regions/${r.id}`).spawn || []]));
+// A region pack can add rules that only apply while its flag is on (`spawnMore` and
+// `spawnFlag` in the region file). They come after the region's own rules, so the objects
+// that were already there keep their ids when the flag is switched on.
+const REGION_FILES = Object.fromEntries(WG.REGIONS.map(r => [r.id, require(`../regions/${r.id}`)]));
 // For testing streaming before any region has land of its own: SPAWN_TEST=1 scatters extra
 // trees and rocks over the Landing's chunks (never set this on the live island).
-if (process.env.SPAWN_TEST) SPAWN_TABLES.landing = [{ type: 'tree', per: 3, pad: .5 }, { type: 'rock', per: 1.5 }, { type: 'bush', per: 1 }];
+const LANDING_TEST = process.env.SPAWN_TEST ? [{ type: 'tree', per: 3, pad: .5 }, { type: 'rock', per: 1.5 }, { type: 'bush', per: 1 }] : null;
+const spawnTables = () => Object.fromEntries(Object.entries(REGION_FILES).map(([id, f]) =>
+  [id, id === 'landing' && LANDING_TEST ? LANDING_TEST : [...(f.spawn || []), ...(f.spawnMore && f.spawnFlag && WG.feature(f.spawnFlag) ? f.spawnMore : [])]]));
 
 const methods = {
   // One object by id, or undefined (also for a chunk that isn't loaded).
@@ -26,7 +31,17 @@ const methods = {
   },
   // The chunk an object belongs to ("cx,cz"), for saving.
   objectChunk(o) { const c = WG.chunkOf(o.x, o.z); return WG.chunkKey(c.cx, c.cz); },
-  spawnTables() { return SPAWN_TABLES; },
+  spawnTables() { return spawnTables(); },
+  // The loaded objects within r of (x, z): the chunks' (new land) and the Landing's.
+  objectsNear(x, z, r) {
+    const out = [], c0 = WG.chunkOf(x - r, z - r), c1 = WG.chunkOf(x + r, z + r);
+    if (this.chunks) for (let cx = c0.cx; cx <= c1.cx; cx++) for (let cz = c0.cz; cz <= c1.cz; cz++) {
+      const c = this.chunks.get(WG.chunkKey(cx, cz));
+      if (c) for (const o of c.objects) if (Math.hypot(o.x - x, o.z - z) <= r) out.push(o);
+    }
+    if (Math.hypot(x, z) < WG.ISL * 1.6) for (const o of this.objects) if (Math.hypot(o.x - x, o.z - z) <= r) out.push(o);
+    return out;
+  },
 
   // What happens to one object at sunrise, as of today (used at dawn, and when a chunk
   // wakes up after a dawn has passed). Returns true, and marks it for saving, if it changed.
@@ -43,6 +58,8 @@ const methods = {
     if (o.type === 'bush' && s.gone && this.day - s.goneDay >= RULES.TREE_REGROW_DAYS) s = o.state = WG.defaultState(o.type);
     if (o.type === 'ore' && s.gone && this.day - s.goneDay >= RULES.ORE_REGROW_DAYS) s = o.state = WG.defaultState(o.type);
     if (o.type === 'dig' && s.dug) s = o.state = WG.defaultState(o.type);
+    const T = WG.THINGS[o.type];   // a region's things (C3 ...): back after T.regrow days
+    if (T && T.regrow && (s.gone || s.picked) && this.day - (s.goneDay ?? s.pickedDay ?? this.day) >= T.regrow) s = o.state = WG.defaultState(o.type);
     const g = WG.growth(o.type, s, this.day, 0.25);
     if (o.type === 'palm' && !s.gone && g >= 1) s.coconuts = RULES.COCONUTS;
     if (o.type === 'bush' && g >= RULES.FRUIT_AT) s.berries = true;
@@ -77,7 +94,7 @@ const methods = {
     if (this.chunks.has(key)) return this.chunks.get(key);
     if (this.chunkLoads.has(key)) return this.chunkLoads.get(key);   // already on its way
     const load = (async () => {
-      const objects = WG.generateChunk(this.seed, cx, cz, SPAWN_TABLES).filter(o => !this.caveCut(o.x, o.z))   // not where a cave mouth cuts the ground (W9)
+      const objects = WG.generateChunk(this.seed, cx, cz, spawnTables()).filter(o => !this.caveCut(o.x, o.z))   // not where a cave mouth cuts the ground (W9)
         .map(o => ({ ...o, state: WG.defaultState(o.type) }));
       const byId = new Map(objects.map(o => [o.id, o]));
       for (const saved of await this.store.loadChunkStates(this.id, key)) {

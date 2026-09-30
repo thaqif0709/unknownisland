@@ -511,7 +511,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
   $('firetable').insertAdjacentHTML('beforeend', Object.entries(W.FIRES).map(([k, f]) => `<tr><td><b>${k === 'hearth' ? 'Clay hearth' : 'Campfire'}</b></td><td>${f.warm} steps</td><td>${mins(f.start / f.burn)}</td><td>+${mins(f.add / f.burn)}</td><td>${mins(f.max / f.burn)}</td></tr>`).join(''));
   $('patches').insertAdjacentHTML('beforeend', W.PATCHES.map(p => `<tr><td><b>${esc(p.name)}</b></td><td data-need="${esc(p.needs)}">${esc(p.needs.replace(/_/g, ' '))}</td><td>${esc(p.perk)}</td><td>${esc(p.cost)}</td></tr>`).join(''));
   const rar = { common: '&#9670; Common', uncommon: '&#9670;&#9670; Uncommon', rare: '&#9670;&#9670;&#9670; Rare' };
-  const cats = { bugs: 'Bugs', moon: 'Full moon', shells: 'Shells', glass: 'Sea glass', tide: 'From the tide', strange: 'Strange tides', relics: 'Left by the stones' };
+  const cats = { bugs: 'Bugs', moon: 'Full moon', shells: 'Shells', glass: 'Sea glass', tide: 'From the tide', strange: 'Strange tides', relics: 'Left by the stones', stilled: 'Things in the fog' };
   fetch('/api/hiddenpages').then(r => r.json()).then(d => {
     const names = Object.fromEntries(d.journal.map(e => [e.key, e.name]));
     document.querySelectorAll('[data-need]').forEach(td => { if (names[td.dataset.need]) td.textContent = 'a ' + names[td.dataset.need].toLowerCase(); });

@@ -12,5 +12,9 @@ const BUGS = [
   // only on full-moon nights
   { key: 'glow_mushroom', when: 'night', biomes: ['forest'], weight: 4, moon: 'full' },
   { key: 'lantern_fish', when: 'night', biomes: ['sea'], weight: 3, moon: 'full', shallow: true },
+  // only on the Stairs (C3, flag region-stair)
+  { key: 'stone_beetle', when: 'day', biomes: ['meadow', 'highland'], weight: 4, region: 'stair', flag: 'region-stair' },
+  { key: 'terrace_grasshopper', when: 'day', biomes: ['meadow'], weight: 5, region: 'stair', flag: 'region-stair' },
+  { key: 'wind_moth', when: 'night', biomes: ['meadow', 'highland'], weight: 1.5, region: 'stair', flag: 'region-stair', minH: 90 },
 ];
 module.exports = { BUGS };

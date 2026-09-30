@@ -16,8 +16,8 @@ const r2 = v => Math.round(v * 100) / 100;
 const REGION_FILES = Object.fromEntries(WG.REGIONS.map(r => [r.id, require(`../regions/${r.id}`)]));
 const chainOf = region => (REGION_FILES[region] && REGION_FILES[region].requests) || [];
 const CHAIN_KEYS = new Set(WG.REGIONS.flatMap(r => chainOf(r.id)));
-const KINDS = new Set(['offer', 'lanterns_lit', 'lantern_fed', 'gather', 'fires_dawn', 'fog_walk', 'bugs', 'find']);
-const need = c => c.type === 'offer' || c.type === 'lanterns_lit' || c.type === 'gather' || c.type === 'fires_dawn' || c.type === 'bugs' ? Math.max(1, c.count | 0) : 1;
+const KINDS = new Set(['offer', 'lanterns_lit', 'lantern_fed', 'gather', 'fires_dawn', 'fog_walk', 'bugs', 'find', 'in_cave']);
+const need = c => c.type === 'offer' || c.type === 'lanterns_lit' || c.type === 'gather' || c.type === 'fires_dawn' || c.type === 'bugs' || c.type === 'in_cave' ? Math.max(1, c.count | 0) : 1;
 
 const methods = {
   // Rebuild state from the event log.
@@ -234,6 +234,8 @@ const methods = {
         const n = [...this.players.values()].filter(p => !p.dead && Math.hypot(p.x - stone.x, p.z - stone.z) < RULES.SLEEPER.GATHER_RADIUS).length;
         return this.sleeperProgress(n, true);
       }
+      case 'in_cave':   // frogs in that cave (W9) at once
+        return this.sleeperProgress([...this.players.values()].filter(p => !p.dead && p.under === c.cave).length, true);
       case 'fog_walk':
         for (const p of this.players.values()) {
           if (p.dead) continue;

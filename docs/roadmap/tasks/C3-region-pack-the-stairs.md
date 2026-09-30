@@ -3,7 +3,7 @@ id: C3
 title: Region pack: The Stairs
 lane: content
 owner: thaqif
-status: todo
+status: doing
 depends: [W5, W8, W9, P3]
 flag: region-stair
 size: 2 sessions
