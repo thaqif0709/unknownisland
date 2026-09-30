@@ -157,4 +157,8 @@ public/net.js             Connection to the server, smoothing other players
 db/schema.sql             Database tables (already created on Neon)
 render.yaml               Render setup
 docs/HANDOFF.md           Design decisions and status, for picking up work later
+docs/roadmap/             The plan for the 5 km world: design, contracts, one file per task
+scripts/roadmap.js        Prints the task board (npm run roadmap)
 ```
+
+Working on the expansion? Start at `docs/roadmap/README.md` and run `npm run roadmap`.

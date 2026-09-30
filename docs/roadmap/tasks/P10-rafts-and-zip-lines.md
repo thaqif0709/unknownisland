@@ -1,0 +1,34 @@
+---
+id: P10
+title: Rafts and zip lines
+lane: player
+owner: edvin
+status: todo
+depends: [P2]
+flag: travel
+size: 1 session
+---
+# P10: Rafts and zip lines
+
+Float down rivers and cross the Mire; slide down player-built lines.
+
+## Scope
+
+- Raft recipe, placing it on water, boarding and steering, river current pushes you.
+- Zip lines: tie vine rope between two high points; anyone can ride.
+- Saved in the world (a small table or as objects).
+
+## Files it touches
+
+new server/systems/rafts.js, new public/js/rafts.js, new migration
+
+## Done when
+
+- [ ] Two frogs can ride one raft.
+- [ ] A zip line built by one player works for another.
+- [ ] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
+- [ ] This file's `status` set to `done` in the PR that finishes it.
+
+## Log
+
+<!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->

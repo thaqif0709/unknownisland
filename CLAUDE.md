@@ -14,3 +14,17 @@ and `/api/hiddenpages` (journal, tide, carving requests), so prefer wiring new n
 same way instead of typing them in.
 
 Also keep `docs/HANDOFF.md` (design notes for developers) and `README.md` in step.
+
+## The roadmap and tasks (two people work at once)
+The big expansion is planned in `docs/roadmap/`: `DESIGN.md` (decisions), `CONTRACTS.md`
+(interfaces between lanes) and one file per task in `docs/roadmap/tasks/`.
+- Before starting, read the task file and the contracts it names. Run `npm run roadmap`
+  to see the board and what is ready.
+- Set the task's `status:` to `doing` in the first commit on the branch, and to `done`
+  (with its "Done when" boxes ticked and a Log line) in the PR that finishes it.
+- Stay in the task's files. Don't edit another lane's files to get around a missing
+  contract; extend the stub in `CONTRACTS.md` in a small PR both people see.
+- Build behind the task's feature flag (`RULES.FEATURES`), because `main` deploys to Render
+  as soon as it merges.
+- If a design decision changes, update `DESIGN.md` in the same PR.
+- `npm run roadmap -- --check` must pass.
