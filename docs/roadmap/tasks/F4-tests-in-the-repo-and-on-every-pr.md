@@ -3,7 +3,7 @@ id: F4
 title: Tests in the repo and on every PR
 lane: foundations
 owner: edvin
-status: todo
+status: doing
 depends: [F2]
 flag: none
 size: 1 session
@@ -30,10 +30,11 @@ new tests/*, package.json, new .github/workflows/test.yml, README.md
 ## Done when
 
 - [ ] `npm test` passes locally and in GitHub Actions.
-- [ ] The time-of-day setup (midday, clear) is built into the tests so the Stilled don't interfere.
-- [ ] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
+- [x] The time-of-day setup (midday, clear) is built into the tests so the Stilled don't interfere.
+- [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
 - [ ] This file's `status` set to `done` in the PR that finishes it.
 
 ## Log
 
+- 2026-09-30 edvin: tests in `tests/` (35 server checks in 9 files over WebSocket, 4 browser smoke checks), `npm test` / `npm run test:browser`, and the workflow. Passes locally on memory and on Postgres 16 (also run again on the same database); waiting on the first GitHub Actions run to tick the last box and set `done`. Hidden Pages unchanged (nothing players see). Setup goes through a test-only preload (`tests/helpers/test-hooks.js`) instead of test code in the server.
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->

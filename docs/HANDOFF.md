@@ -425,3 +425,39 @@ Server → client: `welcome` (you, island, objects, fires, players, rules), `sna
 To test against Postgres, create a database from `db/schema.sql` and set
 `DATABASE_URL`, `INVITE_CODE` and `SESSION_SECRET`; the server runs the migrations in
 `server/migrations/` on start.
+
+## Automated tests (F4)
+
+- `npm test` runs `tests/server/*.test.js` with `node:test`, one file at a time. Each file
+  starts its own real server (`tests/helpers/server.js`: `node server/index.js` as a child
+  process on a free port) and plays it over WebSocket with `TestClient`s
+  (`tests/helpers/client.js`). The store is Postgres when `TEST_DATABASE_URL` is set
+  (an empty database gets `db/schema.sql` first; the helper refuses to run if it's the same
+  as `DATABASE_URL`), otherwise memory. GitHub Actions (`.github/workflows/test.yml`) runs it
+  against a fresh Postgres 16 on every pull request and push to main, after
+  `npm run roadmap -- --check`.
+- `npm run test:browser` runs `tests/browser/*.test.js` with Playwright (a devDependency; no
+  browser download on install): page loads without script errors, sign-up, skipping the
+  intro, jumping and sitting (checked through a second, WebSocket player who sees the
+  broadcasts). `CHROMIUM_PATH` points it at an existing Chromium.
+- **Test hooks, no test code in the game.** The server is started with
+  `-r tests/helpers/test-hooks.js`, which wraps two things from the outside: the store's
+  `loadIsland` (the island always loads at time 0.51, just after noon, in clear weather, so
+  the Stilled stay away and the weather can't roll for about 7 minutes) and
+  `Island.prototype.onMessage`, adding a `{t:'test', do, id}` message for setup: `give`
+  (items, tools), `place` (put a player anywhere), `tide`, `sleeperOffer` (carve an offering
+  request), `boil` (finish every pot), `state`. It only exists when the tests preload it.
+  Add a command there when a new system needs quick setup; test the system itself through
+  its real messages.
+- Adding tests for a feature: a new `tests/server/<feature>.test.js` with its own
+  `startServer()` in `before` (pass `{ env: { FEATURES: 'flag' } }` for a flagged feature),
+  `server.join()` for players, `c.test('give', ...)`/`c.test('place', ...)` for setup,
+  then real messages. `tests/helpers/world.js` finds objects (`/api/world` layout plus the
+  welcome's states), spots beside them, dry land and shallow sea.
+- Gotchas: the server sends a toast before the `me` with the new inventory, so `c.act()`
+  waits for both, and after a `build` call `c.settle()` before reading `c.me`. E is ignored
+  more often than every 350 ms (`act()` spaces presses out). With a kept database, earlier
+  runs have chopped trees, emptied bushes, lit lanterns and left fires, so tests pick
+  objects with enough left (`chopsLeft`, `state.left`) and build away from existing fires.
+  In the browser, headless rendering is slow (the sign-up to island step can take close to
+  a minute), hence the long waits there.
