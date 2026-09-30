@@ -179,6 +179,20 @@ planned separately by Thaqif):
   marker in about 86%+ of the time on hard, which is why hard asks for 70%. Admins:
   `/minigame <type> [easy|medium|hard]`. Tests: `tests/server/minigames.test.js`,
   `tests/browser/minigames.test.js`.
+- **Climbing and gliding (P9, flag `travel`, off until tried by hand).** `WG.climbAt` is
+  real: the tall palms (`climb: true` from `generateObjects`) and cliffs (slopes steeper
+  than `RULES.TRAVEL.CLIFF_SLOPE`). `public/js/385-climbing.js` holds the climb state
+  (`climb`: a trunk with an angle round it, or a cliff you move over the face of) and
+  `glide`; `stepHop` skips physics while climbing and, with travel on, tracks the height
+  in the air against the sea (`hop.abs`), so falling off a cliff is a real drop and a glide
+  sinks at `GLIDE_FALL` while its drift (`hop.fwd`) carries you. With travel on, cliffs
+  can't be walked up and you slide down them unless holding on. Energy comes from
+  `stepEnergy`'s new `drain`, the same number on both sides. The server allows the glide
+  speed, shows the pose (the snapshot's 9th value, after W9's cave) and a height up to `MAX_HEIGHT`.
+  Poses: `poseTravel` in `120-castaways.js`. Space on a trunk lets go (`startCharge`), and
+  holding it on the way down glides. Tests: `tests/server/travel.test.js`,
+  `tests/browser/travel.test.js` (runs the page small and on Low graphics: the server spends
+  climbing energy by the clock, so a slow headless page would run out halfway up).
 - **Phase 3, stone lanterns (done; light only, no map gating).** 26 lanterns from
   `generateLanterns(seed)` (one near the spawn beach, one by the main spring; the
   4 highest others are great lanterns needing lamp oil from 3 different frogs).

@@ -296,6 +296,25 @@ World content marks climbable things; the movement code only asks:
 WG.climbAt(x, y, z)  // -> null or { normal, top } from objects with `climb: true` or cliff slopes. Stub (F5): always null
 ```
 
+As built (P9, flag `travel`): `WG.climbAt(x, y, z, objs)`. Cliffs need nothing else: ground
+steeper than `RULES.TRAVEL.CLIFF_SLOPE` gives `{ kind: 'cliff', nx, nz, slope, top }` (`nx, nz`
+point out of the face, downhill; `top` is the first gentle spot uphill, `{ x, z, h }`, or null).
+Trunks need the nearby objects passed as `objs`; one with `climb: true` (not gone, not a
+sapling) within its radius + `TRAVEL.TRUNK_REACH` gives `{ kind: 'trunk', o, nx, nz, top }`,
+with `top` its measured height (`o._top` in the browser) or 4.2 × `maxScale`, and null once
+`y` is above that. `generateObjects` marks palms with `maxScale >= 1.2` `climb: true` (79 on the
+Landing); new land (C4's giant trunks, vines) can set `climb: true` on its own objects. Also
+`WG.slopeAt(x, z) -> { gx, gz, g }`.
+
+Movement (browser, `385-climbing.js`, with hooks in `380-jumping.js` and `390-loop.js`): with
+`travel` on you can't walk up a cliff, you grab trunks and cliffs by walking into them, and in
+the air your height is kept against the sea (`hop.abs`), so you fall off cliffs and a glide
+carries you out over the drop. The server (`players.js`) takes `pose: 'climb' | 'glide'` with
+`pos`: a glide may drift at `TRAVEL.GLIDE_SPEED`, `stand` may go up to `TRAVEL.MAX_HEIGHT`,
+both use energy (`WG.stepEnergy(p, dt, sprint, drain)`, the same on both sides), and each
+snapshot row gets a 9th value (after W9's cave), the pose (0, 1 climbing, 2 gliding), which the browser plays
+back with `poseTravel`.
+
 ## 13. Minigames (P8)
 
 ```js

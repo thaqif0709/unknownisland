@@ -93,9 +93,11 @@ const methods = {
       down: p.knockedUntil > Date.now() });
   },
 
-  onPos(p, { x, z, face, moving, sprint, cam, stand, under }) {
+  onPos(p, { x, z, face, moving, sprint, cam, stand, under, pose }) {
     if (num(cam)) p.camYaw = cam;
-    if (num(stand)) p.stand = Math.min(2.2, Math.max(0, stand));   // standing on a rock (just for show)
+    // climbing a trunk or gliding (P9, flag travel): shown to everyone, and a glide drifts faster than walking
+    p.pose = WG.feature('travel') && (pose === 'climb' || pose === 'glide') && !p.dead ? pose : null;
+    if (num(stand)) p.stand = Math.min(p.pose ? RULES.TRAVEL.MAX_HEIGHT : 2.2, Math.max(0, stand));   // standing on a rock, up a trunk, in the air (just for show)
     if (p.dead || !num(x) || !num(z) || !num(face)) return;
     const now = Date.now();
     if (p.knockedUntil > now) { p.lastPosAt = now; p.moving = false; if (Math.hypot(x - p.x, z - p.z) > .3) this.send(p, { t: 'correct', x: p.x, z: p.z }); return; }
@@ -103,8 +105,9 @@ const methods = {
     p.lastPosAt = now;
     p.wantSprint = !!sprint;
     // Allow sprint speed only while the server agrees you have energy.
-    const speed = RULES.WALK_SPEED * (p.wantSprint && !p.exhausted ? RULES.SPRINT_MULT : 1)
+    let speed = RULES.WALK_SPEED * (p.wantSprint && !p.exhausted ? RULES.SPRINT_MULT : 1)
       + (now - (p.lastJumpAt || 0) < 1600 ? 4.5 : 0);   // a charged leap carries you forward faster than walking
+    if (p.pose === 'glide' && !p.exhausted) speed = Math.max(speed, RULES.TRAVEL.GLIDE_SPEED);
     const maxStep = speed * 1.4 * Math.min(dt, 1) + 0.6;
     const d = Math.hypot(x - p.x, z - p.z);
     const wasUnder = p.under || null;
@@ -167,7 +170,8 @@ const methods = {
       if (this.mobs.of('stilled').some(s => Math.hypot(s.x - p.x, s.z - p.z) < RULES.STILLED.NEAR_RADIUS)) dd += RULES.STILLED.NEAR_DREAD;
       if (dd > 0 && this.has(p, 'moon_wing')) dd *= 1.3;
       p.dread = Math.max(0, Math.min(100, p.dread + dd * dt));
-      p.running = WG.stepEnergy(p, dt, p.wantSprint && p.moving);
+      const T = RULES.TRAVEL, drain = p.pose === 'glide' ? T.GLIDE_ENERGY : p.pose === 'climb' ? (p.moving ? T.CLIMB_ENERGY : T.HANG_ENERGY) : 0;
+      p.running = WG.stepEnergy(p, dt, p.wantSprint && p.moving, drain);
       // Hunger and thirst only go down while you're moving; standing still costs nothing.
       if (p.moving) {
         p.hunger = Math.max(0, p.hunger - (RULES.HUNGER_DRAIN * (this.has(p, 'conch_charm') ? 1.2 : 1) + (p.running ? RULES.SPRINT_HUNGER : 0)) * dt);

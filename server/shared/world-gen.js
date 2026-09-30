@@ -108,8 +108,23 @@
       farview: false,    // W3: see out to about 2 km (1 km on phones)
       caves: false,      // W9: caves you walk into (the Landing's sea cave), torches and the Dark
       checkpoints: false, // P4: sleep by a lit hearth to wake there after a knockdown or dying
+      travel: false,     // P9 climbing (palm trunks, cliffs) and gliding with the cloak
       fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
       mouselook: false,  // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
+    },
+    // Climbing and gliding (P9, flag travel). Speeds in m/s, energy per second.
+    TRAVEL: {
+      CLIMB_SPEED: 1.6,        // up or down a trunk or a cliff
+      CLIMB_ENERGY: 9,         // while moving on it
+      HANG_ENERGY: 3,          // while hanging still
+      SLIDE_SPEED: 3,          // sliding down when your energy runs out
+      CLIFF_SLOPE: 1.6,        // ground steeper than this (rise over run, about 58°) is a cliff: climb it, you can't walk up it
+      TRUNK_REACH: .75,        // how close to a climbable trunk you must be to grab it
+      GLIDE_SPEED: 6,          // forward drift while gliding
+      GLIDE_FALL: 1.5,         // how fast you sink while gliding
+      GLIDE_ENERGY: 7,
+      GLIDE_MIN_HEIGHT: 2.2,   // above the ground: lower than this and the cloak can't catch the air
+      MAX_HEIGHT: 40,          // highest anyone can be shown at (a tall trunk, a glide off a cliff)
     },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {
@@ -500,6 +515,8 @@
     for (const o of objects) {
       if (RULES.FLORA[o.type]) o.maxScale = maxScaleFor(seed, o);
       o.species = speciesOf(seed, o);
+      // the taller palms have trunks you can climb (task P9); only used with the travel flag on
+      if (o.type === 'palm' && o.maxScale >= 1.2) o.climb = true;
     }
     genCache.set(seed, objects);
     return objects.map(o => ({ ...o }));
@@ -537,9 +554,14 @@
 
   // One step of the energy model, shared by the server and the client's prediction.
   // p: { energy, exhausted, rest }; wantSprint means "holding sprint while moving".
-  function stepEnergy(p, dt, wantSprint) {
+  // `drain` is any other energy use per second (climbing, gliding: RULES.TRAVEL).
+  function stepEnergy(p, dt, wantSprint, drain = 0) {
     const running = wantSprint && !p.exhausted && p.energy > 0;
-    if (running) {
+    if (drain > 0 && !running) {
+      p.energy = Math.max(0, p.energy - drain * dt);
+      p.rest = 0;
+      if (p.energy <= 0) p.exhausted = true;
+    } else if (running) {
       p.energy = Math.max(0, p.energy - RULES.ENERGY_DRAIN * dt);
       p.rest = 0;
       if (p.energy <= 0) p.exhausted = true;
@@ -608,8 +630,41 @@
   // Which region a spot belongs to: 'sea' below sea level. With the big world off, all land
   // is the Landing.
   const regionAt = (x, z) => (heightAt(x, z) < 0 ? 'sea' : bigOn() ? worldRegionAt(x, z) : 'landing');
-  // A climbable surface at this spot, or null (section 12). Placeholder until task P9.
-  const climbAt = (x, y, z) => null;
+  // A climbable surface at this spot, or null (CONTRACTS.md section 12, task P9).
+  // Cliffs: ground steeper than RULES.TRAVEL.CLIFF_SLOPE. Returns { kind: 'cliff', nx, nz }
+  // (the way the face looks out: downhill) and `top`: the first spot uphill that's gentle
+  // enough to stand on ({ x, z, h }), if there is one within 16 m.
+  // Trunks: pass nearby objects as `objs` (the browser's, with their `climb` mark, states
+  // and optionally `_top`, the height of the leaves); a climbable one within reach gives
+  // { kind: 'trunk', o, nx, nz (from the trunk towards you), top }.
+  function slopeAt(x, z) {
+    const e = .4, gx = (heightAt(x + e, z) - heightAt(x - e, z)) / (2 * e), gz = (heightAt(x, z + e) - heightAt(x, z - e)) / (2 * e);
+    return { gx, gz, g: Math.hypot(gx, gz) };
+  }
+  function climbAt(x, y, z, objs) {
+    const T = RULES.TRAVEL;
+    if (objs) {
+      let best = null, bd = Infinity;
+      for (const o of objs) {
+        if (!o.climb || (o.state && (o.state.gone || o.state.planted != null))) continue;
+        const d = Math.hypot(x - o.x, z - o.z);
+        if (d < (o.r || .35) + T.TRUNK_REACH && d < bd) { bd = d; best = o; }
+      }
+      if (best) {
+        const d = bd || 1, top = best._top != null ? best._top : 4.2 * (best.maxScale || 1);
+        if (y < top) return { kind: 'trunk', o: best, nx: bd ? (x - best.x) / d : 0, nz: bd ? (z - best.z) / d : 1, top };
+      }
+    }
+    const s = slopeAt(x, z);
+    if (s.g < T.CLIFF_SLOPE || heightAt(x, z) < .3) return null;
+    const nx = -s.gx / s.g, nz = -s.gz / s.g;
+    let top = null;
+    for (let d = .25; d <= 16; d += .25) {
+      const tx = x - nx * d, tz = z - nz * d;
+      if (slopeAt(tx, tz).g < T.CLIFF_SLOPE * .75) { top = { x: tx, z: tz, h: heightAt(tx, tz) }; break; }
+    }
+    return { kind: 'cliff', nx, nz, top, slope: s.g };
+  }
 
   // ================= Chunks (task W1) =================
   // The Landing's objects come from generateObjects (ids 0, 1, 2 ...), unchanged. All new
@@ -666,7 +721,7 @@
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
     generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
     feature, features, setFeatures, resolveFeatures,
-    REGIONS, regionAt, climbAt, landingHeightAt, WORLD, RIVERS,
+    REGIONS, regionAt, climbAt, slopeAt, landingHeightAt, WORLD, RIVERS,
     CHUNK, CHUNK_ID_BASE, chunkOf, chunkKey, chunkObjectId, chunkOfId, generateChunk,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;

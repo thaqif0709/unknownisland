@@ -142,14 +142,19 @@
       let iz = free ? (held('forward') || keys.ArrowUp ? 1 : 0) - (held('back') || keys.ArrowDown ? 1 : 0) - joy.y : 0;
       const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
       wantSprint = free && l > .08 && (held('sprint') || runToggle);
-      running = WG.stepEnergy(nrg, dt, wantSprint);
-      const leaping = hop.air && hop.fwd > 0;
-      if (l > .08 || leaping) {
+      running = WG.stepEnergy(nrg, dt, wantSprint, travelDrain());   // (climbing and gliding use energy too)
+      if (climb) { stepClimb(dt, ix, iz); moving = climbMoving; }   // on a trunk or a cliff (385-climbing.js)
+      else if (glide) { const [gx, gz] = glideDir(ix, iz); hop.fwd = RULES.TRAVEL.GLIDE_SPEED; hop.fx = gx; hop.fz = gz; }
+      const leaping = !climb && hop.air && hop.fwd > 0;
+      if (!climb && (l > .08 || leaping)) {
         const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
         const dx = rx * ix + fx * iz, dz = rz * ix + fz * iz;
         // a bit slower through the air, so you can land on the rock you jumped at instead of sailing past it
-        const spd = ((myCave ? caveDepth() > CAVE.WADE : heightAt(px, pz) < .1) ? RULES.WADE_SPEED : RULES.WALK_SPEED) * WG.speedMult(running, nrg.exhausted) * Math.min(1, l) * (hop.air ? .6 : 1);
+        // (and none while gliding: the glide's drift carries you, steered by the keys)
+        const spd = glide ? 0 : ((myCave ? caveDepth() > CAVE.WADE : heightAt(px, pz) < .1) ? RULES.WADE_SPEED : RULES.WALK_SPEED) * WG.speedMult(running, nrg.exhausted) * Math.min(1, l) * (hop.air ? .6 : 1);
         let nx = px + dx * spd * dt, nz = pz + dz * spd * dt;
+        if (l > .08 && !leaping && tryGrab(dx / l, dz / l)) { nx = px; nz = pz; }   // walked into a climbable trunk or cliff: grab it
+        else if (cliffBlocks(nx, nz)) { nx = px; nz = pz; }   // too steep to walk up
         if (leaping) { nx += hop.fx * hop.fwd * dt; nz += hop.fz * hop.fwd * dt; }   // a charged jump carries you forward
         // caves (W9): their walls, and the way in and out at the mouth; slide along walls
         let cs = caveStep(nx, nz);
@@ -190,17 +195,22 @@
           if (sitting) setSitting(false);   // walking off stands you up
         }
       }
+      if (!climb) slideOffCliff(dt);   // on a cliff without holding on: down you go
       const now = performance.now();
       const cam = Math.atan2(px - camera.position.x, pz - camera.position.z);   // which way you're looking
+      const pose = travelPose(), standNow = pose ? hop.y : (hop.floor || 0);   // how high you are, for friends
       const changed = Math.abs(px - lastSent.x) > .01 || Math.abs(pz - lastSent.z) > .01 || Math.abs(face - lastSent.face) > .02
-        || moving !== lastSent.moving || wantSprint !== lastSent.sprint || Math.abs(cam - lastSent.cam) > .04 || Math.abs((hop.floor || 0) - (lastSent.stand || 0)) > .05;
+        || moving !== lastSent.moving || wantSprint !== lastSent.sprint || Math.abs(cam - lastSent.cam) > .04 || Math.abs(standNow - (lastSent.stand || 0)) > .05 || pose !== lastSent.pose;
       if (net && net.open && !(window.__dbg && __dbg.noSend) && ((changed && now - lastSent.at > 66) || now - lastSent.at > 1000)) {
-        net.send({ t: 'pos', x: px, z: pz, face, moving, sprint: wantSprint, cam, stand: +(hop.floor || 0).toFixed(2), under: myCave ? myCave.id : undefined });
-        lastSent = { at: now, x: px, z: pz, face, moving, sprint: wantSprint, cam, stand: hop.floor || 0 };
+        net.send({ t: 'pos', x: px, z: pz, face, moving, sprint: wantSprint, cam, stand: +standNow.toFixed(2), pose: pose || undefined, under: myCave ? myCave.id : undefined });
+        lastSent = { at: now, x: px, z: pz, face, moving, sprint: wantSprint, cam, stand: standNow, pose };
       }
     }
     stepHop(hop, dt);
-    if (hero) { poseCastaway(hero, px, pz, face, moving ? (running ? 2 : 1) : 0, state === 'dead' || knockT > 0, dt, elapsed); applyHop(hero, hop.y, hop.air, hop.land, hop.charge >= 0 ? hop.charge / CHARGE_FULL : 0); }
+    if (hero) {
+      poseCastaway(hero, px, pz, face, moving ? (running ? 2 : 1) : 0, state === 'dead' || knockT > 0, dt, elapsed); applyHop(hero, hop.y, hop.air, hop.land, hop.charge >= 0 ? hop.charge / CHARGE_FULL : 0);
+      if (travelPose()) poseTravel(hero, travelPose(), elapsed, moving);
+    }
 
     animateBugs(elapsed);
     updatePots(dt);
@@ -217,6 +227,7 @@
       poseCastaway(r.av, s.x, s.z, s.face, s.moving, !!s.dead || r.knockT > 0, dt, elapsed);
       r.standS = (r.standS || 0) + ((r.stand || 0) - (r.standS || 0)) * Math.min(1, dt * 8);   // standing on a rock
       r.av.root.position.y += r.standS;
+      if (r.pose) poseTravel(r.av, r.pose === 1 ? 'climb' : 'glide', elapsed, s.moving);   // climbing or gliding (P9)
       if (r.chargeAt && !r.hop) applyHop(r.av, 0, false, 0, Math.min(1, (performance.now() - r.chargeAt) / 1000 / CHARGE_FULL));   // crouching to jump
       if (r.hop) { r.chargeAt = 0; const A = airTime(r.hop.mul); r.hop.t += dt; const air = r.hop.t < A; applyHop(r.av, air ? hopHeight(r.hop.t, r.hop.mul) : 0, air, air ? 0 : .18 - (r.hop.t - A)); if (r.hop.t > A + .18) r.hop = null; }
       tagV.set(s.x, r.av.root.position.y - r.standS + 2.05, s.z).project(camera);
@@ -282,7 +293,7 @@
     } else {
       // Past the lowest orbit angle the camera stops sinking, comes in closer
       // behind the frog and tilts up, so you can look at the sky and treetops.
-      camLift += ((hop.floor || 0) - camLift) * Math.min(1, dt * 6);   // follow you up onto a rock, smoothly
+      camLift += (((climb || glide) ? hop.y : (hop.floor || 0)) - camLift) * Math.min(1, dt * 6);   // follow you up onto a rock (or a trunk, or a glide), smoothly
       const py = (myCave ? myFloor() : Math.max(heightAt(px, pz), -.75)) + camLift, LOW = .18;   // in a cave: its floor (W9)
       const up = Math.max(0, LOW - pitch), orbit = Math.max(pitch, LOW - up * .12);
       const dist = camDist * (1 - Math.min(up, 1) * .45);
