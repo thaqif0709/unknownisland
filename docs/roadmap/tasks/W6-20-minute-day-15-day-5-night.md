@@ -3,7 +3,7 @@ id: W6
 title: 20-minute day (15 day, 5 night)
 lane: world
 owner: thaqif
-status: on-hold
+status: done
 depends: []
 flag: none
 size: under an hour
@@ -22,14 +22,15 @@ server/shared/world-gen.js (two numbers)
 
 ## Done when
 
-- [ ] A full day takes 20 minutes, night 5.
-- [ ] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
-- [ ] This file's `status` set to `done` in the PR that finishes it.
+- [x] A full day takes 20 minutes, night 5.
+- [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
+- [x] This file's `status` set to `done` in the PR that finishes it.
 
 ## Notes
 
-On hold: the planning page note says 20 min but the ticked option says keep 16½. Confirm, then this can go in any time.
+Confirmed by Thaqif: 20 minutes.
 
 ## Log
 
+- 2026-09-30 thaqif: DAYLIGHT_LEN 900, DAY_LEN 1200.
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->

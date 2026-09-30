@@ -85,7 +85,6 @@ Statuses: `todo`, `doing`, `review` (PR open), `done`, `on-hold` (waiting on a d
 
 ## Decisions still open
 
-- Day length: 20 min (W6, on hold until confirmed).
 - Fast travel: keep or cut (W10, on hold).
 - The Hollow and the ending: waiting on the story plan (C9).
 - Crawler screams: Thaqif is finding clips (C2 uses a placeholder until then).

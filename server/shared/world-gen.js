@@ -10,9 +10,9 @@
     // 10 min is day, 8 min 20 s is night, and dusk and dawn are short in between.
     // Daylight (sunrise to sunset, including both) and night, in real seconds.
     // Time simply runs faster through the night. DAY_LEN is the whole cycle.
-    DAYLIGHT_LEN: 696,       // 11 min 36 s
+    DAYLIGHT_LEN: 900,       // 15 min
     NIGHT_LEN: 300,          // 5 min
-    DAY_LEN: 996,
+    DAY_LEN: 1200,           // 20 min
     HUNGER_DRAIN: 0.28,      // per second while moving (standing still costs no hunger or thirst)
     THIRST_DRAIN: 0.42,
     STARVE_DMG: 1.6,         // per second each, when hunger or thirst is 0

@@ -3,7 +3,7 @@ id: F1
 title: Split the server into feature modules
 lane: foundations
 owner: thaqif
-status: todo
+status: doing
 depends: []
 flag: none
 size: 1 session

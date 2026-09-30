@@ -15,8 +15,7 @@ How it's split into tasks: [README.md](README.md). How the pieces talk to each o
 - **Walking across:** about 18 min straight, 24–27 min by a real route.
 - **Heights:** up to about 600 m in the Teeth, snow above 400 m.
 - **Today's island is kept** as **The Landing**, same shape, everything built on it stays.
-- **Day length:** 20 min, of which 15 min day and 5 min night.
-  (Open: the planning page still has "keep 16½ min" ticked; the note says 20. Confirm.)
+- **Day length:** 20 min, of which 15 min day and 5 min night (confirmed; W6 done).
 - **Log in** where you logged out (as now).
 - **Phones:** quality picks itself (shorter far view, thinner leaves). No setting.
 - **Objects** (trees, rocks...) come from the world seed. Only changes are saved.
@@ -216,7 +215,6 @@ for fish.
 
 ## 13. Open questions
 
-- Day length: 20 min (note) vs 16½ min (ticked). Written as 20 above.
 - Fast travel: keep or cut.
 - The Hollow and the ending need Thaqif's story plan.
 - Crawler scream sounds: Thaqif is finding them.
