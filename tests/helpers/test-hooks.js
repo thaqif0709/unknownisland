@@ -34,11 +34,13 @@ const COMMANDS = {
     this.sendMe(p);
     return { inv: p.inv, tools: p.tools };
   },
-  // Put the player at x, z (the client is told with a 'correct').
-  place(p, { x, z, face }) {
+  // Put the player at x, z (the client is told with a 'correct'). `under`: a cave id to
+  // put them in that cave, or '' to bring them out (caves, W9).
+  place(p, { x, z, face, under }) {
     p.x = x; p.z = z; if (typeof face === 'number') p.face = face;
     p.lastPosAt = Date.now(); p.moving = false;
-    this.send(p, { t: 'correct', x, z });
+    if (under !== undefined) p.under = under || null;
+    this.send(p, under !== undefined ? { t: 'correct', x, z, under: under || 0 } : { t: 'correct', x, z });
     return { x, z };
   },
   // A tide right now, as at sunrise.

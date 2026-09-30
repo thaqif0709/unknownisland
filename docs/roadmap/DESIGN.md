@@ -148,6 +148,12 @@ round 1. Confirm.
   Backs off from bright light, flees fire, can't cross water. Touch: knockdown and a short
   drag deeper. Screams: Thaqif supplies clips (1–3 s, .ogg/.mp3, licence allows use, e.g.
   CC0) into `public/sfx/crawler/`; placeholder until then.
+- As built (C2): one Crawler in the Landing's sea cave. It hangs from the roof and lurks; it
+  hears running (25 m), calling (60 m) and chat (30 m), and anyone within 5 m. Its lunge is
+  warned for 0.8 s; caught, you're knocked down and dragged about 8 m deeper. A lit torch
+  within 4.5 m drives it back (so a torch is protection, not just light). No fires underground,
+  so "flees fire" waits for thrown torches (P6). Clips: list their names in
+  `public/sfx/crawler/list.json`.
 
 ## 9. The Stilled of each region
 

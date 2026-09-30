@@ -147,8 +147,10 @@ The Veil lifts at the next dawn. Admins can also type `/spawn dummy` to put the 
 
 The big world is behind three flags that go together: `FEATURES=streaming,bigworld,farview`
 (chunks load around each player, the 5 km world, and the view out to 2 km).
-Caves (the Landing's sea cave, torches and the Dark) are their own flag: `caves`. It works
-with or without the big world.
+Caves (the Landing's sea cave, torches and the Dark, and the Crawler that lives down there)
+are their own flag: `caves`. It works with or without the big world. The Crawler's screams:
+put sound clips in `public/sfx/crawler/` and list their names in `list.json` there (see the
+README in that folder); until then it uses a made-up screech.
 
 Hearth checkpoints are the `checkpoints` flag: sit by a lit clay hearth to wake there after a
 knockdown or collapsing.

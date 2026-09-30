@@ -59,6 +59,7 @@ const methods = {
       return sys(`There's no /${cmd0} command. Type /help for the list.`);
     }
     const msg = { t: 'chat', kind: 'all', from: p.name, id: p.id, text: clean, at: now };
+    p.lastChatAt = now;   // (in a cave, the Crawler hears it, C2)
     this.chatLog = [...(this.chatLog || []), msg].slice(-30);
     if (!p.under) return this.broadcast(msg);
     // from underground (W9): clear to whoever is in the same cave, muffled to everyone else

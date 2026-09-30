@@ -405,6 +405,9 @@ builds each region's cave (described in `server/regions/<id>.js`) for both sides
 `server/systems/caves.js` tracks who is underground (`p.under`), the tide in sea caves, the
 Dark, torches and muffled chat, and `135-caves.js` draws the tunnel, cuts the ground at the
 mouth and keeps you (and the camera) inside it. Details: CONTRACTS.md section 18.
+The sea cave's Crawler (C2) is a mob kind: `server/mobs/crawler.js` and
+`public/js/mobs/crawler.js`; its scream plays clips from `public/sfx/crawler/` (listed in
+`list.json` there) when there are any. Details: CONTRACTS.md section 8.
 The start screen's "What's new" box is `215-whats-new.js` (`NEWS`: lines, each optionally tied
 to a flag, read from `/api/hiddenpages` since it shows before the welcome; a new `id` opens it
 again for everyone). With the `checkpoints` flag (P4), sitting by a lit clay hearth for 3 s saves it as where you
