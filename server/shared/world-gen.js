@@ -6,9 +6,8 @@
 
   // ================= Tuning =================
   const RULES = {
-    // Real seconds per in-game day, loosely Minecraft's: 20 minutes, of which about
-    // 10 min is day, 8 min 20 s is night, and dusk and dawn are short in between.
-    // Daylight (sunrise to sunset, including both) and night, in real seconds.
+    // Real seconds per in-game day: 20 minutes, 15 of daylight (sunrise to sunset,
+    // including both) and 5 of night.
     // Time simply runs faster through the night. DAY_LEN is the whole cycle.
     DAYLIGHT_LEN: 900,       // 15 min
     NIGHT_LEN: 300,          // 5 min
@@ -94,6 +93,11 @@
     BUCKET: { wood: { uses: 5, boil: 75 }, iron: { uses: 20, boil: 45 }, DRINKS: 3, DRINK: 30, MAX: 4 },
     // The Sleeper: requests carved on the stones. Days to answer, and what its moods do.
     SLEEPER: { DAYS: 3, CALM_TOP: 1.5, PRESS_TOP: 4, PRESS_BURN: 1.5, FOG_WALK: .7, GATHER_RADIUS: 6, REACH: 2.2 },
+    // Feature flags: unfinished work can be merged to main while switched off.
+    // Add `name: false` when a task starts and set it to true in the task's last PR.
+    // On the server the FEATURES env var overrides these ("slots,combat" or "-slots").
+    // See docs/roadmap/CONTRACTS.md section 1.
+    FEATURES: {},
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {
       PER_PLAYER: 2, ALONE_EXTRA: 1, DREAD_EXTRA: 1, MAX: 12,
@@ -454,10 +458,29 @@
   }
   const recipeById = id => RECIPES.find(r => r.id === id);
 
+  // Feature flags. The server resolves RULES.FEATURES plus the FEATURES env var once at
+  // start-up and sends the result to each client when it joins, so both sides agree.
+  let activeFeatures = null;
+  const setFeatures = f => { activeFeatures = { ...f }; };
+  const features = () => ({ ...(activeFeatures || RULES.FEATURES) });
+  const feature = name => !!(activeFeatures || RULES.FEATURES)[name];
+  // "slots,combat" switches those on, "-slots" switches one off.
+  function resolveFeatures(env) {
+    const out = { ...RULES.FEATURES };
+    for (const part of String(env || '').split(',')) {
+      const name = part.trim();
+      if (!name) continue;
+      if (name[0] === '-') out[name.slice(1)] = false;
+      else out[name.replace(/^\+/, '')] = true;
+    }
+    return out;
+  }
+
   const WorldGen = {
     RULES, ITEMS, RECIPES, FIRES, PATCHES, MOON_NAMES, moonPhase, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
     generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
+    feature, features, setFeatures, resolveFeatures,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;
   else root.WorldGen = WorldGen;

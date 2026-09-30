@@ -128,6 +128,13 @@ recipes and the fire types are at the top of `server/shared/world-gen.js` (`RULE
 `RECIPES`, `FIRES`). Change a number, push, and Render redeploys. New recipes show
 up in the recipe book automatically; a new kind of item also needs a line in `ITEMS`.
 
+Unfinished features are switched off with flags in `RULES.FEATURES`. To try one on the live
+island before it's finished, add a `FEATURES` environment variable on Render (for example
+`FEATURES=slots` to switch one on, `FEATURES=-slots` to switch it off).
+
+Database changes go in `server/migrations/` as numbered files; the server runs any new ones
+when it starts.
+
 ## Trying it on your own computer (optional)
 
 You need [Node.js](https://nodejs.org) 20 or newer.

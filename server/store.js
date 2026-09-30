@@ -13,81 +13,53 @@ function createPgStore(url) {
   pool.on('error', err => console.error('[db] idle client error', err.message));
   const q = (text, params) => pool.query(text, params);
 
+  // Default journal, tide and Sleeper content: inserted only where missing, on every start,
+  // so new entries in server/content/ appear and edits made in Neon are kept.
+  async function seedContent() {
+    const C = require('./content');
+    for (const r of C.SLEEPER) await q(`INSERT INTO sleeper_requests (request_key, text, conditions, reward, penalty, min_day, days, stone, done_text, fail_text)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT DO NOTHING`,
+      [r.key, r.text, r.conditions, JSON.stringify(r.reward || []), JSON.stringify(r.penalty || []), r.minDay || 1, r.days || 3, r.stone || null, r.doneText || null, r.failText || null]);
+    for (const e of C.JOURNAL) await q(`INSERT INTO journal_entries (entry_key, category, name, description, rarity) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+      [e.key, e.category, e.name, e.description, e.rarity]);
+    for (const t of C.TIDE) await q(`INSERT INTO tide_table (item_key, weight, min_day, conditions, kind, label, gives, entry_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING`,
+      [t.key, t.weight, t.minDay || 1, t.conditions || {}, t.kind, t.label, t.gives || {}, t.entry || null]);
+  }
+
   return {
     kind: 'postgres',
-    // Small additive migrations, safe to run on every start.
+    // Numbered migrations from server/migrations/, each run once (see migrations/index.js),
+    // then the default content is added where it's missing.
     async migrate() {
-      await q(`ALTER TABLE island_members ADD COLUMN IF NOT EXISTS inventory JSONB NOT NULL DEFAULT '{}'`);
-      await q(`ALTER TABLE fires ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'campfire'`);
-      await q(`ALTER TABLE fires ADD COLUMN IF NOT EXISTS pot JSONB`);   // a bucket boiling on it
-      // Island 2: the big island (island 1 was the small original; its data is kept).
-      await q(`INSERT INTO islands (id, name, seed) VALUES (2, 'Unknown Island', 11) ON CONFLICT (id) DO NOTHING`);
-      await q(`ALTER TABLE island_members ADD COLUMN IF NOT EXISTS dread REAL NOT NULL DEFAULT 0`);
-      await q(`CREATE TABLE IF NOT EXISTS lanterns (
-        island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
-        lantern_id INT NOT NULL,
-        lit BOOLEAN NOT NULL DEFAULT false,
-        fuel REAL NOT NULL DEFAULT 0,
-        offerings JSONB NOT NULL DEFAULT '[]',
-        lit_by INT REFERENCES players(id) ON DELETE SET NULL,
-        lit_at TIMESTAMPTZ,
-        PRIMARY KEY (island_id, lantern_id))`);
-      await q(`ALTER TABLE lanterns ADD COLUMN IF NOT EXISTS cleared_since TIMESTAMPTZ`);
-      // Phase 4: collections and tides. The two content tables can be edited in
-      // Neon without redeploying; defaults are inserted only if missing.
-      await q(`CREATE TABLE IF NOT EXISTS journal_entries (
-        entry_key TEXT PRIMARY KEY, category TEXT NOT NULL, name TEXT NOT NULL,
-        description TEXT NOT NULL, rarity TEXT NOT NULL DEFAULT 'common')`);
-      await q(`CREATE TABLE IF NOT EXISTS tide_table (
-        item_key TEXT PRIMARY KEY, weight REAL NOT NULL, min_day INT NOT NULL DEFAULT 1,
-        conditions JSONB NOT NULL DEFAULT '{}', kind TEXT NOT NULL DEFAULT 'resource',
-        label TEXT NOT NULL, gives JSONB NOT NULL DEFAULT '{}', entry_key TEXT)`);
-      await q(`CREATE TABLE IF NOT EXISTS discoveries (
-        island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
-        player_id INT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-        entry_key TEXT NOT NULL, found_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        first_on_island BOOLEAN NOT NULL DEFAULT false, count INT NOT NULL DEFAULT 1,
-        PRIMARY KEY (island_id, player_id, entry_key))`);
-      await q(`CREATE TABLE IF NOT EXISTS washups (
-        id SERIAL PRIMARY KEY, island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
-        item_key TEXT NOT NULL, x REAL NOT NULL, z REAL NOT NULL, data JSONB NOT NULL DEFAULT '{}', day INT NOT NULL)`);
-      // Phase 5: moon, weather, board and cloak patches
-      await q(`ALTER TABLE islands ADD COLUMN IF NOT EXISTS moon_day INT`);
-      await q(`ALTER TABLE islands ADD COLUMN IF NOT EXISTS weather TEXT NOT NULL DEFAULT 'clear'`);
-      await q(`CREATE TABLE IF NOT EXISTS board_notes (
-        id SERIAL PRIMARY KEY, island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
-        note_key TEXT, text TEXT NOT NULL, pinned_by INT REFERENCES players(id) ON DELETE SET NULL,
-        pinned_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
-      await q(`CREATE TABLE IF NOT EXISTS cloak_items (
-        island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
-        player_id INT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-        item_key TEXT NOT NULL, slot INT NOT NULL,
-        PRIMARY KEY (island_id, player_id, slot))`);
-      // The Sleeper: editable requests, and a log of what happened on each island
-      await q(`CREATE TABLE IF NOT EXISTS sleeper_requests (
-        request_key TEXT PRIMARY KEY, text TEXT NOT NULL, conditions JSONB NOT NULL, reward JSONB NOT NULL DEFAULT '[]',
-        penalty JSONB NOT NULL DEFAULT '[]', min_day INT NOT NULL DEFAULT 1, weight REAL NOT NULL DEFAULT 1,
-        days INT NOT NULL DEFAULT 3, stone TEXT, done_text TEXT, fail_text TEXT, enabled BOOLEAN NOT NULL DEFAULT true)`);
-      await q(`CREATE TABLE IF NOT EXISTS island_events (
-        id SERIAL PRIMARY KEY, island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
-        event_key TEXT NOT NULL, starts_at TIMESTAMPTZ NOT NULL DEFAULT now(), ends_at TIMESTAMPTZ, state JSONB NOT NULL DEFAULT '{}')`);
-      await q(`ALTER TABLE players ADD COLUMN IF NOT EXISTS seen_intro BOOLEAN NOT NULL DEFAULT false`);
-      const C = require('./content');
-      for (const r of C.SLEEPER) await q(`INSERT INTO sleeper_requests (request_key, text, conditions, reward, penalty, min_day, days, stone, done_text, fail_text)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT DO NOTHING`,
-        [r.key, r.text, r.conditions, JSON.stringify(r.reward || []), JSON.stringify(r.penalty || []), r.minDay || 1, r.days || 3, r.stone || null, r.doneText || null, r.failText || null]);
-      for (const e of C.JOURNAL) await q(`INSERT INTO journal_entries (entry_key, category, name, description, rarity) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
-        [e.key, e.category, e.name, e.description, e.rarity]);
-      for (const t of C.TIDE) await q(`INSERT INTO tide_table (item_key, weight, min_day, conditions, kind, label, gives, entry_key) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING`,
-        [t.key, t.weight, t.minDay || 1, t.conditions || {}, t.kind, t.label, t.gives || {}, t.entry || null]);
-      await q(`ALTER TABLE lanterns ADD COLUMN IF NOT EXISTS reclaim_progress REAL NOT NULL DEFAULT 1`);
-      await q(`CREATE TABLE IF NOT EXISTS drops (
-        id SERIAL PRIMARY KEY,
-        island_id INT NOT NULL REFERENCES islands(id) ON DELETE CASCADE,
-        x REAL NOT NULL, z REAL NOT NULL,
-        items JSONB NOT NULL,
-        dropped_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
-      await q(`SELECT setval(pg_get_serial_sequence('islands', 'id'), GREATEST((SELECT MAX(id) FROM islands), 1))`);
+      const { listMigrations } = require('./migrations');
+      const list = listMigrations();
+      // Each migration runs in its own transaction holding a transaction-level lock, so two
+      // servers starting together can't both run one (and it works through Neon's pooler).
+      const c = await pool.connect();
+      try {
+        await c.query('BEGIN');
+        await c.query('SELECT pg_advisory_xact_lock(727001)');
+        await c.query('CREATE TABLE IF NOT EXISTS migrations (name TEXT PRIMARY KEY, ran_at TIMESTAMPTZ NOT NULL DEFAULT now())');
+        await c.query('COMMIT');
+        for (const m of list) {
+          await c.query('BEGIN');
+          try {
+            await c.query('SELECT pg_advisory_xact_lock(727001)');
+            if ((await c.query('SELECT 1 FROM migrations WHERE name = $1', [m.name])).rowCount) { await c.query('COMMIT'); continue; }
+            if (m.sql) await c.query(m.sql);
+            else await m.up((text, params) => c.query(text, params));
+            await c.query('INSERT INTO migrations (name) VALUES ($1)', [m.name]);
+            await c.query('COMMIT');
+            console.log(`[db] migration ${m.name} applied`);
+          } catch (e) {
+            await c.query('ROLLBACK').catch(() => {});
+            throw new Error(`migration ${m.name} failed: ${e.message}`);
+          }
+        }
+      } finally {
+        c.release();
+      }
+      await seedContent();
     },
     async findPlayerByName(name) {
       const r = await q('SELECT id, username, pass_hash FROM players WHERE lower(username) = lower($1)', [name]);

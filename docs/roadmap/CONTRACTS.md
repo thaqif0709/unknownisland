@@ -9,19 +9,24 @@ is fine; renaming or changing meaning is not, without agreeing first.
 
 ---
 
-## 1. Feature flags (F3)
+## 1. Feature flags (F3, done)
 
 Unfinished work can merge to `main` (which auto-deploys) without going live.
 
 ```js
-// server/shared/world-gen.js
-RULES.FEATURES = { streaming: false, slots: false, combat: false, ... };
-// Render env var FEATURES="slots,combat" (or "-slots") overrides on the server,
-// and the server sends the resolved flags to the client in the join message.
-WG.feature('slots')   // true/false, works on server and client
+// server/shared/world-gen.js: add your flag when the task starts
+RULES.FEATURES = { slots: false, combat: false };
+WG.feature('slots')   // true/false, the same answer on the server and in the browser
+WG.features()         // { slots: false, combat: true } (the resolved set)
 ```
 
-Each task names its flag. Flip it on (in `RULES.FEATURES`) in the task's last PR.
+- On Render, the `FEATURES` env var overrides them: `FEATURES="slots,combat"` switches those
+  on, `FEATURES="-slots"` switches one off. The server logs the flags that are on at
+  start-up, and warns about names that aren't in `RULES.FEATURES` (typos).
+- The server sends the resolved flags in the `welcome` message and `public/net.js` applies
+  them, so the client never decides on its own.
+- Each task names its flag. Flip it to `true` in `RULES.FEATURES` in the task's last PR.
+  Once a feature has been on for a while, delete the flag and the `if`s.
 
 ## 2. Server feature modules and the message registry (F1)
 
@@ -172,11 +177,22 @@ UI.minigames.register(type, { open(puzzle, answer), close() })   // answer(paylo
 
 The answer stays on the server. Fishing (P7) and future Sleeper requests use this.
 
-## 14. Database migrations (F3)
+## 14. Database migrations (F3, done)
 
-Each change is its own file, `server/migrations/NNNN-short-name.sql` (or `.js`), run once in
-order and recorded in a `migrations` table. Pick the next free number when you open the PR;
-if both of you took the same number, the second to merge renumbers.
+Each change is its own file in `server/migrations/`:
+
+- `NNNN-short-name.sql`: plain SQL, or
+- `NNNN-short-name.js`: `module.exports = { async up(q) { await q('ALTER TABLE ...'); } }`.
+
+Each runs once, in number order, in its own transaction, and is recorded in the
+`migrations` table. A failing migration is rolled back and stops the server from starting,
+with the file name in the error. `0001-baseline` is everything that existed before.
+Take the next free number when you open the PR. If both of you took the same number, the
+server refuses to start until one is renumbered (whoever merges second). Never edit a
+migration that is already on `main`; add a new one.
+
+Default content (journal, tide, Sleeper requests) is not a migration: `seedContent()` in
+`server/store.js` inserts whatever is missing on every start.
 
 ## 15. Content data files
 

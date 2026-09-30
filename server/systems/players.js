@@ -54,6 +54,7 @@ const methods = {
       firstArrival: m.x == null, seenIntro: !!m.seen_intro,
       players: [...this.players.values()].filter(q => q !== p).map(q => this.publicView(q)),
       rules: RULES,
+      features: WG.features(),
       ...this.joinExtras(p),
     });
     this.broadcast({ t: 'join', player: this.publicView(p) }, p);

@@ -317,6 +317,17 @@ survival loop, show-only messages), gather (E on things), crafting, fires, still
 knockdowns), lanterns (and `lights()`), buckets, drops, sleeper. Default content is in
 `server/content/<topic>.js`.
 
+## Feature flags and migrations
+- **Flags:** `RULES.FEATURES` in `world-gen.js`, read with `WG.feature(name)` on both sides.
+  The `FEATURES` env var on Render overrides them (`"slots,combat"`, `"-slots"`); the server
+  resolves them once at start-up (`server/index.js`) and sends them in `welcome`
+  (`public/net.js` applies them). Details: `docs/roadmap/CONTRACTS.md` section 1.
+- **Migrations:** numbered files in `server/migrations/` (`.sql`, or `.js` exporting
+  `up(q)`), each run once in its own transaction under a transaction-level advisory lock,
+  recorded in the `migrations` table. `0001-baseline` holds everything the old `migrate()`
+  did (all idempotent). Default content is seeded separately on every start
+  (`seedContent()` in `store.js`). Details: CONTRACTS.md section 14.
+
 ## Infrastructure
 
 - **Neon:** project `unknown-island` (id `proud-water-43664930`), AWS Singapore,
@@ -354,4 +365,5 @@ Server → client: `welcome` (you, island, objects, fires, players, rules), `sna
 
 `npm start` without `DATABASE_URL` runs an in-memory island with invite code `dev`.
 To test against Postgres, create a database from `db/schema.sql` and set
-`DATABASE_URL`, `INVITE_CODE` and `SESSION_SECRET`.
+`DATABASE_URL`, `INVITE_CODE` and `SESSION_SECRET`; the server runs the migrations in
+`server/migrations/` on start.

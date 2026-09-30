@@ -8,6 +8,16 @@ const { WebSocketServer } = require('ws');
 const { createStore } = require('./store');
 const { createAuth } = require('./auth');
 const { Island } = require('./world');
+const WG = require('./shared/world-gen');
+
+// Feature flags: RULES.FEATURES, overridden by the FEATURES env var ("slots,combat", "-slots").
+WG.setFeatures(WG.resolveFeatures(process.env.FEATURES));
+{
+  const on = Object.keys(WG.features()).filter(WG.feature);
+  const unknown = String(process.env.FEATURES || '').split(',').map(s => s.trim().replace(/^[-+]/, '')).filter(n => n && !(n in WG.RULES.FEATURES));
+  console.log(`[setup] feature flags on: ${on.join(', ') || 'none'}`);
+  if (unknown.length) console.warn(`[setup] FEATURES names flags not in RULES.FEATURES (typo?): ${unknown.join(', ')}`);
+}
 
 const PORT = +process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, '..', 'public');

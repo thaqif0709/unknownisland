@@ -1,6 +1,7 @@
 -- Unknown Island database schema.
 -- This has ALREADY been applied to the Neon database; it's here for reference
--- and for setting up a fresh database (for example a local test copy).
+-- and for setting up a fresh database (for example a local test copy). Later changes
+-- are numbered migrations in server/migrations/, which the server runs on start.
 
 CREATE TABLE players (
   id SERIAL PRIMARY KEY,

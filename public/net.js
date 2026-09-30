@@ -15,6 +15,8 @@ window.Net = (function () {
         let msg;
         try { msg = JSON.parse(e.data); } catch { return; }
         if (msg.t === 'kicked' || msg.t === 'auth-failed') stopped = true;
+        // the server decides which feature flags are on (WorldGen.feature(name))
+        if (msg.t === 'welcome' && msg.features && window.WorldGen) window.WorldGen.setFeatures(msg.features);
         handlers.message(msg);
       };
       ws.onclose = () => {
