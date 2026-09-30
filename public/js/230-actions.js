@@ -24,7 +24,7 @@
       case 'sea': return 'Drink seawater';
       case 'palm': return o.state.coconuts > 0 ? 'Pick a coconut' : o.state.planted != null ? 'Chop the young palm' : 'Chop the palm';
       case 'tree': return o.state.planted != null ? 'Chop the young tree' : 'Chop the tree';
-      case 'bush': return o.state.berries ? 'Eat berries' : 'Bush (picked clean)';
+      case 'bush': return !o.state.berries ? 'Bush (picked clean)' : WG.feature('slots') ? `Pick ${o.species === 'blueberry' ? 'blueberries' : 'berries'}` : 'Eat berries';   // with the bag (P2) they go into it
       case 'rock': return o.species === 'pebble' ? 'Pick up stones' : 'Gather stone';
       case 'ore': return has('pickaxe') ? `Mine ${o.ore === 'iron' ? 'iron' : 'copper'} ore` : `${o.ore === 'iron' ? 'Iron' : 'Copper'} ore (needs a pickaxe)`;
       case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
@@ -35,7 +35,7 @@
       }
       case 'carving': return o.offer && o.tally ? `Read the ${o.key} stone (it wants ${WG.ITEMS[o.offer].toLowerCase()})` : `Read the ${o.key} stone`;
       case 'board': return notes.length ? `Read the driftwood board (${notes.length} note${notes.length > 1 ? 's' : ''})` : 'The driftwood board (pin a note)';
-      case 'wash': return o.kind === 'strange' ? (o.key === 'door_in_sand' ? 'Try the door' : o.key === 'ringing_bell' ? 'Touch the bell' : o.key === 'footprints' ? 'Look at the footprints' : 'Pick it up') : `Pick up: ${o.label.replace(/^A /, 'a ')}`;
+      case 'wash': return o.kind === 'strange' ? (o.key === 'door_in_sand' ? 'Try the door' : o.key === 'ringing_bell' ? 'Touch the bell' : o.key === 'footprints' ? 'Look at the footprints' : 'Pick it up') : `${o.kind === 'food' ? 'Eat' : 'Pick up'}: ${o.label.replace(/^A /, 'a ')}`;   // tide food is eaten on the spot
       case 'bug': { const e = journal.entries.find(e => e.key === o.key); return `Catch the ${(e ? e.name : 'bug').toLowerCase()}`; }
       case 'lantern': {
         const oil = (stats.inv.oil || 0) > 0;

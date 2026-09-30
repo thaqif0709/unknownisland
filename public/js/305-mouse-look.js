@@ -3,7 +3,7 @@
   // mouse turns the camera. Esc frees it (and opens settings). Any panel, chat, the intro
   // or dying frees it too, with an ink cursor for menus; closing the last panel locks it
   // again, or shows "Click to continue" when the browser won't allow that without a click.
-  // An ink crosshair floats just in front of you and snaps onto whatever E would use.
+  // An ink crosshair snaps onto whatever E would use; it only shows while something you can hit is aimed at.
   // Phones and touch are unchanged.
   const finePointer = matchMedia('(any-pointer: fine)').matches;
   const mouseLookOn = () => WG.feature('mouselook') && finePointer;
@@ -87,17 +87,18 @@
       lockPill.classList.toggle('hidden', !pill);
     }
 
-    // crosshair
-    const show = on && state === 'play' && !blocker;
-    if (show !== xShown) { xShown = show; xhair.classList.toggle('hidden', !show); }
-    if (!show) return;
+    // crosshair: kept out of sight (players found it got in the way; what E would use already
+    // has its label), and only shown while something you can hit is aimed at (P6)
+    const aiming = on && state === 'play' && !blocker;
+    const hit = aiming && UI.crosshair.hittable.some(fn => { try { return fn(); } catch (e) { return false; } });
+    if (hit !== xShown) { xShown = hit; xhair.classList.toggle('hidden', !hit); }
+    if (!aiming) return;
     const [ax, ay, az] = aimPoint();
     xv.set(ax, ay, az).project(camera);
     if (xv.z > 1) return;
     const sx = (xv.x * .5 + .5) * innerWidth, sy = (-xv.y * .5 + .5) * innerHeight, k = Math.min(1, dt * 18);
     xx += (sx - xx) * k; xy += (sy - xy) * k;
     xhair.style.transform = `translate(${xx.toFixed(1)}px,${xy.toFixed(1)}px)`;
-    const hit = UI.crosshair.hittable.some(fn => { try { return fn(); } catch (e) { return false; } });
     xhair.classList.toggle('hit', hit);
     xhair.classList.toggle('use', !hit && !!(target || bucketAction()));
   });

@@ -144,7 +144,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li><b>Top right:</b> who's on the island (in their map colours) and the minimap.</li>
         <li><b>Bottom left:</b> your eight item slots and your tools.</li>
         <li><b>Bottom middle:</b> what <kbd>E</kbd> will do right now.</li>
-        <li data-feature="mouselook"><b>The crosshair</b> (with a mouse) floats just in front of you, and rings whatever <kbd>E</kbd> would use.</li>
+        <li data-feature="mouselook"><b>No crosshair</b> (with a mouse): it stays out of sight, since whatever <kbd>E</kbd> would use already has its label. It will only show when there’s something to hit.</li>
         <li><b>Red glow at the screen edges:</b> your health is below half (stronger as it drops, pulsing below a quarter), or you just got hurt.</li>
         <li>Dropped sacks glow white on the ground so they're easy to spot.</li>
       </ul>
@@ -166,7 +166,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td>Silverfin</td><td>+20 food</td><td>Washed up by the tide</td></tr>
         <tr><td>Bugs</td><td>+6 food, a little less dread</td><td>Catch them with <kbd>E</kbd> (see the Journal)</td></tr>
       </table>
-      <p data-feature="slots">Coconuts and berries go into your bag when you pick them, to eat when you like: hold one in your hand and hold <kbd>E</kbd> for a second (a ring fills round the middle of the screen), or tap it in the bag and press <b>Eat one</b>. Silverfin and bugs are still eaten on the spot.</p>
+      <p data-feature="slots">Coconuts and berries are kept when you pick them (the hotbar first, then the bag), to eat when you like: hold one in your hand and hold <kbd>E</kbd> (a ring fills round the middle of the screen; a bite every second while you keep holding, until you're full), or tap it in the bag and press <b>Eat one</b>. Silverfin and bugs are still eaten on the spot.</p>
       <h3>Water</h3>
       <ul>
         <li><b>Springs:</b> fresh water, +<span data-r="SPRING_WATER"></span> a drink. The main spring is south of the big hill; there are others in hollows around the island.</li>
@@ -263,6 +263,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li data-feature-off="slots">You have <b>8 slots</b>, numbered <kbd>1</kbd>&ndash;<kbd>8</kbd>. Each kind of thing keeps its slot; each bucket has its own.</li>
         <li data-feature="slots">You carry things in <b><span data-r="SLOTS.HOTBAR"></span> hotbar slots</b> (<kbd>1</kbd>&ndash;<kbd>8</kbd>, along the bottom of the screen) and a <b>bag of <span data-r="SLOTS.BAG"></span> more</b> (<kbd>I</kbd>). A slot holds up to <span data-r="SLOTS.STACK"></span> of one thing (<span data-r="SLOTS.FOOD_STACK"></span> of a food, and one bucket). What you gather goes into the bag first; buckets and torches go into the hotbar, since you use them from your hand.</li>
         <li data-feature="slots"><b>In the bag:</b> drag a stack onto an empty slot to move it, onto the same thing to add to it, or onto something else to swap them. Drag with the right mouse button to take half. <kbd>Shift</kbd>+click sends a stack across, between the bag and the hotbar. Drag it off the page to drop it. On a phone, tap a stack and then tap where it goes; the buttons under the bag take half, send it across, eat it or drop it.</li>
+        <li data-feature="slots"><b>Where new things go:</b> into the hotbar first, then the bag once the hotbar is full. Picking an empty hotbar slot leaves your hands empty.</li>
         <li data-feature="slots"><b>A full bag:</b> whatever doesn't fit is left in a sack at your feet. Picking up a sack takes what fits and leaves the rest in it.</li>
         <li>Press a number (or <kbd>Q</kbd> to cycle) to hold that item. Your frog carries it in its hand and friends can see it.</li>
         <li><kbd>G</kbd> drops one of the held item in a sack at your feet; <kbd>Shift</kbd>+<kbd>G</kbd> drops the whole stack. Drops next to a sack go into it.</li>
@@ -441,6 +442,8 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="slots"><b>Bag fixes:</b> new things fill the hotbar before the bag, an empty slot can't be picked any more, a bush now says <i>Pick berries</i>, and tide food says <i>Eat</i>. Holding <kbd>E</kbd> eats a bite every second even on a slow computer (it used to lag until you let go), and stops when you're full.</li>
+        <li data-feature="mouselook"><b>The crosshair is gone</b> while you look around with the mouse; it will only come back when there’s something to hit.</li>
         <li data-feature="caves"><b>Something lives in the sea cave.</b> Keep quiet, and keep your torch lit.</li>
         <li data-feature="slots"><b>The bag:</b> <span data-r="SLOTS.HOTBAR"></span> hotbar slots and a <span data-r="SLOTS.BAG"></span>-slot bag on <kbd>I</kbd>, with stacks and dragging. Coconuts and berries go into the bag; hold <kbd>E</kbd> with one in hand to eat it.</li>
         <li data-feature="travel"><b>Climbing and gliding:</b> climb the tall palms and the cliffs, and glide down with your cloak.</li>
@@ -449,7 +452,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li data-feature="checkpoints"><b>Hearth checkpoints:</b> sleep by a lit clay hearth and you wake there after being knocked down or collapsing.</li>
         <li><b>What's new</b> on the start screen: a short list of what's changed, above "Go to the island". And if the spot you left is somewhere you can't stand any more, you come back on the beach.</li>
         <li data-feature="caves"><b>Caves:</b> a sea cave on the Landing, torches to carry, and the Dark.</li>
-        <li data-feature="mouselook"><b>Mouse-look:</b> click the island and the mouse turns the camera, with a crosshair on what you can use. The wheel picks your item; Ctrl + wheel zooms.</li>
+        <li data-feature="mouselook"><b>Mouse-look:</b> click the island and the mouse turns the camera, The wheel picks your item; Ctrl + wheel zooms.</li>
         <li><b>Chopping and mining look different:</b> an axe sweeps sideways into trees, and a pickaxe comes down onto rocks and ore.</li>
         <li data-feature="farview"><b>Far view:</b> you can see mountains two kilometres away now.</li>
         <li><b>The map</b> can be dragged and zoomed, with buttons to centre on yourself or see it all.</li>

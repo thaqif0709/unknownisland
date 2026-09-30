@@ -216,7 +216,8 @@ after Esc); then a "Click to continue" pill shows. With the flag on, the wheel c
 hotbar and Ctrl + wheel zooms.
 
 Crosshair: it snaps onto `target` (what E would use). For things you can hit (P6), push a
-function that says whether one is aimed at right now; the crosshair turns red while any does:
+function that says whether one is aimed at right now; the crosshair (otherwise hidden) shows,
+in red, while any does:
 
 ```js
 UI.crosshair.hittable.push(() => aimedMob != null);

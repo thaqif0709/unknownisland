@@ -157,7 +157,7 @@
     flint: 'Flint', herbs: 'Healing herbs', flax: 'Flax', bricks: 'Old bricks', tin: 'Tin ore' };   // (the last five: the Stairs, C3)
   // More about an item than its name (all optional): kind 'food' is eaten from a slot (food,
   // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise),
-  // hand: goes into the hotbar first, because it's used from your hand.
+  // hand: used from your hand. (Every new item goes into the hotbar first, then the bag.)
   const ITEM_INFO = {
     berries: { kind: 'food', food: RULES.BERRY_FOOD },
     coconut: { kind: 'food', food: RULES.COCONUT_FOOD, water: RULES.COCONUT_WATER },
