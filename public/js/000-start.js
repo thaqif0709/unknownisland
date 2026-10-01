@@ -14,6 +14,9 @@
   //   UI.panels.register('inventory', { el, onOpen })   Esc, closing and "a panel is open" include it
   // (call panels.register from a file numbered after 240-input.js, or from inside a function)
   //   UI.mapLayers.push({ draw(g, at, dotScale, full) })   markers on the map (290-map.js); from any part
+  //   UI.things.flint = { make(rng, o) -> { g, parts? }, state(o, s)?, label(o), solid? }   a region's own objects (100-plants-and-rocks.js)
+  //   UI.itemIcons.flint = (g, fill, INK) => ...   draws an item's 64x64 icon (240-input.js)
+  //   UI.bugLooks.wind_moth = { make(g, add), move(b, e, gy) -> [x, y, z]? }   how a bug looks and moves (170-bugs.js)
   const UI = window.UI = {
     net: {
       handlers: new Map(),
@@ -23,5 +26,8 @@
     frameFns: [],
     onFrame(fn) { this.frameFns.push(fn); },
     mapLayers: [],
+    things: {},
+    bugLooks: {},
+    itemIcons: {},
   };
 

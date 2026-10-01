@@ -166,7 +166,7 @@
         if (cs.k !== 'block' && (cs.k === 'in' || heightAt(nx, nz) > -1) && !veiled) {
           const under = cs.k === 'in';   // in a cave, the things up on the ground aren't in your way
           const push = o => {
-            if (o.state.gone || o.type === 'dig') return;
+            if (o.state.gone || o.type === 'dig' || (UI.things[o.type] && UI.things[o.type].solid === false)) return;
             if (hop.y > 0 && hop.y >= topOf(o) - .05) return;   // high enough (or standing on top): pass over it
             // off the ground (jumping, or standing on something) and up among the leaves: they're solid.
             // On foot you walk under and around trees as before, so palms and their coconuts stay reachable.

@@ -26,7 +26,7 @@
       case 'tree': return o.state.planted != null ? 'Chop the young tree' : 'Chop the tree';
       case 'bush': return !o.state.berries ? 'Bush (picked clean)' : WG.feature('slots') ? `Pick ${o.species === 'blueberry' ? 'blueberries' : 'berries'}` : 'Eat berries';   // with the bag (P2) they go into it
       case 'rock': return o.species === 'pebble' ? 'Pick up stones' : 'Gather stone';
-      case 'ore': return has('pickaxe') ? `Mine ${o.ore === 'iron' ? 'iron' : 'copper'} ore` : `${o.ore === 'iron' ? 'Iron' : 'Copper'} ore (needs a pickaxe)`;
+      case 'ore': { const n = (WG.ITEMS[o.ore] || 'Ore').replace(/ ore$/i, ''); return has('pickaxe') ? `Mine ${n.toLowerCase()} ore` : `${n} ore (needs a pickaxe)`; }
       case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
       case 'drop': {
         const list = o.items ? Object.entries(o.items).filter(([k, n]) => k !== 'buckets' && n > 0).map(([k, n]) => `${n} ${(WG.ITEMS[k] || k).toLowerCase()}`) : [];
@@ -48,13 +48,14 @@
         if (o.pot) return o.pot.left <= 0 ? 'Take the bucket of clean water' : (stats.inv.wood || 0) > 0 ? `Add wood (the bucket is boiling)` : 'Take the bucket back (not boiled yet)';
         return (stats.inv.wood || 0) > 0 ? (o.fuel > 0 ? `Add wood to the ${n}` : 'Relight with wood') : `${n[0].toUpperCase() + n.slice(1)} (needs wood)`; }
     }
+    if (UI.things[o.type]) return UI.things[o.type].label(o);   // a region's own (C3 ...)
   }
   const has = tool => stats.tools.includes(tool);
   // Which swing a hit gets: chopping (axe, swept sideways) for trees and palms with
   // no coconuts left, mining (pickaxe, brought down) for rocks and ore.
   const swingKindFor = o => !o ? null
     : (o.type === 'tree' || (o.type === 'palm' && !(o.state && o.state.coconuts > 0))) ? 'chop'
-    : (o.type === 'rock' || o.type === 'ore') ? 'mine' : null;
+    : (o.type === 'rock' || o.type === 'ore') ? 'mine' : UI.things[o.type] ? UI.things[o.type].swing || null : null;
   function targetKey(o) {
     if (o.type === 'spring' || o.type === 'sea') return o.type;
     return ({ fire: 'f', drop: 'd', lantern: 'l', wash: 'w', bug: 'b' }[o.type] || 'o') + o.id;
@@ -88,7 +89,7 @@
     cooldown = .45;
     if (target.type === 'board') { togglePanel('board'); return; }
     if (target.type === 'carving') { readCarving(target); return; }
-    if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig', 'lantern'].includes(target.type)) startSwing(hero, swingKindFor(target));
+    if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig', 'lantern'].includes(target.type) || (UI.things[target.type] && UI.things[target.type].swing !== undefined)) startSwing(hero, swingKindFor(target));
     net.send({ t: 'act', target: targetKey(target) });
   }
   // Build a recipe: tools are made on the spot, fires are placed in front of you.

@@ -186,6 +186,7 @@
         g.lineWidth = 1.5; [[-.6, 12], [.2, 16], [1, 12]].forEach(([a, r]) => { g.beginPath(); g.arc(32, 36, r, a, a + 1.4); g.stroke(); });
         g.fillStyle = INK; [[26, 30], [36, 29], [31, 38]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 2.6, 0, 7); g.fill(); }); break;
       default:
+        if (UI.itemIcons[key]) { UI.itemIcons[key](g, fill, INK); break; }   // a region's own items (C3 ...)
         if (key.startsWith('bucket:')) {
           const [, mat, water] = key.split(':'), body = mat === 'iron' ? '#8E96A0' : '#A57A55';
           g.lineWidth = 3;

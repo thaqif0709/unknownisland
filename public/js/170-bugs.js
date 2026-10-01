@@ -24,6 +24,7 @@
     else if (key === 'lantern_fish') { add(new THREE.SphereGeometry(.14, 10, 8), bugMats.lanternFish, 0, 0, 0).scale.set(1.6, .8, .8);
       const st = add(new THREE.CylinderGeometry(.008, .008, .2, 4), bugMats.lanternFish, .16, .14, 0); st.rotation.z = -.6;
       add(new THREE.SphereGeometry(.045, 8, 6), bugMats.lure, .24, .22, 0); }
+    else if (UI.bugLooks[key]) UI.bugLooks[key].make(g, add);   // a region's own (C3 ...)
     else { add(new THREE.SphereGeometry(.08, 8, 6), bugMats.bark_beetle, 0, 0, 0).scale.set(1, .55, 1.3); }
     return g;
   }
@@ -46,6 +47,7 @@
       else if (b.key === 'glow_mushroom') { y = gy; }
       else if (b.key === 'lantern_fish') { x += Math.sin(e * .4) * 1.4; z += Math.cos(e * .33) * 1.4; y = Math.max(gy, -.5) + .05 + Math.sin(e * 1.5) * .04; }
       else if (b.key === 'glass_snail') { x += Math.sin(e * .08) * .3; y += .01; }
+      else if (UI.bugLooks[b.key] && UI.bugLooks[b.key].move) [x, y, z] = UI.bugLooks[b.key].move(b, e, gy);
       else { x += Math.sin(e * .25) * .5; z += Math.cos(e * .2) * .5; y += .05; }
       b.mesh.position.set(x, y, z); if (b.key !== 'glow_mushroom') b.mesh.rotation.y = e * .5;
       b.cx = x; b.cz = z;   // where it actually is, for catching

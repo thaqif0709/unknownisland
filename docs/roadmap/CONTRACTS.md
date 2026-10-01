@@ -74,6 +74,10 @@ UI.net.on('fish-bite', m => {...});   // after the core has handled each message
 UI.onFrame(dt => {...});               // every frame, before drawing
 UI.panels.register('inventory', { el, onOpen });   // Esc, closing and "a panel is open" include it
 UI.panels.toggle(name) / UI.panels.close() / UI.panels.isOpen()
+// a region's own things, items and bugs (C3 and the other region packs; see 108-the-stairs.js)
+UI.things.flint = { make(rng, o) -> { g, parts }, state(o, s), label(o), solid: false, swing: 'mine' };
+UI.itemIcons.flint = (g, fill, INK) => {...};   // draws the 64x64 icon on a canvas
+UI.bugLooks.wind_moth = { make(g, add), move(b, e, gy) -> [x, y, z] };
 ```
 
 `UI.panels.register` must run from a part numbered after `240-input.js` (or inside a
@@ -203,6 +207,11 @@ The 5 km ground (W4, flag `bigworld`, which needs `streaming` on too):
 - Each region's `spawn` table is in its file; they're placeholders until its pack.
 Content tasks put per-region data in `server/regions/<id>.js` (spawn tables, Stilled kind,
 boss, requests), so two region packs never edit the same file.
+A pack's own things: `spawnMore` rules (with `spawnFlag`) in the region file, only while the
+flag is on and always after `spawn` (so the objects already there keep their ids and saved
+state); their start state, regrow days and size in `WG.THINGS`; what E does in
+`server/systems/<region>.js` (`uses`); how they look through `UI.things` (section 3). A cave,
+bug or journal entry can carry `flag` (and bugs `region`, `minH`) to stay hidden until then.
 
 ## 7. Panels and the cursor (P1)
 

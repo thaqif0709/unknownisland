@@ -161,6 +161,11 @@ are their own flag: `caves`. It works with or without the big world. The Crawler
 put sound clips in `public/sfx/crawler/` and list their names in `list.json` there (see the
 README in that folder); until then it uses a made-up screech.
 
+The Stairs' own things (flint, herbs, flax, old walls, standing stones, tin, three bugs, the
+Leaning on windy nights, the old mine and the Stairs' run of carvings) are the `region-stair`
+flag; it needs `streaming,bigworld` (and `caves` for the mine). Switching it on adds them to
+the land without moving anything already there.
+
 Hearth checkpoints are the `checkpoints` flag: sit by a lit clay hearth to wake there after a
 knockdown or collapsing.
 

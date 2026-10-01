@@ -453,6 +453,16 @@ mouth and keeps you (and the camera) inside it. Details: CONTRACTS.md section 18
 The sea cave's Crawler (C2) is a mob kind: `server/mobs/crawler.js` and
 `public/js/mobs/crawler.js`; its scream plays clips from `public/sfx/crawler/` (listed in
 `list.json` there) when there are any. Details: CONTRACTS.md section 8.
+The Stairs' pack (C3, flag `region-stair`; the Keeper of Steps still to come, it needs the
+boss system C0) is the pattern for the other region packs: `server/regions/stair.js` adds
+`spawnMore` rules (only while the flag is on, after the region's own rules so existing ids
+never move), `server/systems/stair.js` says what E does to its things (`uses`), `WG.THINGS`
+gives their starting state, regrow days and size, `server/mobs/leaning.js` is its Stilled
+(the wind: `wind(now)`, the same for everyone; `sheltered()`), its cave has `flag`, its bugs
+and journal entries carry `region`/`flag`, and its chain is in `server/content/sleeper.js`.
+The browser side is one part, `108-the-stairs.js`, through `UI.things` (models, E labels,
+solidity, swing), `UI.itemIcons` and `UI.bugLooks`, plus `public/js/mobs/leaning.js`. Tests:
+`tests/server/stair.test.js`, `tests/browser/stairs.test.js`.
 The start screen's "What's new" box is `215-whats-new.js` (`NEWS`: lines, each optionally tied
 to a flag, read from `/api/hiddenpages` since it shows before the welcome; a new `id` opens it
 again for everyone). With the `checkpoints` flag (P4), sitting by a lit clay hearth for 3 s saves it as where you
