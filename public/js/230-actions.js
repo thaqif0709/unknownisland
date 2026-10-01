@@ -26,10 +26,12 @@
       case 'tree': return o.state.planted != null ? 'Chop the young tree' : 'Chop the tree';
       case 'bush': return !o.state.berries ? 'Bush (picked clean)' : WG.feature('slots') ? `Pick ${o.species === 'blueberry' ? 'blueberries' : 'berries'}` : 'Eat berries';   // with the bag (P2) they go into it
       case 'rock': return o.species === 'pebble' ? 'Pick up stones' : 'Gather stone';
-      case 'ore': { const n = (WG.ITEMS[o.ore] || 'Ore').replace(/ ore$/i, ''); return has('pickaxe') ? `Mine ${n.toLowerCase()} ore` : `${n} ore (needs a pickaxe)`; }
-      case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : has('shovel') ? 'Dig for clay' : 'Soft soil (needs a shovel)';
+      case 'ore': { const n = (WG.ITEMS[o.ore] || 'Ore').replace(/ ore$/i, '');
+        return toolInHand('pick') ? `Mine ${n.toLowerCase()} ore` : `${n} ore (${has('pickaxe') || has('ironpick') ? 'hold your pickaxe' : 'needs a pickaxe'})`; }   // (P3: in your hand)
+      case 'dig': return o.state.dug ? 'Dug up (settles by morning)' : toolInHand('shovel') ? 'Dig for clay' : `Soft soil (${has('shovel') ? 'hold your shovel' : 'needs a shovel'})`;
       case 'drop': {
-        const list = o.items ? Object.entries(o.items).filter(([k, n]) => k !== 'buckets' && n > 0).map(([k, n]) => `${n} ${(WG.ITEMS[k] || k).toLowerCase()}`) : [];
+        const list = o.items ? Object.entries(o.items).filter(([k, n]) => k !== 'buckets' && k !== 'tools' && n > 0).map(([k, n]) => `${n} ${(WG.ITEMS[k] || k).toLowerCase()}`) : [];
+        if (o.items && Array.isArray(o.items.tools)) list.unshift(...o.items.tools.map(t => `a ${(WG.ITEMS[t.k] || 'tool').toLowerCase()}`));   // (P3)
         if (o.items && o.items.buckets && o.items.buckets.length) list.unshift(o.items.buckets.length > 1 ? `${o.items.buckets.length} buckets` : 'a bucket');
         return list.length ? `Pick up the sack (${list.slice(0, 3).join(', ')}${list.length > 3 ? ', ...' : ''})` : 'Pick up the sack';
       }
@@ -45,12 +47,29 @@
         return o.big ? `Offer lamp oil (${o.have}/${o.need} frogs)` : 'Light it with lamp oil';
       }
       case 'fire': { const n = o.kind === 'hearth' ? 'hearth' : 'fire';
+        const mend = !o.pot && repairHere(o);   // a worn tool in your hand at a lit hearth (P3)
+        if (mend) return `Mend your ${WG.ITEMS[heldTool().k].toLowerCase()} (${mend.map(([k, c]) => `${c} ${WG.ITEMS[k].toLowerCase()}`).join(', ')})`;
         if (o.pot) return o.pot.left <= 0 ? 'Take the bucket of clean water' : (stats.inv.wood || 0) > 0 ? `Add wood (the bucket is boiling)` : 'Take the bucket back (not boiled yet)';
         return (stats.inv.wood || 0) > 0 ? (o.fuel > 0 ? `Add wood to the ${n}` : 'Relight with wood') : `${n[0].toUpperCase() + n.slice(1)} (needs wood)`; }
     }
     if (UI.things[o.type]) return UI.things[o.type].label(o);   // a region's own (C3 ...)
   }
-  const has = tool => stats.tools.includes(tool);
+  const has = tool => stats.tools.includes(tool) || (stats.inv[tool] || 0) > 0;   // (P3: tools can be items in the bag)
+  // The tool in your hand for a job ('axe', 'pick', 'shovel'), with the tools flag (P3); before
+  // that, owning one was enough.
+  const toolsOn = () => WG.feature('tools') && slotsOn();
+  const heldTool = () => { const s = toolsOn() && selSlot >= 0 ? stats.slots[selSlot] : null; return s && s.d ? s : null; };
+  const toolInHand = job => {
+    if (!toolsOn()) return ({ axe: ['axe'], pick: ['ironpick', 'pickaxe'], shovel: ['shovel'] }[job] || []).find(has) || null;
+    const s = heldTool(); return s && WG.itemInfo(s.k).tool === job ? s.k : null;
+  };
+  // What mending the tool in your hand at this fire would cost, or null (P3: a lit hearth, a worn tool)
+  function repairHere(f) {
+    const s = heldTool();
+    if (!s || !f || f.kind !== 'hearth' || !(f.fuel > 0) || s.d >= WG.itemInfo(s.k).uses) return null;
+    const r = WG.recipeById(s.k);
+    return Object.entries(r ? r.cost : {}).map(([k, n]) => [k, Math.max(1, Math.ceil(n * RULES.TOOLS.REPAIR))]);
+  }
   // Which swing a hit gets: chopping (axe, swept sideways) for trees and palms with
   // no coconuts left, mining (pickaxe, brought down) for rocks and ore.
   const swingKindFor = o => !o ? null

@@ -27,7 +27,7 @@
 
   function renderBook() {
     $('recipes').innerHTML = WG.RECIPES.filter(r => !(r.flag && !WG.feature(r.flag))).map(r => {
-      const owned = r.kind === 'tool' && has(r.id);
+      const owned = r.kind === 'tool' && has(r.id) && !WG.feature('tools');   // (with the tools flag, P3, they wear out: you can make another)
       const locked = r.needs && !has(r.needs);
       const ok = canAfford(r) && !owned && !locked;
       const cost = Object.entries(r.cost).map(([k, n]) => {

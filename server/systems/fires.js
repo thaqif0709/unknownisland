@@ -14,6 +14,8 @@ const methods = {
     if (!f || Math.hypot(f.x - p.x, f.z - p.z) - 0.6 > RULES.REACH + REACH_SLACK) return;
     // a bucket on it: take it when it's ready (or when there's no wood to keep it going)
     if (f.pot && (f.pot.left <= 0 || this.count(p, 'wood') <= 0)) return this.takePot(p, f);
+    const mended = this.repairTool(p, f);   // a worn tool in your hand, at a lit hearth (P3, flag tools)
+    if (mended) { this.sendMe(p); return say(mended); }
     if (this.count(p, 'wood') <= 0) return say('You need wood for the fire.');
     const k = FIRES[f.kind];
     this.take(p, 'wood');

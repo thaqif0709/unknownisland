@@ -201,6 +201,17 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
+- **Tools that wear out (P3, flag `tools`, off; needs `slots`).** Tools are items (`ITEMS.pickaxe`
+  etc., `ITEM_INFO` kind 'tool'), one to a slot with `d`, their uses left (`RULES.TOOLS.USES`).
+  `inventory.js`: `toolFor(p, job)` (the tool in hand with the flag), `wearTool` (a use; warns at
+  `WARN`, breaks into one of `returns`), `repairTool` (E at a lit hearth with a worn tool in
+  hand: `REPAIR` of the recipe). `gather.js` chops, mines and digs with `toolFor`/`wearTool`;
+  `fires.js` tries `repairTool` before feeding. Owned tools (`p.tools`) become items on the
+  first join with the flag. Sacks carry tools as `items.tools: [{ k, d }]`, so wear survives a
+  drop (a tool can't be dropped by name, only from its slot). Browser: wear bars on tool slots
+  (`wearBar` in 240), E labels for "hold your pickaxe" and "Mend your ...", iron pickaxe and
+  shovel models, and the swing shows the tool in hand. Tests: `tests/server/tools.test.js`
+  (gather and build tests handle both flag states).
 - **The bag (P2, flag `slots`, on since 30 Sept).** `server/systems/inventory.js` keeps `p.slots` (8 hotbar
   + 30 bag; `{ k, n }`, `{ b: bucketId }` or null) and still recounts `p.inv` as totals, so
   nothing outside it changed except drops (drop by slot; picking up a sack takes what fits
