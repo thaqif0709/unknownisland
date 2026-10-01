@@ -114,7 +114,8 @@
       caves: false,      // W9: caves you walk into (the Landing's sea cave), torches and the Dark
       checkpoints: false, // P4: sleep by a lit hearth to wake there after a knockdown or dying
       travel: true,      // P9 climbing (palm trunks, cliffs) and gliding with the cloak
-      fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
+      rafts: true,       // P10: rafts on the sea and rivers (two frogs to one), zip lines anyone can ride
+      fishing: true,     // P7 fishing: rods, casting, bites, P8's minigames to land them, cooking
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
       slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
       combat: true,      // P6: weapons, attacking (left click, hold for heavy), dodging (double-tap Shift), downed and revived
@@ -163,6 +164,27 @@
       LIGHT_SLOW: .5,           // ...and the Stilled stalking you move this much slower
       STILLED_HP: 12,           // the Stilled take a few blows to break (1 without combat)
       REFORM: 90,               // seconds before a broken Stilled forms again where it broke (at night, in fog)
+    },
+    // Rafts and zip lines (P10, flag rafts).
+    RAFT: {
+      SPEED: 3.4,               // m/s, the frog at the back paddling
+      TURN: 2.5,                // how quickly it swings round to where it's paddled (per second)
+      CURRENT: 1.3,             // m/s a river carries it downstream (bigworld)
+      RIVER_W: 24,              // metres from a river's line that its current reaches
+      MIN_DEPTH: -.25,          // it floats where the ground is lower than this
+      SEATS: 2,                 // frogs on one raft (the first aboard steers)
+      REACH: 2.5,               // how close to it you board, and how far off you step ashore
+      MAX: 40,                  // rafts on an island; past that the oldest empty one drifts away
+    },
+    ZIP: {
+      MIN: 6, MAX: 80,          // a line's length, end to end (m)
+      DROP: 1.5,                // its top end must be at least this much higher than its bottom
+      POST: 2.4,                // posts this tall at each end; the line runs between their tops
+      CLEAR: .5,                // and must stay this high over the ground on the way
+      HANG: 1.6,                // a rider's feet hang this far below the line
+      SPEED: 9,                 // m/s down it
+      REACH: 2,                 // how close to the top post you take hold
+      MAX: 60,                  // lines on an island
     },
     // Fishing (P7, flag fishing). The fish themselves are in server/content/fish.js.
     FISHING: {
@@ -232,6 +254,7 @@
     sword_wood: 'Wooden sword', sword_bronze: 'Bronze sword', sword_iron: 'Iron sword', sword_silver: 'Silver sword', sword_obsidian: 'Obsidian sword',
     spear: 'Spear', club: 'Club', sling: 'Sling',   // (weapons, P6)
     flint: 'Flint', herbs: 'Healing herbs', flax: 'Flax', bricks: 'Old bricks', tin: 'Tin ore',   // (the Stairs, C3)
+    raft: 'Raft', zipline: 'Zip line kit',   // (P10)
     rod: 'Fishing rod', bait: 'Bait', silverfin: 'Silverfin', pool_minnow: 'Pool minnow', lantern_fish: 'Lantern fish', cooked_fish: 'Cooked fish' };   // (fishing, P7)
   // More about an item than its name (all optional): kind 'food' is eaten from a slot (food,
   // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise).
@@ -248,6 +271,7 @@
     sword_wood: { kind: 'weapon', returns: 'wood' }, sword_bronze: { kind: 'weapon', returns: 'copper' },
     sword_iron: { kind: 'weapon', returns: 'iron' }, sword_silver: { kind: 'weapon' }, sword_obsidian: { kind: 'weapon' },
     spear: { kind: 'weapon', returns: 'stone' }, club: { kind: 'weapon', returns: 'wood' }, sling: { kind: 'weapon' },
+    raft: { stack: 1 }, zipline: { stack: 4 },   // (P10, flag rafts)
     // fishing (P7, flag fishing): the rod wears like a tool; raw fish can be eaten, but cook them at a fire
     rod: { kind: 'tool', tool: 'rod', returns: 'wood' },
     silverfin: { kind: 'food', food: 8, cooks: 'cooked_fish' }, pool_minnow: { kind: 'food', food: 5, cooks: 'cooked_fish' },
@@ -308,6 +332,11 @@
       desc: 'Heavy, sharp and long-lasting.' },
     { id: 'sling', kind: 'item', name: 'Sling', cost: { wood: 1, flax: 2 }, gives: { sling: 1 }, flag: 'combat',
       desc: 'A flax cord and pouch. Throws a stone from your bag at whatever you aim at, far off.' },
+    // rafts and zip lines (P10)
+    { id: 'raft', kind: 'item', name: 'Raft', cost: { wood: 10 }, gives: { raft: 1 }, flag: 'rafts',
+      desc: 'Logs lashed side by side. Hold it, face the water and press E to set it afloat; E beside it to climb aboard (two of you fit).' },
+    { id: 'zipline', kind: 'item', name: 'Zip line kit', cost: { wood: 4, copper: 2 }, gives: { zipline: 1 }, flag: 'rafts',
+      desc: 'Two posts, a long twisted line and a copper pulley. Hold it and press E up high, then again lower down, to string a line anyone can ride.' },
     // fishing (P7)
     { id: 'rod', kind: 'item', name: 'Fishing rod', cost: { wood: 3, copper: 1 }, gives: { rod: 1 }, flag: 'fishing',
       desc: 'A springy pole, a line of twisted bark and a copper hook. Hold it, face the water and hold E to cast.' },

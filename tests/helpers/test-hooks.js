@@ -56,6 +56,7 @@ const COMMANDS = {
   // Put the player at x, z (the client is told with a 'correct'). `under`: a cave id to
   // put them in that cave, or '' to bring them out (caves, W9).
   place(p, { x, z, face, under }) {
+    if (p.ride) this.dismount(p);   // (off a raft or a zip line first, P10)
     p.x = x; p.z = z; if (typeof face === 'number') p.face = face;
     p.lastPosAt = Date.now(); p.moving = false;
     if (under !== undefined) p.under = under || null;

@@ -201,7 +201,17 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
-- **Fishing (P7, flag `fishing`, off).** `server/systems/fishing.js`: `cast` (a rod in hand;
+- **Rafts and zip lines (P10, flag `rafts`, on).** `server/systems/rafts.js`: a raft item set
+  on deep water (`raft-place`), boarded by up to `RAFT.SEATS` (`raft-board`); the first aboard
+  paddles (`raft-steer`), the server moves the raft (`RAFT.SPEED`, a river's `CURRENT` in the
+  wider world, stopping aground) and seats the riders; `raft-off` steps onto ground within
+  reach. Zip lines: a kit, `zip-tie` at the top then at the bottom (length, drop and clearance
+  checked), `zip-ride` from the top post at `ZIP.SPEED`. While riding (`p.ride`) `players.js`
+  ignores your position. Saved in `islands.rides` (migration 0009). Browser
+  `public/js/394-rafts.js`: raft and line models, the ride (`UI.ride`, used by the loop and
+  jumping), E (`UI.rafts.act`), prompts. Tests: `tests/server/rafts.test.js` (6),
+  `tests/browser/rafts.test.js`.
+- **Fishing (P7, flag `fishing`, on).** `server/systems/fishing.js`: `cast` (a rod in hand;
   the bobber lands `CAST.MIN`-`MAX` m out by how long E was held, in the sea or a spring's pool),
   a bite after `BITE.MIN`-`MAX` s (sooner at night, in rain, on a rising tide, at full moon,
   with bait, which the bite takes), `hook` within `HOOK` s, then P8's minigames by rarity

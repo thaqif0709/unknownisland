@@ -602,3 +602,23 @@ As built (`server/systems/fishing.js`, `server/content/fish.js`, `public/js/393-
 - Browser: `UI.fishing.act()` is asked first by `act()` (230); `UI.heldModels.rod` draws the
   rod in the hand (120). Test commands: `bite { fish, game }` (a bite now, with that fish and
   game) and `solve` (a right answer to the current minigame); `set { day }` moves the moon.
+
+## 20. Rafts and zip lines (P10, flag `rafts`)
+
+As built (`server/systems/rafts.js`, `public/js/394-rafts.js`, migration `0009-rides`):
+
+- Riding: `p.ride = { kind: 'raft' | 'zip', id, at? }`. While it's set (and for 0.5 s after),
+  `players.js` takes only `face` and `cam` from `pos` (`island.rideHoldsPos`); the ride sets
+  `p.x`, `p.z` and `p.stand`. `island.dismount(p)` ends either (the `place` test command calls it).
+- Rafts: `{ t: 'raft-place', x, z }` (a raft in hand; water deeper than `RAFT.MIN_DEPTH`),
+  `{ t: 'raft-board', id }`, `{ t: 'raft-steer', dx, dz, go }` (the first rider only; a unit
+  direction and 0-1), `{ t: 'raft-off' }` (to ground within `RAFT.REACH`). Broadcast
+  `{ t: 'rafts', list: [{ id, x, z, a, riders }] }` or `{ t: 'rafts', gone: [id] }`.
+  `island.riverCurrent(x, z)` is the push down `WG.RIVERS` (bigworld only).
+- Zip lines: `{ t: 'zip-tie' }` twice (a kit in hand; the first sets `p.zipFrom`), then
+  `{ t: 'zip-ride', id }` by the top post. Broadcast `{ t: 'zips', list: [{ id, ax, ay, az,
+  bx, by, bz, who }] }` and `{ t: 'ride', id, zip }` (null when off). y is the top of a post.
+- Saved as `islands.rides` (JSONB): `{ rafts: [{ id, x, z, a, made }], zips: [...] }`, via
+  `island.ridesSave()` in the island snapshot. The welcome has `rafts` and `zips`.
+- Browser: `UI.ride` (`{ step(dt, ix, iz) }`) takes over the walking keys in `390-loop.js` and
+  holds your height in `380-jumping.js`; `UI.rafts.act()` is asked first by `act()` (230).

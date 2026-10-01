@@ -16,7 +16,7 @@ const { Minigames } = require('./minigames');
 // optional hooks onTick(dt), onDawn(sunrises) and onJoin(p) (extra welcome fields) run
 // alongside the core loop. See docs/roadmap/CONTRACTS.md section 2.
 const SYSTEMS = ['journal', 'tides', 'bugs', 'weather', 'time', 'chat', 'board', 'patches', 'players',
-  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves', 'checkpoints', 'lanterntravel', 'torches', 'stair', 'minigames', 'combat', 'fishing'];
+  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves', 'checkpoints', 'lanterntravel', 'torches', 'stair', 'minigames', 'combat', 'fishing', 'rafts'];
 
 class Island {
   constructor(store, data) {
@@ -45,6 +45,7 @@ class Island {
     this.lanternsDirty = new Set();
     this.weather = data.weather || 'clear';
     this.chains = data.chains || {};   // Sleeper request chains: { region: { done, completeDay } }
+    this.ridesSaved = data.rides || {};   // rafts and zip lines (P10, systems/rafts.js), as saved
     this.env = {};   // moon and weather flags, see updateEnv()
     const l0 = WG.generateLanterns(this.seed)[0];
     this.board = { x: r2(l0.x + 2.6), z: r2(l0.z + 1.4) };   // the driftwood board, by the beach lantern
@@ -203,7 +204,7 @@ class Island {
     // Every loaded chunk is saved as of today (see unloadChunk).
     const chunkDays = this.chunks ? [...this.chunks.values()].map(c => [c.key, this.day]) : [];
     const snap = {
-      id: this.id, day: this.day, time: this.time, lastTickAt: this.lastTickAt, moonDay: WG.moonPhase(this.day), weather: this.weather, chains: this.chains,
+      id: this.id, day: this.day, time: this.time, lastTickAt: this.lastTickAt, moonDay: WG.moonPhase(this.day), weather: this.weather, chains: this.chains, rides: this.ridesSave(),
       objects, fires: this.fires.map(f => ({ id: f.id, fuel: r2(f.fuel), pot: f.pot ? { ...f.pot } : null })), members,
       lanterns, chunkDays,
       seen: this.seenDirty ? Buffer.from(this.seen) : null,
