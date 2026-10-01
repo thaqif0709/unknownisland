@@ -97,6 +97,7 @@
     return null;
   }
   function act() {
+    if (UI.fishing && UI.fishing.act()) return;   // a rod in hand, or a friend's line to help with (P7)
     const ba = state === 'play' && cooldown <= 0 && net && knockT <= 0 ? bucketAction() : null;
     if (ba) {
       cooldown = .45;

@@ -127,6 +127,7 @@
     lastInv = ''; renderInventory();
     const k = heldKey(), hb = heldBucket();
     if (hb) toast(`${bucketName(hb)} in hand. ${hb.water === 'none' ? 'Wade into the sea and press E to fill it.' : hb.water === 'sea' ? 'Seawater: press E at a fire to boil it.' : `Clean water: hold ${keyLabel(prefs.binds.act)} to drink.`}`);
+    else if (k === 'rod' && WG.feature('fishing')) toast(`Fishing rod in hand. Face the water and hold ${keyLabel(prefs.binds.act)} to cast; let go to throw.`);
     else if (k && slotsOn() && WG.itemInfo(k).kind === 'food') toast(`${WG.ITEMS[k]} in hand. Hold ${keyLabel(prefs.binds.act)} to eat.`);
     else if (k === 'torch' && WG.feature('torchlight')) toast(`Torch in hand: it lights the way and keeps you warm. ${keyLabel(prefs.binds.drop)} plants it in the ground.`);
     else if (k) toast(`${WG.ITEMS[k]} in hand. ${keyLabel(prefs.binds.drop)} drops one, Shift+${keyLabel(prefs.binds.drop)} drops them all.`);

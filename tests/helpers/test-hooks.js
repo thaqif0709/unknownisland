@@ -85,7 +85,8 @@ const COMMANDS = {
   },
   // Set the clock (0 = midnight, .5 = noon; night is before .22 and from .8), the weather,
   // and/or the player's hunger.
-  set(p, { time, weather, hunger, thirst, health, energy }) {
+  set(p, { time, weather, hunger, thirst, health, energy, day }) {
+    if (typeof day === 'number') this.day = day;   // (the moon follows the day: WG.moonPhase)
     if (typeof health === 'number') { p.health = health; this.sendMe(p); }
     if (typeof energy === 'number') { p.energy = energy; this.sendMe(p); }
     if (typeof hunger === 'number') { p.hunger = hunger; this.sendMe(p); }
@@ -114,6 +115,14 @@ const COMMANDS = {
     done.catch(() => {});
     return this.minigames.solution(p) || { error: 'did not start' };
   },
+  // Fishing (P7): the fish bites now ({ fish: its key, game: the minigame to land it with }).
+  bite(p, { fish, game }) {
+    if (!p.fishing) return { error: 'not fishing' };
+    Object.assign(p.fishing, { biteAt: 0, only: fish || null, game: game || null });
+    return { ok: true };
+  },
+  // A right answer to the player's current minigame ({ game: its id, answer }).
+  solve(p) { return this.minigames.solution(p) || { error: 'no game' }; },
   mobs() { return { mobs: this.mobs.list.map(m => ({ id: m.id, kind: m.kind, x: m.x, z: m.z, state: m.state, hp: m.hp })) }; },
   // Set the time of day (0-1), e.g. for the tide in a sea cave.
   time(p, { at }) { this.time = at % 1; return { time: this.time }; },

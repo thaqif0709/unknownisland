@@ -226,6 +226,11 @@ New stat in the Teeth: **warmth** (fire, hood, fur cloak help).
 5. A **minigame** decides the catch. Lose: the line snaps, hooks can break.
 6. Cook fish on a fire. Rare fish go in the journal (a fish page: where and when they bite).
 
+(P7 as built: the rod is wood and copper; bait is made from berries and seeds and is taken by
+each bite; the Landing has the silverfin (sea), the pool minnow (springs, uncommon) and the lantern
+fish (sea, full-moon nights, rare); a cooked fish is one item whatever it was; the games keep
+their own time limits rather than the table below.)
+
 All five minigames are kept:
 - **Island trivia:** 3–4 answers, from a `fishing_trivia` table (editable in Neon).
 - **Untangle the line:** rotate tiles, 3×3 up to 5×5.

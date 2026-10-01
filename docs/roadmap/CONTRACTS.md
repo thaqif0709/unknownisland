@@ -576,3 +576,29 @@ island.caveList() / caveById(id) / caveHitOf(p) / caveCut(x, z) / caveLit(p)
   torch lights. `__dbg.cave()` for tests.
 - The Crawler (C2) lives in caves whose description has `lair: ['crawler']` (section 8).
   Test command `place { x, z, under }` puts a player in (or out of) a cave.
+
+## 19. Fishing (P7, flag `fishing`)
+
+As built (`server/systems/fishing.js`, `server/content/fish.js`, `public/js/393-fishing.js`):
+
+- Messages from the client: `{ t: 'cast', power, a }` (power 0-1, how long E was held over
+  `FISHING.CAST.CHARGE`; a the aim), `{ t: 'hook' }` (E: hooks a biting fish, or reels in),
+  `{ t: 'reel' }`, `{ t: 'fish-help', id }` (a friend's E, once per catch). To the fisher:
+  `{ t: 'fish-bite', ms }`. To everyone: `{ t: 'fishing', id, x, z, s }` with s `'wait'`,
+  `'bite'`, `'fight'` or null (reeled in); the welcome has `fishing: [...]` for lines already out.
+- `p.fishing = { x, z, ox, oz, water, bait, state, biteAt, fish, helped }`. Water is
+  `fishing.waterAt(x, z)`: 'sea' (ground below 0) or 'spring' (within `FISHING.SPRING_R` of
+  one). `island.fishFor(water, x, z, bait)` lists what could bite (`content/fish.js`: water,
+  region, when, moon, weather, weight, bait, rarity, hint); a region pack adds its fish there.
+- The catch is decided by `island.minigames.start` (section 13) per `FISHING.GAMES[rarity]`
+  (a random game; strange fish get trivia); `island.minigames.extend(p, ms)` adds time and
+  sends `{ t: 'minigame-time', id, ms }` (the new total). Won: `give`, `discover` (the fish's
+  journal key is its item key), the rod wears one use. Lost: the rod wears `FISHING.SNAP`.
+- Items: `rod` (a tool, `tool: 'rod'`), `bait`, the fish (food with `cooks: 'cooked_fish'`),
+  `cooked_fish`. `island.cookFish(p, fire)` is asked by `fires.js` when E is pressed at a lit
+  fire; a new food that cooks only needs `cooks` in `ITEM_INFO`.
+- The journal's hint for a fish adds where it bites (`journal.js` `findHint`); fish without
+  another category go in `category: 'fish'` ("On the line").
+- Browser: `UI.fishing.act()` is asked first by `act()` (230); `UI.heldModels.rod` draws the
+  rod in the hand (120). Test commands: `bite { fish, game }` (a bite now, with that fish and
+  game) and `solve` (a right answer to the current minigame); `set { day }` moves the moon.

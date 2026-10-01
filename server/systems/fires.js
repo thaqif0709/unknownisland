@@ -16,6 +16,8 @@ const methods = {
     if (f.pot && (f.pot.left <= 0 || this.count(p, 'wood') <= 0)) return this.takePot(p, f);
     const mended = this.repairTool(p, f);   // a worn tool in your hand, at a lit hearth (P3, flag tools)
     if (mended) { this.sendMe(p); return say(mended); }
+    const cooked = this.cookFish(p, f);   // a raw fish in your hand, at a lit fire (P7, flag fishing)
+    if (cooked) { this.sendMe(p); return say(cooked); }
     if (this.count(p, 'wood') <= 0) return say('You need wood for the fire.');
     const k = FIRES[f.kind];
     this.take(p, 'wood');

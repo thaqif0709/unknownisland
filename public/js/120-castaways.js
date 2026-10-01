@@ -105,7 +105,9 @@
       case 'club': add(new THREE.CylinderGeometry(.06, .025, .5, 7), logM, 0, -.26, 0); break;
       case 'sling': add(new THREE.CylinderGeometry(.006, .006, .3, 4), softShared(0xD9C9A6), 0, -.15, 0);
         add(new THREE.SphereGeometry(.04, 6, 4), softShared(0xC8B48A), 0, -.31, 0); break;
-      default: add(new THREE.BoxGeometry(.12, .12, .12), sackM, 0, 0, 0);
+      default:
+        if (UI.heldModels[key]) { UI.heldModels[key](g, add); break; }   // a later part's own items (the rod, P7)
+        add(new THREE.BoxGeometry(.12, .12, .12), sackM, 0, 0, 0);
     }
     shadows(g);
     return g;

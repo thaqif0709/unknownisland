@@ -25,6 +25,10 @@ const methods = {
   // Where and when something can be found, in a few words, from the spawn rules
   // (so the journal can say how to look for it even before you've found it).
   findHint(key) {
+    const base = this.findHintBase(key), fish = WG.feature('fishing') && CONTENT.FISH.find(f => f.key === key);
+    return fish ? `${base ? base + ' ' : ''}Bites on a line ${fish.hint}.` : base;   // (P7: the journal's fish page)
+  },
+  findHintBase(key) {
     const list = (xs) => xs.length > 1 ? xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1] : xs[0];
     const place = { meadow: 'meadows', forest: 'forests', spring: 'spring clearings', beach: 'beaches', highland: 'the hills', peak: 'the peaks', sea: 'the shallows' };
     const b = CONTENT.BUGS.find(x => x.key === key);

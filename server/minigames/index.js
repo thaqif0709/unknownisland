@@ -61,6 +61,17 @@ class Minigames {
     try { ok = !!s.check(answer); } catch (e) { ok = false; }   // malformed answers simply lose
     this.finish(s, ok, ok ? 'right' : 'wrong');
   }
+  // More time for the player's game (a friend helping land a fish, P7): the client hears
+  // { t: 'minigame-time', id, ms } with the new total.
+  extend(p, ms) {
+    const s = this.active.get(p.id);
+    if (!s || !(ms > 0)) return false;
+    s.deadline += ms;
+    clearTimeout(s.timer);
+    s.timer = setTimeout(() => this.finish(s, false, 'late'), s.deadline - Date.now() + GRACE_MS);
+    this.island.send(p, { t: 'minigame-time', id: s.id, ms: s.deadline - s.startedAt });
+    return true;
+  }
   quit(p, { id }) { const s = this.active.get(p.id); if (s && (id == null || s.id === id)) this.finish(s, false, 'gave up'); }
 
   finish(s, won, reason) {
