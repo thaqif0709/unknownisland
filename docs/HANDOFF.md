@@ -201,7 +201,7 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
-- **Fighting (P6, flag `combat`, off).** `server/systems/combat.js`: `attack` (the
+- **Fighting (P6, flag `combat`, on).** `server/systems/combat.js`: `attack` (the
   weapon in hand, `RULES.COMBAT.WEAPONS`; reach and arc with `LAG` slack; heavy, a sword's
   combo, the sling's stones; tags for weaknesses incl. 'light' and 'silver'; a shove), `dodge`
   (`p.dodgeUntil`; `players.js` allows the roll's speed), `damagePlayer` / `combatGuard`
@@ -218,7 +218,7 @@ planned separately by Thaqif):
   yet: silver and obsidian recipes (region packs). Tests: `tests/server/combat.test.js` (10),
   `tests/server/combat-night.test.js` (light slowing them; two friends against a Stilled, then
   picking each other up), `tests/browser/combat.test.js`.
-- **Tools that wear out (P3, flag `tools`, off; needs `slots`).** Tools are items (`ITEMS.pickaxe`
+- **Tools that wear out (P3, flag `tools`, on; needs `slots`).** Tools are items (`ITEMS.pickaxe`
   etc., `ITEM_INFO` kind 'tool'), one to a slot with `d`, their uses left (`RULES.TOOLS.USES`).
   `inventory.js`: `toolFor(p, job)` (the tool in hand with the flag), `wearTool` (a use; warns at
   `WARN`, breaks into one of `returns`), `repairTool` (E at a lit hearth with a worn tool in

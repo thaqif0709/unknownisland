@@ -112,9 +112,9 @@
       fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
       slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
-      combat: false,     // P6: weapons, attacking (left click, hold for heavy), dodging (double-tap Shift), downed and revived
+      combat: true,      // P6: weapons, attacking (left click, hold for heavy), dodging (double-tap Shift), downed and revived
       fasttravel: false, // W10: travel between lit lanterns you've stood by, paying lamp oil
-      tools: false,      // P3: tools are items in the bag, used from your hand, that wear out (needs slots)
+      tools: true,       // P3: tools are items in the bag, used from your hand, that wear out (needs slots)
       'region-stair': false,   // C3: the Stairs' own things (flint, herbs, flax, ruins, standing stones, tin), bugs, the Leaning, the old mine, its request chain
     },
     // Creative mode, for testing only: admins (the ADMINS env var) type /creative in chat,
