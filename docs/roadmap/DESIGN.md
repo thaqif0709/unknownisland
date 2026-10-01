@@ -135,6 +135,10 @@ camps (checkpoints above), zip lines (player-built with vine rope), a map that f
 where someone has walked (shared), calling out to friends (sound from your direction plus
 a faint map mark for a minute).
 
+(P10 as built: a raft is wood only and a zip line kit is wood and copper, so both can be made
+on the Landing before vine rope exists; two frogs to a raft, the first paddles; zip lines run
+from a higher post to a lower one, between 6 and 80 m; both stay in the world for anyone.)
+
 **Fast travel between lit lanterns (paying oil):** kept (Thaqif, 1 Oct). Stand in a lit
 lantern's light to remember it; at a lit lantern, travel to another lit one you remember, paying
 1 lamp oil per 150 m (at least 1). Both ends must be lit, so it rewards keeping lanterns fed.

@@ -108,6 +108,7 @@ const methods = {
 
   onPos(p, { x, z, face, moving, sprint, cam, stand, under, pose }) {
     if (num(cam)) p.camYaw = cam;
+    if (this.rideHoldsPos(p, face)) return;   // on a raft or a zip line (P10): it moves you, and says how high
     // climbing a trunk or gliding (P9, flag travel): shown to everyone, and a glide drifts faster than walking;
     // flying, in creative mode (admins, for testing: /creative in chat)
     p.pose = p.dead ? null : p.creative && pose === 'fly' ? 'fly' : WG.feature('travel') && (pose === 'climb' || pose === 'glide') ? pose : null;

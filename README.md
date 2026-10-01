@@ -70,6 +70,9 @@ Environment*). Existing players aren't affected.
   You can fight (the `combat` flag, on): click (or R) to swing what you're holding, hold it for a
   heavy swing, double-tap Shift to roll, and hold E beside a friend who's down to pick them up.
   A heavy swing with a torch throws it to burst into fire.
+  Rafts and zip lines (the `rafts` flag, on): make a raft, set it on the water with E, climb
+  aboard with E (two fit; the first paddles with the walking keys); string a zip line with a kit
+  (E at the top, E at the bottom) and anyone can ride it down with E by the top post.
   Fishing (the `fishing` flag, on): make a rod, hold E facing the sea or a spring to cast, E again when
   it bites, and land it with a little game; cook fish at a fire.
   Tools are items too (the `tools` flag, on): hold one (1-8) to use it. They wear out, break

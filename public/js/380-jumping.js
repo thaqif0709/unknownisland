@@ -93,7 +93,7 @@
   }
   const JUMP_TOP = JUMP_V * JUMP_V * 3 / (2 * GRAVITY);   // the highest a full-charge jump goes (about 2.6 m)
   function stepHopInner(h, dt) {
-    if (flying) { h.floor = 0; h.air = true; h.charge = -1; h.land = 0; return; }   // flying moves you (387-creative.js)
+    if (flying || UI.ride) { h.floor = 0; h.air = true; h.charge = -1; h.land = 0; return; }   // flying, or riding a raft or a line, moves you (387, 394)
     if (climb) { h.floor = 0; h.air = false; h.charge = -1; h.abs = null; glide = false; return; }   // climbing moves you (385-climbing.js)
     if (h.charge >= 0) { h.charge += dt; if (!canJump()) h.charge = -1; }
     else if ((keys[prefs.binds.jump] || jumpBtnHeld) && canJump()) h.charge = 0;   // pressed just before landing: start charging now

@@ -30,6 +30,7 @@
     things: {},
     bugLooks: {},
     itemIcons: {},
+    ride: null,       // a raft or zip line carrying you: { step(dt, ix, iz) -> moving } (394-rafts.js)
     heldModels: {},   // UI.heldModels.rod = (g, add) => ...   an item's model in the hand (120-castaways.js)
   };
 

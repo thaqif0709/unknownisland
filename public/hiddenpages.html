@@ -99,7 +99,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <div class="search" role="search"><input type="search" id="q" placeholder="Search the pages" aria-label="Search the Hidden Pages" autocomplete="off"><kbd>/</kbd><p id="qInfo" class="muted" aria-live="polite"></p></div>
     <div class="cols">
     <b>Start</b><a href="#start">Getting started</a><a href="#controls">Controls</a><a href="#hud">The screen</a>
-    <b>Surviving</b><a href="#survival">Food, water, health</a><a href="#water">Clean water &amp; buckets</a><a href="#moving">Moving, jumping, sitting</a><a href="#time">Day, night, moon, weather</a>
+    <b>Surviving</b><a href="#survival">Food, water, health</a><a href="#water">Clean water &amp; buckets</a><a href="#moving">Moving, jumping, sitting</a><a href="#rafts" data-feature="rafts">Rafts &amp; zip lines</a><a href="#time">Day, night, moon, weather</a>
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
     <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#fighting" data-feature="combat">Fighting</a><a href="#torches" data-feature="torchlight">Torches</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
     <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a><a href="#fishing" data-feature="fishing">Fishing</a><a href="#minigames" data-feature="fishing">Landing a fish</a>
@@ -136,6 +136,8 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr data-feature="combat"><td>Click (mouse-look) or <kbd>R</kbd></td><td>Attack where you aim; hold, then let go, for a heavy swing</td></tr>
         <tr data-feature="combat"><td><kbd>Shift</kbd> twice, quickly</td><td>Roll out of the way</td></tr>
         <tr data-feature="combat"><td><kbd>E</kbd> (hold) beside a friend who's down</td><td>Pick them up</td></tr>
+        <tr data-feature="rafts"><td><kbd>E</kbd> by a raft / on a raft</td><td>Climb aboard / step ashore (the first aboard paddles with the walking keys)</td></tr>
+        <tr data-feature="rafts"><td><kbd>E</kbd> by a zip line's top post</td><td>Ride it down</td></tr>
         <tr data-feature="fishing"><td><kbd>E</kbd> (hold, a rod in hand)</td><td>Cast: let go to throw (the longer you hold, the further). <kbd>E</kbd> again when it bites hooks the fish; while nothing bites it reels in</td></tr>
         <tr data-feature="fishing"><td><kbd>E</kbd> beside a friend landing a fish</td><td>Grab the line with them: a second more, once a catch</td></tr>
         <tr><td><kbd>E</kbd> (hold, with something to eat or drink in hand)</td><td>Eat or drink one (food in a slot, or a bucket of clean water). Keep holding for the next</td></tr>
@@ -221,6 +223,23 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li>Wading in the sea is slow, and you can't jump in water.</li>
         <li data-feature="travel"><b>Climbing:</b> walk into one of the tall palms, or into a cliff (ground too steep to walk up), and you grab on. <kbd>W</kbd> / <kbd>S</kbd> climb up and down, <kbd>A</kbd> / <kbd>D</kbd> go round the trunk or along the cliff, <kbd>Space</kbd> lets go. It costs <span data-r="TRAVEL.CLIMB_ENERGY"></span> energy a second while you climb (<span data-r="TRAVEL.HANG_ENERGY"></span> just hanging on); run out and you slide back down. Keep climbing at the top of a palm to pull yourself up onto its leaves; at the top of a cliff you step out onto the ground above.</li>
         <li data-feature="travel"><b>Gliding:</b> falling from at least <span data-r="TRAVEL.GLIDE_MIN_HEIGHT"></span> m up (off a palm, a cliff or a tree top), hold <kbd>Space</kbd> and your cloak catches the air: you sink slowly and drift forward, steering with the walking keys, for <span data-r="TRAVEL.GLIDE_ENERGY"></span> energy a second. Let go of <kbd>Space</kbd> to drop.</li>
+      </ul>
+    </section>
+
+    <section id="rafts" data-feature="rafts"><h2>Rafts and zip lines</h2>
+      <h3>Rafts</h3>
+      <ul>
+        <li><b>Make one</b> from the recipe book (wood). Hold it, face the water and press <kbd>E</kbd>: it floats where the water is deep enough.</li>
+        <li><b>Climb aboard</b> with <kbd>E</kbd> beside it. <span data-r="RAFT.SEATS"></span> frogs fit; the first aboard paddles with the walking keys (where the camera looks), at <span data-r="RAFT.SPEED"></span> m/s. Over deep water too, where you couldn't wade.</li>
+        <li>It stops when it runs aground. <kbd>E</kbd> again steps ashore, if there's ground within <span data-r="RAFT.REACH"></span> m; out at sea, paddle back first.</li>
+        <li data-feature="bigworld">Rivers carry a raft downstream at <span data-r="RAFT.CURRENT"></span> m/s.</li>
+        <li>A raft stays where you leave it, for anyone to use.</li>
+      </ul>
+      <h3>Zip lines</h3>
+      <ul>
+        <li><b>A zip line kit</b> from the recipe book (wood and copper). Hold it and press <kbd>E</kbd> up high to set the top post, then walk to where the line should end and press <kbd>E</kbd> again.</li>
+        <li>The line is <span data-r="ZIP.MIN"></span> to <span data-r="ZIP.MAX"></span> m long, its far end must be at least <span data-r="ZIP.DROP"></span> m lower, and the ground mustn't be in the way. <kbd>E</kbd> on the first post again pulls it up.</li>
+        <li><b>Anyone</b> can ride it: <kbd>E</kbd> by the top post and you slide down at <span data-r="ZIP.SPEED"></span> m/s, hanging on with both hands, and drop off at the bottom.</li>
       </ul>
     </section>
 
@@ -565,6 +584,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="rafts"><b>Rafts and zip lines:</b> build a raft, set it on the water and paddle it (a friend can ride along); string a zip line between a high post and a lower one, and anyone can slide down it.</li>
         <li data-feature="fishing"><b>Fishing:</b> make a rod, hold <kbd>E</kbd> to cast into the sea or a spring, hook what bites and land it with a little game. Friends can grab the line, and fish cook on a fire.</li>
         <li data-feature="torchlight"><b>Torches above ground:</b> a torch in hand lights the way, pushes the fog back and keeps you warm, anywhere, and burns down. <kbd>G</kbd> plants it in the ground as a small light for everyone; <kbd>E</kbd> takes it back.</li>
         <li data-feature="combat"><b>Fighting:</b> a torch can be swung (it burns) or thrown with a heavy swing, bursting into fire where it lands. Light also slows down what comes out of the fog for you.</li>

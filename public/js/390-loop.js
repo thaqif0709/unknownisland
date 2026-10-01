@@ -165,11 +165,12 @@
       const l = Math.hypot(ix, iz); if (l > 1) { ix /= l; iz /= l; }
       wantSprint = free && l > .08 && (held('sprint') || runToggle) && !flying;   // (flying: Shift sinks instead)
       running = WG.stepEnergy(nrg, dt, wantSprint, travelDrain());   // (climbing and gliding use energy too)
-      if (flying) moving = flyStep(dt, ix, iz);   // creative mode (387-creative.js)
+      if (UI.ride) moving = UI.ride.step(dt, ix, iz);   // on a raft or a zip line: it carries you (394-rafts.js)
+      else if (flying) moving = flyStep(dt, ix, iz);   // creative mode (387-creative.js)
       else if (climb) { stepClimb(dt, ix, iz); moving = climbMoving; }   // on a trunk or a cliff (385-climbing.js)
       else if (glide) { const [gx, gz] = glideDir(ix, iz); hop.fwd = RULES.TRAVEL.GLIDE_SPEED; hop.fx = gx; hop.fz = gz; }
-      const leaping = !climb && !flying && hop.air && hop.fwd > 0;
-      if (!climb && !flying && (l > .08 || leaping)) {
+      const leaping = !climb && !flying && !UI.ride && hop.air && hop.fwd > 0;
+      if (!climb && !flying && !UI.ride && (l > .08 || leaping)) {
         const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
         const dx = rx * ix + fx * iz, dz = rz * ix + fz * iz;
         // a bit slower through the air, so you can land on the rock you jumped at instead of sailing past it
@@ -218,7 +219,7 @@
           if (sitting) setSitting(false);   // walking off stands you up
         }
       }
-      if (!climb) slideOffCliff(dt);   // on a cliff without holding on: down you go
+      if (!climb && !UI.ride) slideOffCliff(dt);   // on a cliff without holding on: down you go
       const now = performance.now();
       const cam = Math.atan2(px - camera.position.x, pz - camera.position.z);   // which way you're looking
       const pose = travelPose(), standNow = pose ? hop.y : (hop.floor || 0);   // how high you are, for friends
@@ -319,7 +320,7 @@
       // behind the frog and tilts up, so you can look at the sky and treetops.
       // follow you up onto a rock (or a trunk, or a glide), smoothly; and down a long fall (higher
       // above the ground than any jump goes), so the view stays on you instead of the ground below
-      const liftTo = (climb || glide || flying) ? hop.y : hop.air ? Math.max(hop.floor || 0, hop.y - JUMP_TOP) : (hop.floor || 0);
+      const liftTo = (climb || glide || flying || UI.ride) ? hop.y : hop.air ? Math.max(hop.floor || 0, hop.y - JUMP_TOP) : (hop.floor || 0);
       camLift += (liftTo - camLift) * Math.min(1, dt * (hop.air && hop.y > JUMP_TOP ? 12 : 6));
       const py = (myCave ? myFloor() : Math.max(heightAt(px, pz), -.75)) + camLift, LOW = .18;   // in a cave: its floor (W9)
       const up = Math.max(0, LOW - pitch), orbit = Math.max(pitch, LOW - up * .12);
