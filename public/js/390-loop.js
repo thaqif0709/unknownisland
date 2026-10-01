@@ -40,8 +40,12 @@
     const lightDir = sunDir.y > -.05 ? sunDir : moonDir;   // shadows follow whichever is up
     sun.position.set(px + lightDir.x * 50, Math.max(lightDir.y, .12) * 50, pz + lightDir.z * 50);
     sun.target.position.set(px, 0, pz);
-    sunDisc.position.copy(camera.position).addScaledVector(sunDir, 300); sunDisc.visible = sunDir.y > -.12;
-    moonDisc.position.copy(camera.position).addScaledVector(moonDir, 300); moonDisc.visible = moonDir.y > -.12;
+    // the sun and moon sit just inside the camera's far limit (2 km with the far view), so far-off
+    // hills never rise in front of them; scaled to look the same size as at 300 m
+    const skyD = Math.max(300, camera.far * .92), skyK = skyD / 300;
+    sunDisc.position.copy(camera.position).addScaledVector(sunDir, skyD); sunDisc.visible = sunDir.y > -.12;
+    moonDisc.position.copy(camera.position).addScaledVector(moonDir, skyD); moonDisc.visible = moonDir.y > -.12;
+    sunDisc.scale.set(46 * skyK, 46 * skyK, 1); moonDisc.scale.set(34 * skyK, 34 * skyK, 1);
     if (Cut.on && Cut.under > .5) sunDisc.visible = moonDisc.visible = false;
     mist.position.copy(camera.position); mist.position.y = camera.position.y + 12;
     mist.rotation.y = elapsed * .004;
