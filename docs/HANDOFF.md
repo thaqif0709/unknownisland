@@ -489,6 +489,9 @@ inventory JSON, sent as `welcome.lanternsSeen` and `lanternsseen`) and answers
 `RULES.LANTERN_TRAVEL`). The browser part is `265-lantern-travel.js`: E at a lit lantern with
 somewhere to go opens its panel (`UI.lanternTravel.open`, hooked into `act()`). Tests:
 `tests/server/lanterntravel.test.js`, `tests/browser/lanterntravel.test.js`.
+The Hidden Pages have a search box (top of the contents; the script at the end of
+`public/hiddenpages.html`): it filters sections, list items and table rows by word starts,
+keeps spoilers closed (tagged), and skips text for flags that are off.
 Calling out (P11, no flag): `call` message, rate-limited in `server/systems/chat.js`
 (`RULES.CALL`), broadcast as `{ t: 'call', id, name, x, z, under }`; `285-calling-out.js`
 plays a panned, distance-faded call (muffled through a cave), a bubble, a compass note for
