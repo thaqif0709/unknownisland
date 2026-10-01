@@ -157,6 +157,34 @@
     scene.add(sp); noInk.add(sp); return sp;
   };
   const sunDisc = skyDisc('sun'), moonDisc = skyDisc('moon4');
+  // Their glow: a soft halo behind each (added light, so it brightens the sky round them), and
+  // for the sun slow-turning beams. Placed and faded with the discs in 390-loop.js.
+  function glowTexture(kind) {
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const g = c.getContext('2d');
+    if (kind === 'rays') {   // soft beams, wider at the end, fading out
+      for (let i = 0; i < 16; i++) {
+        const a = i / 16 * Math.PI * 2 + (i % 2) * .08, w = i % 2 ? .07 : .12, len = i % 2 ? 100 : 124;
+        const grad = g.createRadialGradient(128, 128, 20, 128, 128, len);
+        grad.addColorStop(0, 'rgba(255,236,170,.75)'); grad.addColorStop(1, 'rgba(255,236,170,0)');
+        g.fillStyle = grad; g.beginPath(); g.moveTo(128, 128);
+        g.lineTo(128 + Math.cos(a - w) * len, 128 + Math.sin(a - w) * len); g.lineTo(128 + Math.cos(a + w) * len, 128 + Math.sin(a + w) * len); g.closePath(); g.fill();
+      }
+    } else {
+      const col = kind === 'sun' ? '255,214,120' : '214,226,255';
+      const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+      grad.addColorStop(0, `rgba(${col},1)`); grad.addColorStop(.22, `rgba(${col},.55)`); grad.addColorStop(.5, `rgba(${col},.16)`); grad.addColorStop(1, `rgba(${col},0)`);
+      g.fillStyle = grad; g.fillRect(0, 0, 256, 256);
+    }
+    return new THREE.CanvasTexture(c);
+  }
+  const skyGlow = (kind, order) => {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(kind), transparent: true, fog: false, depthWrite: false, blending: THREE.AdditiveBlending }));
+    sp.renderOrder = order; scene.add(sp); noInk.add(sp); return sp;
+  };
+  const sunGlow = skyGlow('sun', -4), sunRays = skyGlow('rays', -3), moonGlow = skyGlow('moon', -4);
+  // the haze round the camera is drawn over the sky; the moon (and its glow) shine through it
+  moonDisc.renderOrder = 1; moonGlow.renderOrder = 1; moonDisc.material.depthTest = moonGlow.material.depthTest = true;
   let env = { phase: 4, lightMul: 1 };
   function setEnv(e) {
     env = Object.assign({ lightMul: 1 }, e || {});

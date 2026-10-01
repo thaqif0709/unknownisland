@@ -46,6 +46,18 @@
     sunDisc.position.copy(camera.position).addScaledVector(sunDir, skyD); sunDisc.visible = sunDir.y > -.12;
     moonDisc.position.copy(camera.position).addScaledVector(moonDir, skyD); moonDisc.visible = moonDir.y > -.12;
     sunDisc.scale.set(46 * skyK, 46 * skyK, 1); moonDisc.scale.set(34 * skyK, 34 * skyK, 1);
+    // their glow: brightest high in a clear sky, dimmer low down (and the moon's with its phase);
+    // the halo breathes a little and the sun's beams turn slowly
+    const sunUp = clamp((sunDir.y + .12) / .3, 0, 1), moonUp = clamp((moonDir.y + .12) / .3, 0, 1);
+    const clear = env.weather === 'storm' || env.weather === 'fogstorm' ? .25 : env.weather === 'rain' ? .5 : 1, breathe = 1 + Math.sin(elapsed * .9) * .05;
+    for (const [s, d, k] of [[sunGlow, sunDir, 190], [sunRays, sunDir, 150], [moonGlow, moonDir, 170]]) {
+      s.position.copy(camera.position).addScaledVector(d, skyD * 1.002); s.scale.set(k * skyK * breathe, k * skyK * breathe, 1);
+    }
+    const moonLit = 1 - Math.abs(((env.phase || 0) % 8) - 4) / 4;   // 1 full, 0 new
+    sunGlow.material.opacity = .85 * sunUp * clear; sunRays.material.opacity = .45 * sunUp * clear;
+    moonGlow.material.opacity = (.25 + .75 * moonLit) * moonUp * clear;
+    sunRays.material.rotation = elapsed * .03;
+    sunGlow.visible = sunRays.visible = sunDisc.visible; moonGlow.visible = moonDisc.visible;
     if (Cut.on && Cut.under > .5) sunDisc.visible = moonDisc.visible = false;
     mist.position.copy(camera.position); mist.position.y = camera.position.y + 12;
     mist.rotation.y = elapsed * .004;
@@ -299,7 +311,10 @@
     } else {
       // Past the lowest orbit angle the camera stops sinking, comes in closer
       // behind the frog and tilts up, so you can look at the sky and treetops.
-      camLift += (((climb || glide || flying) ? hop.y : (hop.floor || 0)) - camLift) * Math.min(1, dt * 6);   // follow you up onto a rock (or a trunk, or a glide), smoothly
+      // follow you up onto a rock (or a trunk, or a glide), smoothly; and down a long fall (higher
+      // above the ground than any jump goes), so the view stays on you instead of the ground below
+      const liftTo = (climb || glide || flying) ? hop.y : hop.air ? Math.max(hop.floor || 0, hop.y - JUMP_TOP) : (hop.floor || 0);
+      camLift += (liftTo - camLift) * Math.min(1, dt * (hop.air && hop.y > JUMP_TOP ? 12 : 6));
       const py = (myCave ? myFloor() : Math.max(heightAt(px, pz), -.75)) + camLift, LOW = .18;   // in a cave: its floor (W9)
       const up = Math.max(0, LOW - pitch), orbit = Math.max(pitch, LOW - up * .12);
       const dist = camDist * (1 - Math.min(up, 1) * .45);
