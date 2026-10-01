@@ -173,10 +173,8 @@ Travelling between lit lanterns (paying lamp oil by distance) is the `fasttravel
 Hearth checkpoints are the `checkpoints` flag: sit by a lit clay hearth to wake there after a
 knockdown or collapsing.
 
-When you switch something on for players, put a few lines about it in `NEWS` at the top of
-`public/js/215-whats-new.js`: they show in a "What's new" box on the start screen (each line
-can name a flag, so it only shows while that's on). Change its `id` and it opens by itself
-again for everyone. Switching a flag off again is safe: anyone whose saved spot isn't
+When you switch something on for players, add a line to the Hidden Pages changelog (linked
+from Settings). Switching a flag off again is safe: anyone whose saved spot isn't
 walkable any more (the sea where the big world was, say) comes back on the Landing's beach.
 
 ## Trying it on your own computer (optional)

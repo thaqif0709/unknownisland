@@ -474,9 +474,8 @@ and journal entries carry `region`/`flag`, and its chain is in `server/content/s
 The browser side is one part, `108-the-stairs.js`, through `UI.things` (models, E labels,
 solidity, swing), `UI.itemIcons` and `UI.bugLooks`, plus `public/js/mobs/leaning.js`. Tests:
 `tests/server/stair.test.js`, `tests/browser/stairs.test.js`.
-The start screen's "What's new" box is `215-whats-new.js` (`NEWS`: lines, each optionally tied
-to a flag, read from `/api/hiddenpages` since it shows before the welcome; a new `id` opens it
-again for everyone). With the `checkpoints` flag (P4), sitting by a lit clay hearth for 3 s saves it as where you
+(The start screen's "What's new" box and its Hidden Pages link were taken out on 1 Oct; the
+Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), sitting by a lit clay hearth for 3 s saves it as where you
 wake (`server/systems/checkpoints.js`, `respawnPoint`; browser `145-hearth-checkpoints.js`:
 the pennant, the map flag). The sleep look is in `120-castaways.js` `poseCastaway`: `sleepK`
 eases in over about half a second, then the shut eyes (`av.eyesShut`), the z sprites from the top of

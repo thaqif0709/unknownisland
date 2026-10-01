@@ -11,6 +11,11 @@ before(async () => { server = await startServer({ env: { FEATURES: 'fasttravel' 
 after(async () => { if (server) await server.stop(); });
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// The lantern is remembered (the message may already have come, so look at everything so far).
+async function remembered(c, id) {
+  for (let t = 0; t < 60; t++) { if (c.messages.some(m => m.t === 'lanternsseen' && m.ids.includes(id))) return; await sleep(100); }
+  throw new Error(`lantern ${id} never remembered`);
+}
 const cost = (a, b) => Math.max(WG.RULES.LANTERN_TRAVEL.MIN_OIL, Math.ceil(Math.hypot(a.x - b.x, a.z - b.z) / WG.RULES.LANTERN_TRAVEL.PER_OIL));
 
 test('remember lit lanterns by standing in their light, then travel between them for oil', async () => {
@@ -23,7 +28,7 @@ test('remember lit lanterns by standing in their light, then travel between them
     await c.test('place', besideSpot({ ...l, r: 1.2 }));
     await c.test('give', { inv: { oil: 1 } });
     await c.act('l' + l.id);   // lights it (or tops it up, in a kept database)
-    await c.next(m => m.t === 'lanternsseen' && m.ids.includes(l.id), { timeout: 5000 });
+    await remembered(c, l.id);
   };
   await light(b);
   await light(a);   // now at a, remembering both
@@ -58,7 +63,7 @@ test('the server refuses: a lantern you have not been to, one gone cold, or from
   await c.test('place', besideSpot({ ...a, r: 1.2 }));
   await c.test('give', { inv: { oil: 3 } });
   await c.act('l' + a.id);
-  await c.next(m => m.t === 'lanternsseen' && m.ids.includes(a.id), { timeout: 5000 });
+  await remembered(c, a.id);
   // b: never stood by it (light it from afar with a test hook isn't possible, so it may be cold too)
   const told = c.next(m => m.t === 'toast' && /gone cold|don.t know the way/.test(m.msg));
   c.send({ t: 'lanterntravel', from: a.id, to: b.id });
@@ -82,7 +87,7 @@ test('the lanterns you remember are saved with you', async () => {
   await c.test('place', besideSpot({ ...l, r: 1.2 }));
   await c.test('give', { inv: { oil: 1 } });
   await c.act('l' + l.id);
-  await c.next(m => m.t === 'lanternsseen' && m.ids.includes(l.id), { timeout: 5000 });
+  await remembered(c, l.id);
   c.close();
   await sleep(400);
   const again = await connect();
