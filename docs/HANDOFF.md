@@ -201,7 +201,7 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
-- **Bosses (C0, flag `bosses`, off).** `server/systems/bosses.js` and `server/bosses/` (one
+- **Bosses (C0, flag `bosses`, on).** `server/systems/bosses.js` and `server/bosses/` (one
   file per boss: a mob definition plus region, next, hp, appear, phases, trophy). A finished
   chain's `summonBoss(region)` calls its boss; it appears when `appear.when` holds, at x, z.
   Frogs within `BOSSES.ARENA` take part and scale its health (`PER_FROG`); phases by health;

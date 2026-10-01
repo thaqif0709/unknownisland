@@ -3,7 +3,7 @@ id: C0
 title: The boss system
 lane: content
 owner: edvin
-status: review
+status: done
 depends: [P5, P6]
 flag: bosses
 size: 1–2 sessions
@@ -31,9 +31,10 @@ Contract §10 real
 
 - [x] A debug test boss can be summoned, beaten and wiped against.
 - [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
-- [ ] This file's `status` set to `done` in the PR that finishes it.
+- [x] This file's `status` set to `done` in the PR that finishes it.
 
 ## Log
 
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->
 2026-10-01 edvin: built behind `bosses` (off): server/bosses/ (boss files are mob kinds too) and systems/bosses.js: summonBoss calls a region's boss, appear.when and cooldown, the 40 m arena, health × (1 + 0.6 per extra frog), phases, a wipe resets it, trophies for everyone present, an echo for latecomers, bossDay and openRegion(next) on defeat, the `bosses` table (0010) to resume after a restart; the practice boss (the Straw Giant, `/boss practice`); the health bar, map mark, camera shake and echo in the browser. The flag goes on with the first real boss (C1, the Tidewife).
+2026-10-01 edvin: `bosses` switched on for everyone (asked for before C1, so the practice boss can be tried live with `/boss practice`); `FEATURES=-bosses` on Render turns it off again. No region has a boss file yet, so a finished chain still only notes it until C1.

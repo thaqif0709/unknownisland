@@ -114,7 +114,7 @@
       caves: false,      // W9: caves you walk into (the Landing's sea cave), torches and the Dark
       checkpoints: false, // P4: sleep by a lit hearth to wake there after a knockdown or dying
       travel: true,      // P9 climbing (palm trunks, cliffs) and gliding with the cloak
-      bosses: false,     // C0: region bosses: summoned by a finished chain, an arena, phases, winning opens the next region
+      bosses: true,      // C0: region bosses: summoned by a finished chain, an arena, phases, winning opens the next region
       rafts: true,       // P10: rafts on the sea and rivers (two frogs to one), zip lines anyone can ride
       fishing: true,     // P7 fishing: rods, casting, bites, P8's minigames to land them, cooking
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
