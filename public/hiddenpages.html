@@ -103,7 +103,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
     <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#fighting" data-feature="combat">Fighting</a><a href="#bosses" data-feature="bosses">Bosses</a><a href="#torches" data-feature="torchlight">Torches</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
     <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a><a href="#fishing" data-feature="fishing">Fishing</a><a href="#minigames" data-feature="fishing">Landing a fish</a>
-    <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#stairs" data-feature="region-stair">The Stairs</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
+    <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#stairs" data-feature="region-stair">The Stairs</a><a href="#wood" data-feature="region-wood">The Weeping Wood</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
     <b>History</b><a href="#changelog">Changelog</a>
   </div></nav>
 
@@ -408,6 +408,17 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li>She swipes her claw at whoever is close and heaves beams of the wreck at whoever isn't. Torn free (below half her health) she's quicker and throws at anyone.</li>
         <li>Beaten, she leaves her <b>eye</b> (a relic) and a <b>piece of her shell</b>, which makes the Tidewife shell patch: you wade as fast as you walk, but the Stilled notice you more easily. The way to the Stairs opens at the next dawn.</li>
       </ul>
+      <div data-feature="region-wood">
+      <h3>The Hanging Mother (the Weeping Wood)</h3>
+      <p>Something huge and pale that hangs in the canopy by three great vines. When the Wood's carving requests are all answered, the spring stone says: <i>At night, under the tallest trees. Look up.</i></p>
+      <ul>
+        <li>She comes at night and <b>draws back up into the leaves at dawn</b>, whole again.</li>
+        <li>Up in the branches she's <b>out of reach</b>. Her shadow slides over the frog she's after; when it stops, she drops on it. Get out of the shadow.</li>
+        <li><b>Light blinds her</b>: she won't go after a frog in light (a torch in hand, a fire or a lantern close by).</li>
+        <li><b>Cut her three vines</b>, on the ground around her, and she falls. On the ground she can be hit, and light hurts her twice over, until she climbs back up and her vines grow down again.</li>
+        <li>Below half her health she drops quicker and stays down less long.</li>
+        <li>Beaten, she leaves her <b>eye</b> (a relic) and a <b>skein of her silk</b>, which makes the Mother's silk patch: you climb half again as fast, but the Hung reach for you from further off. The way to the Mire opens at the next dawn.</li>
+      </ul></div>
       <p class="muted">(Admins can also try the boss system on a practice boss, the Straw Giant: <code>/boss practice</code>. Fire hurts it twice over.)</p></details>
     </section>
 
@@ -593,6 +604,37 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <details class="spoiler"><summary><span class="warn">Spoiler</span> The Stairs' carvings <span class="muted">(click to show)</span></summary>
       <p>Once the Stairs are open, the carving stones ask for things from up there, in order: six flint, then eight bricks to mend the houses on the steps, then two of you down the old mine and out again, then six healing herbs, and last, catching the wind moth that flies high on the steps at night. What waits after that is still to come.</p></details>
     </section>
+    <section id="wood" data-feature="region-wood"><h2>The Weeping Wood</h2>
+      <p>North-east of the Landing, a forest of <b>giant trees</b>, sixty to ninety metres tall, with a roof of leaves so thick it's dim at noon, and a wide river winding through. Things you'll only find here:</p>
+      <ul>
+        <li><b>The giants</b> themselves. Walk into one to climb the vines down its trunk, all the way up into the leaves (and glide down). An axe hews <b>hardwood</b> from one: <span data-r="WOOD.HARDWOOD"></span> a day from each giant, no more.</li>
+        <li><b>Resin</b> weeping from broken stumps: scrape it off with <kbd>E</kbd>. Back in <span data-r="THINGS.resin.regrow"></span> days.</li>
+        <li><b>Hanging vines</b>: pull them down for <b>vine rope</b>. Back in <span data-r="THINGS.vine.regrow"></span> days.</li>
+        <li><b>Strange fruit</b> on low, crooked bushes: it fills you and quenches your thirst at once. Back in <span data-r="THINGS.fruit.regrow"></span> days.</li>
+        <li><b>Giant leaves</b>, bigger than a frog. Back in <span data-r="THINGS.bigleaf.regrow"></span> day.</li>
+        <li><b>Amber</b>, half-buried in the higher ground: dig it out with a pickaxe.</li>
+        <li><b>River fish</b>: catfish all day and night, and by day the shy glass carp (bring bait).</li>
+        <li>Their own bugs: the <b>lantern beetle</b> (only at night), the <b>glasswing</b> (only by day) and the <b>bark mantis</b>, which you'll only spot on the Wood's higher ground.</li>
+      </ul>
+      <h3>What it makes</h3>
+      <ul>
+        <li><b>A bow</b> (hardwood and vine rope): it shoots <b>arrows</b> (hardwood and resin, six at a time) further than a sling throws. Each shot uses an arrow.</li>
+        <li><b>Resin torches</b>: wood and resin make three torches at once.</li>
+        <li><b>A leaf glider</b> (giant leaves and vine rope): carry it and you fall much more slowly when you glide.</li>
+      </ul>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The Hung <span class="muted">(click to show)</span></summary>
+      <p>The Wood has its own Stilled. <b>The Hung</b> are pale shapes that hang from the giants' high branches by long arms, out of reach. At night, walk beneath one in the dark and it <b>creaks</b>: a ring appears on the ground where it will land. Step out of the ring<span data-feature="combat"> or roll clear</span>, or it drops on you and knocks you down.</p>
+      <ul>
+        <li>They come out at night, under the giants near whoever is in the Wood, and are gone by morning. Being near one frightens you.</li>
+        <li><b>Light</b> is the answer: they won't drop on a frog with a torch in hand, or by a fire or a lantern.</li>
+        <li>Once one has dropped it's on the ground for a moment and can be hit (light hurts it more), then it climbs back up.</li>
+      </ul></details>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The root hollow <span class="muted">(click to show)</span></summary>
+      <p>Under the roots of a giant on a rising slope in the east of the Wood, a narrow way leads down between the roots into a wider, damp hollow, with a side passage. Bring a torch.</p></details>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The Wood's carvings <span class="muted">(click to show)</span></summary>
+      <p>Once the Wood is open, the carving stones ask, in order: six resin, then six vine rope, then two of you down the root hollow and out again, then catching a lantern beetle, and last a bark mantis. Then the ridge stone says where to look for what comes next.</p></details>
+    </section>
+
     <section id="death"><h2>Getting hurt and dying</h2>
       <ul>
         <li>Hunger, thirst, the cold and the Stilled all hurt you. The screen edges glow red below half health.</li>
@@ -608,6 +650,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="region-wood"><b>The Weeping Wood:</b> giant trees to climb and hew hardwood from, resin, vine rope, strange fruit, giant leaves and amber; a bow and arrows, resin torches and a leaf glider; river fish, three new bugs, something in the branches, a root hollow, five carvings and what comes after them.</li>
         <li data-feature="bosses"><b>The Tidewife:</b> the Landing has a boss. When its carving requests are all answered, something stirs on the east sand at the lowest tide.</li>
         <li data-feature="bosses"><b>Bosses:</b> when a region's carving requests are all answered, its boss comes. Fight it together (it grows tougher with each frog), watch its bar, and if you missed it, touch its echo for the trophy.</li>
         <li data-feature="rafts"><b>Rafts and zip lines:</b> build a raft, set it on the water and paddle it (a friend can ride along); string a zip line between a high post and a lower one, and anyone can slide down it.</li>

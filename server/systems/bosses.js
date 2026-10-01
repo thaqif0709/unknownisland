@@ -92,6 +92,7 @@ const methods = {
     if (resume && b.maxHp) mob.maxHp = b.maxHp;
     Object.assign(b, { state: 'fighting', mob, present: new Set(), emptySince: null, resume: false });
     if (!resume) { b.frogs = 1; b.phase = 0; }
+    if (def.onAppear) def.onAppear(this, b, mob);   // its helpers (the Hanging Mother's vines...)
     this.bossTell(b);
     this.bossSave(b);
     this.broadcast({ t: 'toast', msg: `${def.name} has come.` });
@@ -100,6 +101,7 @@ const methods = {
   bossWipe(b, say) {
     const def = BOSSES[b.id];
     if (b.mob && !b.mob.gone) this.mobs.remove(b.mob);
+    if (def.onGone) def.onGone(this, b);
     Object.assign(b, { state: 'waiting', mob: null, hp: def.hp, maxHp: def.hp, phase: 0, frogs: 1, returnAt: Date.now() + (def.appear.cooldown || 0) * 1000 });
     this.bossTell(b);
     this.bossSave(b);
@@ -110,6 +112,7 @@ const methods = {
     const b = this.bossOf(mob);
     if (!b || b.state !== 'fighting') return;
     const def = BOSSES[b.id];
+    if (def.onGone) def.onGone(this, b);
     Object.assign(b, { state: 'beaten', defeatedAt: Date.now(), hp: 0, mob: null });
     for (const p of this.players.values()) if (!p.dead && !p.under && Math.hypot(p.x - b.x, p.z - b.z) < B().ARENA) b.present.add(p.id);   // (and whoever is there as it falls)
     for (const id of b.present) { const p = this.players.get(id); if (p) this.bossTrophy(p, b); }

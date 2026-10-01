@@ -185,6 +185,10 @@ spawns in its region.
 | Ashen Shore | The Ashen | burning footprints | a thrown bucket of water |
 | Hollow | The Dreaming | look like your friends on the map | calling out (real friends answer) |
 
+(C4 as built: the Hung's weakness is light, not their vine: they won't drop on a frog with
+a torch in hand or by a fire or lantern, and a ring on the ground shows where one will land.
+They knock you down rather than lift you. No wind chimes.)
+
 Each kind gets a journal entry for surviving an encounter; its weakness goes in a spoiler
 box on the Hidden Pages.
 
@@ -201,6 +205,12 @@ saved in a `bosses` table so a restart resumes the fight.
 -1.5 m, about four minutes of fight in a 20-minute day; her kelp takes 35% of a blow until 40
 fire damage burns it, her shell 60%, her eyes 250% while she rears; her shell makes a patch,
 wading at walking speed at the cost of the Stilled noticing you more.)
+
+(C4 as built: the Hanging Mother comes at night under the tallest trees and leaves at dawn;
+there are no canopy walkways yet, so her three vines hang to the ground around her and are
+cut there; light (torch, fire, lantern) is what blinds her, and hurts her twice over once
+she's down; her silk makes a patch, climbing 1.5x as fast at the cost of the Hung reaching
+further. Rafts are a Landing craft already (P10), so the Wood doesn't add them.)
 
 (C0 as built: the arena, scaling, wipe and echo are as above; trophies are journal keys,
 a relic and the one a cloak patch needs; a practice boss, the Straw Giant, exists only for

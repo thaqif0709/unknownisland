@@ -123,6 +123,7 @@
       torchlight: false, // torches burn above ground too: light, fog pushed back, warmth; G plants one (E takes it back)
       fasttravel: false, // W10: travel between lit lanterns you've stood by, paying lamp oil
       tools: true,       // P3: tools are items in the bag, used from your hand, that wear out (needs slots)
+      'region-wood': false,    // C4: the Weeping Wood's own things (giant trees, resin, vines, strange fruit, giant leaves, amber), bugs, fish, the Hung, the root hollow, its chain, the Hanging Mother
       'region-stair': false,   // C3: the Stairs' own things (flint, herbs, flax, ruins, standing stones, tin), bugs, the Leaning, the old mine, its request chain
     },
     // Creative mode, for testing only: admins (the ADMINS env var) type /creative in chat,
@@ -153,6 +154,7 @@
         spear: { damage: 9, reach: 2.9, arc: .35, swing: .6, knock: .5, uses: 120 },
         club: { damage: 11, reach: 1.8, arc: .7, swing: .75, knock: 2.2, uses: 140 },
         sling: { damage: 7, reach: 14, arc: .12, swing: .9, knock: .3, uses: 150, ammo: 'stone' },
+        bow: { damage: 11, reach: 22, arc: .1, swing: 1.1, knock: .4, uses: 160, ammo: 'arrow' },   // (the Weeping Wood, C4)
         torch: { damage: 4, reach: 1.7, arc: .8, swing: .5, knock: .4, tags: ['fire'] },   // a lit torch swung (a heavy swing throws it: THROW)
       },
       THROW: { RANGE: 9, RADIUS: 2.5, DAMAGE: 12 },   // a torch thrown (heavy, with one in hand): a burst of fire where it lands
@@ -165,6 +167,12 @@
       LIGHT_SLOW: .5,           // ...and the Stilled stalking you move this much slower
       STILLED_HP: 12,           // the Stilled take a few blows to break (1 without combat)
       REFORM: 90,               // seconds before a broken Stilled forms again where it broke (at night, in fog)
+    },
+    // The Weeping Wood (C4, flag region-wood).
+    WOOD: {
+      HARDWOOD: 3,              // an axe takes this much hardwood from one giant a day (2 a swing)
+      GLIDER_FALL: .5,          // carrying a leaf glider, a glide sinks this much as fast
+      HUNG: { MAX: 6, PER_PLAYER: 2, REACH: 2.8, DROP_MS: 1400, DMG: 28, CLIMB: 3, NEAR_DREAD: 1.5 },   // the Hung (server/mobs/hung.js)
     },
     // Bosses (C0, flag bosses). Each boss is a file in server/bosses/.
     BOSSES: {
@@ -206,6 +214,7 @@
       HELP: 1, HELP_REACH: 4,   // a friend this close presses E once per catch: a second more
       SNAP: 3,                  // a lost fish snaps the line: the rod loses this many uses
       SPRING_R: 2.2,            // a spring's pool, from its middle (m)
+      RIVER_R: 24,              // a river's water, from its line (the wider world's rivers: river fish)
       LANDING_R: 420,           // the Landing's waters, from the middle of the world (other regions' fish come with their packs)
       COOKED: 34,               // a cooked fish fills you this much (raw ones: ITEM_INFO)
     },
@@ -240,7 +249,7 @@
       GLIDE_FALL: 1.5,         // how fast you sink while gliding
       GLIDE_ENERGY: 7,
       GLIDE_MIN_HEIGHT: 2.2,   // above the ground: lower than this and the cloak can't catch the air
-      MAX_HEIGHT: 40,          // highest anyone can be shown at (a tall trunk, a glide off a cliff)
+      MAX_HEIGHT: 95,          // highest anyone can be shown at (a giant of the Weeping Wood, a glide off a cliff)
     },
     // The Stilled: pale figures that only exist in fog, and only move unwatched.
     STILLED: {
@@ -264,6 +273,8 @@
     spear: 'Spear', club: 'Club', sling: 'Sling',   // (weapons, P6)
     flint: 'Flint', herbs: 'Healing herbs', flax: 'Flax', bricks: 'Old bricks', tin: 'Tin ore',   // (the Stairs, C3)
     raft: 'Raft', zipline: 'Zip line kit',   // (P10)
+    hardwood: 'Hardwood', resin: 'Resin', vine_rope: 'Vine rope', strange_fruit: 'Strange fruit', giant_leaf: 'Giant leaf', amber: 'Amber',
+    bow: 'Bow', arrow: 'Arrow', leaf_glider: 'Leaf glider', catfish: 'River catfish', glass_carp: 'Glass carp',   // (the Weeping Wood, C4)
     rod: 'Fishing rod', bait: 'Bait', silverfin: 'Silverfin', pool_minnow: 'Pool minnow', lantern_fish: 'Lantern fish', cooked_fish: 'Cooked fish' };   // (fishing, P7)
   // More about an item than its name (all optional): kind 'food' is eaten from a slot (food,
   // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise).
@@ -281,6 +292,9 @@
     sword_iron: { kind: 'weapon', returns: 'iron' }, sword_silver: { kind: 'weapon' }, sword_obsidian: { kind: 'weapon' },
     spear: { kind: 'weapon', returns: 'stone' }, club: { kind: 'weapon', returns: 'wood' }, sling: { kind: 'weapon' },
     raft: { stack: 1 }, zipline: { stack: 4 },   // (P10, flag rafts)
+    // the Weeping Wood (C4, flag region-wood)
+    strange_fruit: { kind: 'food', food: 14, water: 10 }, bow: { kind: 'weapon', returns: 'hardwood' }, arrow: { stack: 30 }, leaf_glider: { stack: 1 },
+    catfish: { kind: 'food', food: 10, cooks: 'cooked_fish' }, glass_carp: { kind: 'food', food: 7, cooks: 'cooked_fish' },
     // fishing (P7, flag fishing): the rod wears like a tool; raw fish can be eaten, but cook them at a fire
     rod: { kind: 'tool', tool: 'rod', returns: 'wood' },
     silverfin: { kind: 'food', food: 8, cooks: 'cooked_fish' }, pool_minnow: { kind: 'food', food: 5, cooks: 'cooked_fish' },
@@ -303,6 +317,13 @@
     flax: { state: { picked: false }, regrow: 2, r: .35 },   // blue-flowered flax
     ruin: { state: { left: 3 }, regrow: 6, r: 1.2 },         // a tumbledown wall of old bricks
     standing: { state: {}, regrow: 0, r: .6 },              // a standing stone (shelter from the wind)
+    // the Weeping Wood (C4)
+    giant: { state: { cuts: 0, cutDay: 0 }, regrow: 0, r: 2.6 },   // a giant tree, 60-90 m, hung with climbable vines; an axe takes a little hardwood a day
+    resin: { state: { left: 2 }, regrow: 2, r: .5 },        // a broken stump weeping resin
+    vine: { state: { picked: false }, regrow: 2, r: .45 },  // a curtain of hanging vines (vine rope)
+    fruit: { state: { picked: false }, regrow: 2, r: .5 },  // a strange-fruit bush
+    bigleaf: { state: { picked: false }, regrow: 1, r: .8 }, // a plant with leaves bigger than you
+    amber: { state: { left: 2 }, regrow: 5, r: .6 },        // old roots with amber in them (a pickaxe gets more)
   };
 
   // Things you can build. Add new entries here; the recipe book lists them all.
@@ -341,6 +362,15 @@
       desc: 'Heavy, sharp and long-lasting.' },
     { id: 'sling', kind: 'item', name: 'Sling', cost: { wood: 1, flax: 2 }, gives: { sling: 1 }, flag: 'combat',
       desc: 'A flax cord and pouch. Throws a stone from your bag at whatever you aim at, far off.' },
+    // the Weeping Wood (C4)
+    { id: 'bow', kind: 'item', name: 'Bow', cost: { hardwood: 2, vine_rope: 1 }, gives: { bow: 1 }, flag: 'region-wood',
+      desc: 'Hardwood from the giants, strung with vine rope. Shoots an arrow from your bag at whatever you aim at, further than a sling.' },
+    { id: 'arrow', kind: 'item', name: 'Arrows', cost: { hardwood: 1, resin: 1 }, gives: { arrow: 6 }, flag: 'region-wood',
+      desc: 'Six straight shafts, their heads set in resin.' },
+    { id: 'resin_torch', kind: 'item', name: 'Resin torches', cost: { wood: 1, resin: 1 }, gives: { torch: 3 }, flag: 'region-wood',
+      desc: 'Sticks dipped in resin: three torches for one, and they burn just as long.' },
+    { id: 'leaf_glider', kind: 'item', name: 'Leaf glider', cost: { giant_leaf: 3, vine_rope: 2 }, gives: { leaf_glider: 1 }, flag: 'region-wood',
+      desc: 'Giant leaves laced to your cloak. Carry it and your glides sink half as fast, so they carry you much further.' },
     // rafts and zip lines (P10)
     { id: 'raft', kind: 'item', name: 'Raft', cost: { wood: 10 }, gives: { raft: 1 }, flag: 'rafts',
       desc: 'Logs lashed side by side. Hold it, face the water and press E to set it afloat; E beside it to climb aboard (two of you fit).' },
@@ -360,6 +390,7 @@
     { key: 'firefly_jar', name: 'Firefly jar', needs: 'firefly', perk: 'A small light of your own that pushes the fog back.', cost: 'The Stilled notice you from further away.' },
     { key: 'silverfin_scale', name: 'Silverfin scale', needs: 'silverfin', perk: 'Fires warm you from further away.', cost: 'The Stilled notice you more easily.' },
     { key: 'conch_charm', name: 'Conch charm', needs: 'conch', perk: 'Friends calm you twice as much.', cost: 'You get hungry faster.' },
+    { key: 'silk_patch', name: 'Mother’s silk', needs: 'mother_silk', perk: 'You climb half again as fast.', cost: 'The Hung can reach you from further off.' },   // (C4)
     { key: 'tide_shell', name: 'Tidewife shell', needs: 'tidewife_shell', perk: 'You wade as fast as you walk.', cost: 'The Stilled notice you more easily.' },   // (C1: kept by those who beat her)
   ];
   const MOON_NAMES = ['Drowning Moon', 'thin crescent', 'half moon', 'swelling moon', 'full moon', 'waning moon', 'half moon', 'old crescent'];
@@ -909,7 +940,7 @@
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
     generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
     feature, features, setFeatures, resolveFeatures,
-    REGIONS, regionAt, climbAt, slopeAt, landingHeightAt, WORLD, RIVERS,
+    REGIONS, regionAt, worldRegionAt, climbAt, slopeAt, landingHeightAt, WORLD, RIVERS,
     THINGS, CHUNK, CHUNK_ID_BASE, chunkOf, chunkKey, chunkObjectId, chunkOfId, generateChunk,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;

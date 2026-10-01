@@ -201,6 +201,9 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
+- **The Hanging Mother (C4, flag `region-wood`, off; the Wood's boss).** See the Wood's pack
+  below. Bosses now may have `kinds` (their own helper mobs, registered with the mob engine),
+  `onAppear(island, b)` and `onGone(island, b)` (after a wipe, leaving or being beaten).
 - **The Tidewife (C1, flag `bosses`, on; the Landing's boss).** `server/bosses/tidewife.js`:
   called by the Landing's chain (`region: 'landing'`, `next: 'stair'`), she appears on the east
   sand (140, -40) when `Caves.tideLevel` is below -2.5 and leaves whole once it's rising past
@@ -534,6 +537,25 @@ and journal entries carry `region`/`flag`, and its chain is in `server/content/s
 The browser side is one part, `108-the-stairs.js`, through `UI.things` (models, E labels,
 solidity, swing), `UI.itemIcons` and `UI.bugLooks`, plus `public/js/mobs/leaning.js`. Tests:
 `tests/server/stair.test.js`, `tests/browser/stairs.test.js`.
+The Weeping Wood's pack (C4, flag `region-wood`, off) follows the same pattern:
+`server/regions/wood.js` (`spawnMore`: giant, resin, vine, fruit, bigleaf, amber; the
+`roothollow` cave; `requests`, `bossHint`), `server/systems/wood.js` (E: an axe hews
+`RULES.WOOD.HARDWOOD` a day from a giant, the rest are picked or dug), its Stilled
+`server/mobs/hung.js` (night, under giants near frogs in the Wood: `hang`, out of reach
+through `adjust`; a frog in the dark within `HUNG.REACH` gets a ring (`creak`), then it
+drops and knocks; not on a frog `inLight`), river fish (`fishing.js` `waterAt` gives
+`'river'` near `WG.RIVERS` in the big world; fish may carry `flag`), the bow (`WEAPONS.bow`,
+`ammo: 'arrow'`), resin torches and the leaf glider (`380-jumping.js`: glide falls at
+`RULES.WOOD.GLIDER_FALL` while you carry one). Its boss, the Hanging Mother
+(`server/bosses/mother.js`, `next: 'mire'`): night only, leaves at dawn; out of reach while
+up (`adjust`), her shadow (a circle telegraph) chases a frog not `inLight` and she drops;
+her three vines are mob kinds of her own (`kinds: [mother_vine]`, grown in `onAppear`, cut in
+`onGone`); the last one cut sets her `fallen` for `FALLEN` s (light hurts her 2x), then the
+vines grow back. Trophies `mother_eye`, `mother_silk` (the `silk_patch`: climb 1.5x as fast,
+`385-climbing.js`; the Hung reach 1.5 m further). Browser: `109-the-wood.js` (models, labels,
+icons, the bow in hand through `UI.heldModels`, bug looks), `public/js/mobs/hung.js`,
+`public/js/mobs/mother.js`. `RULES.TRAVEL.MAX_HEIGHT` is 95 so the giants can be climbed.
+Tests: `tests/server/wood.test.js` (8).
 (The start screen's "What's new" box and its Hidden Pages link were taken out on 1 Oct; the
 Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), holding V (sit) by a lit clay hearth sleeps there (`UI.sitHold` in
 `145-hearth-checkpoints.js`; a tap only sits), and 3 s asleep saves it as where you

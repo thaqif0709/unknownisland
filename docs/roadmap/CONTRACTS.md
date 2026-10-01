@@ -230,7 +230,9 @@ A pack's own things: `spawnMore` rules (with `spawnFlag`) in the region file, on
 flag is on and always after `spawn` (so the objects already there keep their ids and saved
 state); their start state, regrow days and size in `WG.THINGS`; what E does in
 `server/systems/<region>.js` (`uses`); how they look through `UI.things` (section 3). A cave,
-bug or journal entry can carry `flag` (and bugs `region`, `minH`) to stay hidden until then.
+bug, fish or journal entry can carry `flag` (and bugs `region`, `minH`) to stay hidden until then.
+River water (`fishing.js` `waterAt` → `'river'`, near `WG.RIVERS`, `RULES.FISHING.RIVER_R`)
+exists only in the big world; a fish's `region` beyond the Landing is `WG.worldRegionAt`.
 
 ## 7. Panels and the cursor (P1)
 
@@ -381,7 +383,10 @@ the client `{ t: 'boss-echo', id }`. The welcome has `bosses`. Client: `public/j
 (or `<id>.js`). Since C1: a boss file may have `leaves(island, boss)` (and `leaveSay`): when it
 holds the boss leaves whole, as after a wipe (the Tidewife: the tide turning); and any mob kind
 may have `adjust(island, mob, dmg, tags, from)` to change a blow before it lands (her kelp,
-shell and eyes). Bosses whose `region` is set are called by that region's chain; a region file's
+shell and eyes). Since C4: a boss file may list `kinds: [mobDef, ...]` (its own helper mobs,
+registered with the engine like any kind: the Hanging Mother's vines), and have
+`onAppear(island, b)` (when it shows up) and `onGone(island, b)` (whenever it goes: a wipe,
+`leaves`, or beaten) to set up and clear them. Bosses whose `region` is set are called by that region's chain; a region file's
 `boss` names it.
 
 Where and when a boss appears is in its region file, which W8 already reads:

@@ -40,8 +40,11 @@ after(async () => {
 
 test('hold E with a rod to cast; a bite, E, a game; then the line comes in', async () => {
   const at = shoreSpot(0);
-  await test_('place', { x: at.x, z: at.z });
-  await page.waitForFunction(s => { const q = window.__dbg.pos(); return Math.hypot(q.x - s.x, q.z - s.z) < .5; }, at, { timeout: 10000 });
+  // (a position the page sent just before can reach the server after the move and pull me
+  // part of the way back, so try again until I stay there)
+  const there = () => page.evaluate(s => { const q = window.__dbg.pos(); return Math.hypot(q.x - s.x, q.z - s.z) < .5; }, at);
+  for (let i = 0; i < 5 && !(i && await there()); i++) { await test_('place', { x: at.x, z: at.z }); await page.waitForTimeout(700); }
+  assert.ok(await there(), 'on the shore');
   await test_('give', { inv: { rod: 1 } });
   await page.waitForFunction(() => (window.__dbg.stats.slots || []).some(s => s && s.k === 'rod'), null, { timeout: 10000 });
   const slot = await page.evaluate(() => window.__dbg.stats.slots.findIndex(s => s && s.k === 'rod'));

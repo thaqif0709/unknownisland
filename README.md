@@ -180,6 +180,12 @@ flag; it needs `streaming,bigworld` (and `caves` for the mine). Switching it on 
 the land without moving anything already there.
 
 Travelling between lit lanterns (paying lamp oil by distance) is the `fasttravel` flag.
+The Weeping Wood's own things (giant trees to climb and hew hardwood from, resin, vine rope,
+strange fruit, giant leaves, amber, river fish, three bugs, the bow, arrows, resin torches and
+the leaf glider, the Hung at night, the root hollow, its carvings and the Hanging Mother) are
+the `region-wood` flag; it needs `streaming,bigworld` (and `caves` for the hollow, `bosses` for
+the Mother).
+
 Torches working above ground (light, fog, warmth, burning down; G plants one) are the `torchlight` flag.
 
 Hearth checkpoints are the `checkpoints` flag: hold V by a lit clay hearth to sleep there, and wake there after a

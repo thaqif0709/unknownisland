@@ -28,15 +28,23 @@ const rand = (a, b) => a + Math.random() * (b - a);
 function waterAt(x, z) {
   const sp = WG.nearestSpring(x, z);
   if (Math.hypot(x - sp.x, z - sp.z) < F().SPRING_R) return 'spring';
-  return heightAt(x, z) < 0 ? 'sea' : null;
+  if (heightAt(x, z) >= 0) return null;
+  // a river (out in the wider world): within a river's width of its line
+  if (WG.feature('bigworld') && WG.RIVERS.some(pts => pts.some((a, i) => i > 0 && segDist(x, z, pts[i - 1], a) < F().RIVER_R))) return 'river';
+  return 'sea';
 }
-const regionOfWater = (x, z) => (Math.hypot(x, z) < F().LANDING_R ? 'landing' : null);
+function segDist(x, z, a, b) {
+  const dx = b[0] - a[0], dz = b[1] - a[1], t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
+}
+// Whose water: the Landing's, or (in the wider world) the region it's in.
+const regionOfWater = (x, z) => (Math.hypot(x, z) < F().LANDING_R ? 'landing' : WG.feature('bigworld') ? WG.worldRegionAt(x, z) : null);
 
 const methods = {
   // The fish that could bite in this water now, with their weights.
   fishFor(water, x, z, bait) {
     const night = WG.nightFactor(this.time) > .5, region = regionOfWater(x, z);
-    return CONTENT.FISH.filter(f => f.water.includes(water) && f.region === region
+    return CONTENT.FISH.filter(f => f.water.includes(water) && f.region === region && (!f.flag || WG.feature(f.flag))
       && (f.when === 'any' || (f.when === 'night') === night)
       && (!f.moon || (f.moon === 'full' && this.env.fullMoon)) && (!f.weather || (f.weather === 'rain' && this.env.rain)))
       .map(f => ({ f, w: f.weight * (bait && f.bait ? f.bait : 1) }));

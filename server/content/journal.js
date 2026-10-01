@@ -9,6 +9,15 @@ const JOURNAL = [
   { key: 'stone_beetle', flag: 'region-stair', category: 'bugs', name: 'Stone beetle', rarity: 'common', description: 'Grey and ridged, like a pebble that changed its mind. Warm from the sun.' },
   { key: 'terrace_grasshopper', flag: 'region-stair', category: 'bugs', name: 'Terrace grasshopper', rarity: 'common', description: 'Jumps from one step to the next and never falls. Show-off.' },
   { key: 'wind_moth', flag: 'region-stair', category: 'bugs', name: 'Wind moth', rarity: 'rare', description: 'Only flies high on the steps at night, sideways on the wind. It never lands where you think.' },
+  // the Weeping Wood (C4)
+  { key: 'lantern_beetle', flag: 'region-wood', category: 'bugs', name: 'Lantern beetle', rarity: 'common', description: 'Its back glows like a coal you could hold. They gather where the Hung hang, and nobody knows why.' },
+  { key: 'glasswing', flag: 'region-wood', category: 'bugs', name: 'Glasswing', rarity: 'uncommon', description: 'You only see it when it crosses something: a leaf, a face, the sun.' },
+  { key: 'bark_mantis', flag: 'region-wood', category: 'bugs', name: 'Bark mantis', rarity: 'rare', description: 'Exactly the colour of the giants’ bark, and exactly as patient. It was watching you first.' },
+  { key: 'hung_seen', flag: 'region-wood', category: 'stilled', name: 'The Hung', rarity: 'rare', description: 'Pale shapes hanging from the high branches by long arms. In the dark they let go. A light kept them up there.' },
+  { key: 'catfish', flag: 'region-wood', category: 'fish', name: 'River catfish', rarity: 'common', description: 'Whiskers as long as your arm and a face like an old frog. It doesn’t mind the dark water at all.' },
+  { key: 'glass_carp', flag: 'region-wood', category: 'fish', name: 'Glass carp', rarity: 'uncommon', description: 'You can see its heart, and the river through it. It tastes of almost nothing.' },
+  { key: 'mother_silk', flag: 'region-wood', category: 'relics', name: 'A strand of the Mother’s silk', rarity: 'rare', description: 'Thicker than vine rope and colder than the river. It still sways when there is no wind.' },
+  { key: 'mother_eye', flag: 'region-wood', category: 'relics', name: 'The Hanging Mother’s eye', rarity: 'rare', description: 'Milky, the size of a coconut, and light. It looks up.' },
   { key: 'leaning_seen', flag: 'region-stair', category: 'stilled', name: 'The Leaning', rarity: 'rare', description: 'Pale shapes on the steps that lean into the wind and only move when it blows. You stood behind a stone and it went past.' },
   // shells
   { key: 'spiral_shell', category: 'shells', name: 'Spiral shell', rarity: 'common', description: 'Hold it to your ear and it hums. Everything here hums.' },
