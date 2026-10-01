@@ -67,6 +67,8 @@ Environment*). Existing players aren't affected.
   **I** opens your 30-slot bag (phones: **Bag**): drag stacks between it and the hotbar.
   Coconuts and berries go in it, and holding **E** with one in hand eats it (the `slots` flag,
   on; `FEATURES=-slots` goes back to the old 8 slots without losing anything).
+  With the `tools` flag, tools are items too: hold one (1-8) to use it. They wear out, break
+  into one of their material, and can be mended at a lit hearth (hold it, press E).
 - **Calling out:** press **C** (phones: **Call**) and friends nearby hear you from your
   direction; everyone sees where you called from on the map for a minute.
 - **Chat:** press **Enter** (or **/**) to type, Enter to send, Esc to close. Plain

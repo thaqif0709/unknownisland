@@ -112,6 +112,7 @@
       fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
       slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
+      tools: false,      // P3: tools are items in the bag, used from your hand, that wear out (needs slots)
     },
     // Creative mode, for testing only: admins (the ADMINS env var) type /creative in chat,
     // then double-tap Space to fly. Speeds in m/s; walking is WALK_SPEED.
@@ -119,6 +120,13 @@
       FLY_SPEED: 30,           // across, where the camera looks
       RISE_SPEED: 14,          // up (Space) and down (Shift)
       MAX_HEIGHT: 200,         // above the ground or the sea
+    },
+    // Tools that wear out (P3, flag tools): how many uses each lasts, when it warns you (a share
+    // of its uses left), and what a repair at a lit hearth costs (a share of its recipe).
+    TOOLS: {
+      USES: { shovel: 80, pickaxe: 60, axe: 120, ironpick: 200 },
+      WARN: .2,
+      REPAIR: .5,
     },
     // The slot inventory (P2, flag slots). Stack sizes per kind of item are in ITEM_INFO.
     SLOTS: {
@@ -159,16 +167,23 @@
 
   // Things you can carry (inventory keys and their names).
   const ITEMS = { wood: 'Wood', stone: 'Stone', clay: 'Clay', copper: 'Copper ore', iron: 'Iron ore', seeds: 'Seeds', oil: 'Lamp oil', torch: 'Torch',
-    berries: 'Berries', coconut: 'Coconut' };
+    berries: 'Berries', coconut: 'Coconut',
+    shovel: 'Shovel', pickaxe: 'Stone pickaxe', axe: 'Copper axe', ironpick: 'Iron pickaxe' };   // (tools: items with the tools flag, P3)
   // More about an item than its name (all optional): kind 'food' is eaten from a slot (food,
   // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise).
   const ITEM_INFO = {
     berries: { kind: 'food', food: RULES.BERRY_FOOD },
     coconut: { kind: 'food', food: RULES.COCONUT_FOOD, water: RULES.COCONUT_WATER },
     torch: { stack: 10 },
+    // tools (P3, flag tools): one to a slot; `tool` is what they're for, `returns` what a broken one leaves
+    shovel: { kind: 'tool', tool: 'shovel', returns: 'stone' },
+    pickaxe: { kind: 'tool', tool: 'pick', returns: 'stone' },
+    ironpick: { kind: 'tool', tool: 'pick', returns: 'iron' },
+    axe: { kind: 'tool', tool: 'axe', returns: 'copper' },
   };
   const itemInfo = key => {
     const i = ITEM_INFO[key] || {};
+    if (i.kind === 'tool') return { ...i, stack: 1, uses: RULES.TOOLS.USES[key] };
     return { ...i, stack: i.stack || (i.kind === 'food' ? RULES.SLOTS.FOOD_STACK : RULES.SLOTS.STACK) };
   };
 

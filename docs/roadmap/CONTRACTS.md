@@ -150,6 +150,25 @@ As built (P2, flag `slots`):
   switching the flag off and on loses nothing); anything that no longer fits goes in a sack at
   the player's feet when they join.
 
+As built (P3, flag `tools`, needs `slots`):
+
+- Tools are items: `ITEMS.shovel / pickaxe / axe / ironpick`, with `ITEM_INFO` `{ kind: 'tool',
+  tool: 'axe' | 'pick' | 'shovel', returns }`; `WG.itemInfo(key)` adds `stack: 1` and `uses`
+  (from `RULES.TOOLS.USES`). A tool's slot is `{ k, n: 1, d }`, `d` its uses left. It keeps
+  `d` when moved, dropped (a sack holds `items.tools: [{ k, d }]`) and saved.
+- `this.toolFor(p, job)` -> the key of the tool used for 'axe', 'pick' or 'shovel': the one in
+  the player's hand with the flag, the best one owned without it; null for bare hands.
+- `this.wearTool(p, key)` -> one use of the tool in hand; returns text for the toast (a
+  warning at `RULES.TOOLS.WARN` of its uses, or that it broke and left one of `returns`).
+- `this.repairTool(p, fire)` -> a lit hearth mends the worn tool in hand for
+  `RULES.TOOLS.REPAIR` of its recipe; returns the message, or null if there's nothing to mend.
+- `hasTool(p, id)` is true for a tool kept forever (`p.tools`, before P3) or one in the bag;
+  `addTool` makes an item with the flag on. Owned tools in `p.tools` become items (once) when
+  a player joins with the flag on. Tools are kept through knockdowns (`takeShare`) and death
+  (`clearItems`).
+- Weapons for P6 can be items the same way: `kind: 'weapon'`, `stack: 1`, uses in a `RULES` table,
+  worn with `wearTool`.
+
 ## 5. Things you use with E (F5 done)
 
 What E does to each kind of world object is registered by the system that owns it,

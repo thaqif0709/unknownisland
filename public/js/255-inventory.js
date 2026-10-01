@@ -33,8 +33,8 @@
   function slotHtml(i) {
     const s = bagSlot(i), cls = (pick && pick.from === i ? ' picked' : '') + (i === selSlot ? ' sel' : ''), num = i < BAG0 ? `<i>${i + 1}</i>` : '';
     if (!s || (s.b != null && !bagBucket(s))) return `<div class="slot empty${cls}" data-bag="${i}">${num}</div>`;
-    const n = s.b != null ? '' : `<b>${s.n}</b>`, eat = isFood(s) ? ` (hold ${keyLabel(prefs.binds.act)} with it in hand to eat)` : '';
-    return `<div class="slot${cls}" data-bag="${i}" title="${esc(bagName(s))}${s.n ? ': ' + s.n : ''}${esc(eat)}">${num}<img src="${bagIcon(s)}" alt="${esc(bagName(s))}" draggable="false">${n}</div>`;
+    const n = s.b != null ? '' : s.d ? wearBar(s) : `<b>${s.n}</b>`, eat = isFood(s) ? ` (hold ${keyLabel(prefs.binds.act)} with it in hand to eat)` : '';   // (a tool, P3: its wear bar)
+    return `<div class="slot${cls}" data-bag="${i}" title="${esc(s.b != null ? bagName(s) : slotTitle(s, bagName(s)))}${esc(eat)}">${num}<img src="${bagIcon(s)}" alt="${esc(bagName(s))}" draggable="false">${n}</div>`;
   }
   function renderBag() {
     if (!UI.panels.isOpen('inventory')) return;

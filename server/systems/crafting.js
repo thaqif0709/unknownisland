@@ -9,7 +9,7 @@ const methods = {
     const r = WG.recipeById(recipe || 'campfire');
     if (!r || (r.flag && !WG.feature(r.flag))) return;
     const say = msg => this.send(p, { t: 'toast', msg });
-    if (r.kind === 'tool' && this.hasTool(p, r.id)) return say(`You already have a ${r.name.toLowerCase()}.`);
+    if (r.kind === 'tool' && !WG.feature('tools') && this.hasTool(p, r.id)) return say(`You already have a ${r.name.toLowerCase()}.`);   // (with the tools flag they wear out, so you can make another)
     if (r.needs && !this.hasTool(p, r.needs)) return say(`You need a ${WG.recipeById(r.needs).name.toLowerCase()} first.`);
     if (!this.canAfford(p, r.cost)) return say(`A ${r.name.toLowerCase()} needs ${costText(r.cost)}.`);
 
@@ -33,7 +33,7 @@ const methods = {
       this.addTool(p, r.id);
       this.fx(p, 'swing');
       this.sendMe(p);
-      return say(`You made a ${r.name.toLowerCase()}!`);
+      return say(WG.feature('tools') ? `You made a ${r.name.toLowerCase()}! Hold it (1-8) to use it. It lasts ${WG.itemInfo(r.id).uses} uses.` : `You made a ${r.name.toLowerCase()}!`);
     }
 
     // A fire, placed in front of you.

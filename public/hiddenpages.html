@@ -118,6 +118,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td><kbd>Q</kbd> / <kbd>Shift</kbd>+<kbd>Q</kbd></td><td>Next / previous slot, empty ones too</td></tr>
         <tr><td><kbd>G</kbd> / <kbd>Shift</kbd>+<kbd>G</kbd></td><td>Drop one / all of the held item</td></tr>
         <tr data-feature="slots"><td><kbd>I</kbd></td><td>Open the bag (drag stacks between the bag and the hotbar; phones: the <b>Bag</b> button)</td></tr>
+        <tr data-feature="tools"><td><kbd>E</kbd> at a lit hearth, worn tool in hand</td><td>Mend the tool</td></tr>
         <tr><td><kbd>E</kbd> (hold, with something to eat or drink in hand)</td><td>Eat or drink one (food in a slot, or a bucket of clean water). Keep holding for the next</td></tr>
         <tr><td><kbd>F</kbd></td><td>Quick-build a campfire</td></tr>
         <tr><td><kbd>V</kbd></td><td>Sit down / get up<span data-feature="checkpoints">. By a lit clay hearth: sleep there, and wake there</span></td></tr>
@@ -232,13 +233,27 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td>Clay</td><td>Soft dirt patches, with a shovel (<span data-r="DIG_CLAY"></span> each). Sometimes seeds too.</td><td>Every sunrise</td></tr>
         <tr><td>Seeds</td><td>From coconuts, berries, digging and crates on the beach. Used for lamp oil.</td><td>&ndash;</td></tr>
       </table>
+      <p data-feature="tools">Axes, pickaxes and shovels only count while they're in your hand, and wear down as you use them (see <a href="#craft">Tools wear out</a>).</p>
       <p>You swing an axe sideways into trees and bare palms, and bring a pickaxe down onto rocks and ore. The tool shows in your hand while you swing even before you've made one, but you only get the bigger yield once you have it.</p>
       <p>Every tree, palm and bush has its own full-grown size, and felled ones regrow as saplings (trees in <span data-r="FLORA.tree.growDays"></span> days, palms <span data-r="FLORA.palm.growDays"></span>, bushes <span data-r="FLORA.bush.growDays"></span>). Palms only fruit when fully grown.</p>
     </section>
 
     <section id="craft"><h2>Crafting</h2>
-      <p>Open the recipe book with <kbd>B</kbd>. Tools are kept forever (even when you die); fires are placed in front of you.</p>
+      <p>Open the recipe book with <kbd>B</kbd>. <span data-feature-off="tools">Tools are kept forever (even when you die); </span>fires are placed in front of you.</p>
       <div class="scroll"><table id="recipes"><tr><th>Make</th><th>Costs</th><th>What it does</th></tr></table></div>
+      <div data-feature="tools">
+        <h3>Tools wear out</h3>
+        <p>A tool is something you carry, one to a slot. <b>Hold it</b> (<kbd>1</kbd>&ndash;<kbd>8</kbd>) to use it: chopping with the axe in your hand gives 2 wood, mining with a pickaxe in hand gives 2 stone (and ore needs one), and digging needs the shovel in hand. Just having one in your bag isn't enough.</p>
+        <p>Every use wears it down; the bar under its slot shows how much is left, and it warns you when it gets low. Worn out, it breaks, and you keep one of what it was made of. You can make another whenever you like.</p>
+        <div class="scroll"><table>
+          <tr><th>Tool</th><th>Uses</th><th>Breaks into</th><th>Mending costs</th></tr>
+          <tr><td>Stone pickaxe</td><td data-r="TOOLS.USES.pickaxe"></td><td>1 stone</td><td>2 wood, 2 stone</td></tr>
+          <tr><td>Copper axe</td><td data-r="TOOLS.USES.axe"></td><td>1 copper ore</td><td>1 wood, 2 copper ore</td></tr>
+          <tr><td>Iron pickaxe</td><td data-r="TOOLS.USES.ironpick"></td><td>1 iron ore</td><td>1 wood, 2 iron ore</td></tr>
+          <tr><td>Shovel</td><td data-r="TOOLS.USES.shovel"></td><td>1 stone</td><td>2 wood, 1 stone</td></tr>
+        </table></div>
+        <p><b>Mending:</b> hold a worn tool and press <kbd>E</kbd> at a lit clay hearth. It costs about half of what the tool took to make, and it's as good as new. Tools stay with you when you're knocked down or die; dropped in a sack, they keep their wear.</p>
+      </div>
     </section>
 
     <section id="fires"><h2>Fires</h2>
@@ -441,6 +456,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="tools"><b>Tools wear out:</b> tools are carried in your bag and used from your hand. They wear down with every use, break into one of their material, and can be mended at a lit hearth.</li>
         <li data-feature="checkpoints"><b>Sleeping looks like sleeping:</b> you curl up by a hearth in half a second, under a thick blanket in your cloak's colour that drapes over you and spills onto the ground, eyes closed, with z's floating up out of your head.</li>
         <li><b>Eating and drinking, the same everywhere:</b> hold <kbd>E</kbd> with food or a bucket of clean water in hand; when the ring fills, it's gone and your meter goes up right then (a bucket takes the same short hold now; a tap won't drink). Empty hotbar slots can be picked and stepped through again.</li>
         <li><b>Fixed:</b> adding wood to a fire no longer makes the boiling bucket on it vanish (it was only hidden; it had been there all along). Hotbar slots, empty ones too, light up under the mouse.</li>

@@ -20,6 +20,14 @@ async function besideA(type, ok = () => true, prefix = type) {
   return { c, o };
 }
 
+// A tool for this player: kept forever, or (with the tools flag, P3) an item that has to be in hand.
+async function giveTool(c, tool) {
+  await c.test('give', { tools: [tool] });
+  if (!c.welcome.features.tools) return;
+  c.send({ t: 'select', slot: c.me.slots.findIndex(s => s && s.k === tool) });
+  await new Promise(r => setTimeout(r, 100));
+}
+
 test('chopping a tree gives wood', async () => {
   const { c, o } = await besideA('tree', (x, isl) => chopsLeft(x, isl) >= 3);
   const t = await c.act('o' + o.id);
@@ -32,14 +40,14 @@ test('chopping a tree gives wood', async () => {
 
 test('an axe doubles the wood', async () => {
   const { c, o } = await besideA('tree', (x, isl) => chopsLeft(x, isl) >= 2, 'axe');
-  await c.test('give', { tools: ['axe'] });
+  await giveTool(c, 'axe');
   assert.match((await c.act('o' + o.id)).msg, /^\+2 wood/);
 });
 
 test('breaking rocks gives stone, twice as much with a pickaxe', async () => {
   const { c, o } = await besideA('rock', x => x.state.left >= 2);
   assert.match((await c.act('o' + o.id)).msg, /^\+1 stone/);
-  await c.test('give', { tools: ['pickaxe'] });
+  await giveTool(c, 'pickaxe');
   assert.match((await c.act('o' + o.id)).msg, /^\+2 stone/);
   assert.equal(c.me.inv.stone, 3);
 });
@@ -47,7 +55,7 @@ test('breaking rocks gives stone, twice as much with a pickaxe', async () => {
 test('ore needs a pickaxe', async () => {
   const { c, o } = await besideA('ore');
   assert.match((await c.act('o' + o.id)).msg, /need a pickaxe/);
-  await c.test('give', { tools: ['pickaxe'] });
+  await giveTool(c, 'pickaxe');
   assert.match((await c.act('o' + o.id)).msg, /^\+1 (copper|iron) ore/);
   assert.equal(c.me.inv.copper + c.me.inv.iron, 1);
 });

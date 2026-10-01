@@ -206,6 +206,14 @@
     }
     const url = c.toDataURL(); itemIcons.set(key, url); return url;
   }
+  // A tool in a slot (P3, flag tools): its wear bar, and how many uses it has left.
+  const toolUses = k => WG.itemInfo(k).uses || 0;
+  const wearBar = s => {
+    if (!s || !s.d || !toolUses(s.k)) return '';
+    const w = s.d / toolUses(s.k);
+    return `<u style="--w:${Math.round(w * 100)}%" class="${w <= RULES.TOOLS.WARN ? 'low' : ''}"></u>`;
+  };
+  const slotTitle = (s, name) => (s && s.d && toolUses(s.k) ? `${name}: ${s.d} of ${toolUses(s.k)} uses left` : s && s.n != null ? `${name}: ${s.n}` : name);
   function renderInventory() {
     syncSlots();
     const key = JSON.stringify([stats.inv, stats.tools, stats.buckets, stats.slots, prefs.binds.book, slotKeys, selSlot]);
@@ -223,14 +231,15 @@
           + (bk.water === 'clean' ? `<b>${bk.drinks}</b>` : '') + `<u style="--w:${Math.round(wear * 100)}%" class="${wear < .25 ? 'low' : ''}"></u></div>`;
       }
       const n = slotCountAt(i), fresh = (lastCounts[k] || 0) < (stats.inv[k] || 0) ? ' new' : '';
-      return `<div class="slot${fresh}${sel}" data-slot="${i}" title="${esc(WG.ITEMS[k])}: ${n}">${num}<img src="${itemIcon(k)}" alt="${esc(WG.ITEMS[k])}"><b>${n}</b></div>`;
+      const s = slotsOn() ? stats.slots[i] : null, tool = s && s.d;   // a tool (P3): its wear instead of a count
+      return `<div class="slot${fresh}${sel}" data-slot="${i}" title="${esc(slotTitle(s || { n }, WG.ITEMS[k]))}">${num}<img src="${itemIcon(k)}" alt="${esc(WG.ITEMS[k])}">${tool ? wearBar(s) : `<b>${n}</b>`}</div>`;
     }).join('');
     updateHeld();
     lastCounts = { ...stats.inv };
     $('toolList').innerHTML = stats.tools.length ? '<span class="toolsLabel">Tools</span>' + stats.tools.map(t =>
       `<div class="slot tool" title="${esc(WG.recipeById(t).name)}"><img src="${itemIcon(t)}" alt="${esc(WG.recipeById(t).name)}"></div>`).join('') : '';
     document.documentElement.style.setProperty('--invH', ui.inv.offsetHeight + 'px');
-    const ready = WG.RECIPES.filter(r => !(r.flag && !WG.feature(r.flag)) && canAfford(r) && !(r.kind === 'tool' && has(r.id)) && !(r.needs && !has(r.needs))).length;
+    const ready = WG.RECIPES.filter(r => !(r.flag && !WG.feature(r.flag)) && canAfford(r) && !(r.kind === 'tool' && has(r.id) && !WG.feature('tools')) && !(r.needs && !has(r.needs))).length;
     $('craftHint').textContent = ready
       ? `You can make ${ready} thing${ready > 1 ? 's' : ''}. Press ${keyLabel(prefs.binds.book)} for recipes.`
       : `Press ${keyLabel(prefs.binds.book)} for the recipe book.`;

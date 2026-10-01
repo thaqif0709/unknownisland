@@ -50,14 +50,15 @@ test('fires can\'t be built without the materials, too far, or on top of another
   assert.match((await a.request({ t: 'build', recipe: 'campfire', x: at.x + 1.8, z: at.z }, 'toast', { what: 'second fire refused' })).msg, /already a fire/);
 });
 
-test('tools are made once and kept', async () => {
-  const a = await server.join('tool');
+test('tools are made once and kept (with the tools flag, P3: made as items, and again when worn out)', async () => {
+  const a = await server.join('tool'), items = !!a.welcome.features.tools;
   await a.test('give', { inv: { wood: 6, stone: 6 } });
   assert.match((await a.request({ t: 'build', recipe: 'pickaxe' }, 'toast')).msg, /You made a stone pickaxe/);
   await a.settle();
-  assert.deepEqual(a.me.tools, ['pickaxe']);
+  if (items) assert.deepEqual([a.me.tools, a.me.inv.pickaxe], [[], 1]);
+  else assert.deepEqual(a.me.tools, ['pickaxe']);
   assert.equal(a.me.inv.wood, 3);
-  assert.match((await a.request({ t: 'build', recipe: 'pickaxe' }, 'toast')).msg, /already have/);
+  assert.match((await a.request({ t: 'build', recipe: 'pickaxe' }, 'toast')).msg, items ? /You made a stone pickaxe/ : /already have/);
   assert.match((await a.request({ t: 'build', recipe: 'ironpick' }, 'toast')).msg, /needs 2 wood, 3 iron ore/);
 });
 

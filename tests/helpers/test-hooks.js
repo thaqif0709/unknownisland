@@ -40,6 +40,13 @@ const COMMANDS = {
     this.sendMe(p);
     return { inv: p.inv, tools: p.tools };
   },
+  // A tool's uses left (P3): { slot, d }
+  wear(p, { slot, d }) {
+    const s = p.slots && p.slots[slot];
+    if (!s || !s.d) return { error: `no tool in slot ${slot}` };
+    s.d = d; this.sendMe(p);
+    return { d: s.d };
+  },
   // Put the player at x, z (the client is told with a 'correct'). `under`: a cave id to
   // put them in that cave, or '' to bring them out (caves, W9).
   place(p, { x, z, face, under }) {

@@ -87,9 +87,13 @@
       // the pick's two points lie along z, the plane the overhead strike comes down in.
       case 'axe': add(new THREE.CylinderGeometry(.022, .026, .42, 6), logM, 0, -.24, 0);
         add(new THREE.BoxGeometry(.14, .15, .04), softShared(0x8C6B4A), -.06, -.42, 0); break;
-      case 'pickaxe': add(new THREE.CylinderGeometry(.02, .024, .42, 6), logM, 0, -.24, 0);
-        add(new THREE.ConeGeometry(.022, .2, 5), rockM[1], 0, -.45, .1).rotation.x = Math.PI / 2;
-        add(new THREE.ConeGeometry(.022, .2, 5), rockM[1], 0, -.45, -.1).rotation.x = -Math.PI / 2; break;
+      case 'pickaxe': case 'ironpick': {   // (the iron one a cold blue-grey, P3)
+        const head = key === 'ironpick' ? softShared(0x9AA4B0) : rockM[1];
+        add(new THREE.CylinderGeometry(.02, .024, .42, 6), logM, 0, -.24, 0);
+        add(new THREE.ConeGeometry(.022, .2, 5), head, 0, -.45, .1).rotation.x = Math.PI / 2;
+        add(new THREE.ConeGeometry(.022, .2, 5), head, 0, -.45, -.1).rotation.x = -Math.PI / 2; break; }
+      case 'shovel': add(new THREE.CylinderGeometry(.02, .024, .46, 6), logM, 0, -.26, 0);   // a flat blade at the end
+        add(new THREE.BoxGeometry(.13, .15, .02), rockM[1], 0, -.53, 0); break;
       default: add(new THREE.BoxGeometry(.12, .12, .12), sackM, 0, 0, 0);
     }
     shadows(g);
@@ -122,7 +126,9 @@
     if (!av) return;
     av.swingT = t; av.swingKind = kind || null;
     av.armR.rotation.y = 0; if (av.body) av.body.rotation.y = 0;   // a swing cut short by the next starts square
-    setSwingTool(av, kind === 'chop' ? 'axe' : kind === 'mine' ? 'pickaxe' : null);
+    // (holding a tool for the job, P3: that one, an iron pickaxe say; else the usual)
+    const job = kind === 'chop' ? 'axe' : kind === 'mine' ? 'pick' : null, own = av.heldKey && WG.ITEM_INFO[av.heldKey];
+    setSwingTool(av, !job ? null : own && own.tool === job ? av.heldKey : job === 'axe' ? 'axe' : 'pickaxe');
   }
 
   // A frog castaway in a simple hooded cloak: part wizard, part wanderer.
