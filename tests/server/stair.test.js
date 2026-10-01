@@ -77,9 +77,11 @@ test('a Leaning, carried on a gust, shoves you down the steps; behind a standing
   const knocked = a.next(m => m.t === 'knocked' && m.id === a.id, { timeout: 20000 });
   await waitGust();
   const w = leaning.wind(Date.now());
+  // (waiting for the shove before it can come: it's sent in the same tick as the knockdown)
+  const shove = a.next(m => m.t === 'correct' && Math.hypot(m.x - open.x, m.z - open.z) > .5, { timeout: 23000 });
   await a.test('spawn', { kind: 'leaning', x: open.x - Math.sin(w.a) * 2, z: open.z - Math.cos(w.a) * 2 });
   await knocked;
-  const shoved = await a.next(m => m.t === 'correct', { timeout: 3000 });
+  const shoved = await shove;
   assert.ok(Math.hypot(shoved.x - open.x, shoved.z - open.z) > 2, 'thrown downwind');
   // behind a standing stone (on its downwind side): it can't touch you (a second frog: the
   // first can't be knocked down again so soon anyway)
