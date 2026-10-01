@@ -1,5 +1,5 @@
 // Fighting in the browser (P6, flag combat): R swings the sword in your hand at what you aim
-// at, a double-tap of Shift rolls, being down shows how long you have, and holding E beside
+// at, holding R throws a torch, a double-tap of Shift rolls, being down shows how long you have, and holding E beside
 // a friend who's down picks them up. Needs Chromium like smoke.test.js.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -51,6 +51,21 @@ test('R swings the sword in your hand at the dummy you aim at', async () => {
   const hit = bot.next(m => m.t === 'mobhit', { timeout: 10000 });
   await page.keyboard.press('KeyR');
   assert.ok((await hit).dmg >= 6, 'hit with the sword');
+});
+
+test('holding R with a torch in hand throws it, and it bursts into fire', async () => {
+  await test_('give', { inv: { torch: 2 } });
+  await page.waitForFunction(() => (window.__dbg.stats.slots || []).some(s => s && s.k === 'torch'), null, { timeout: 10000 });
+  const slot = await page.evaluate(() => window.__dbg.stats.slots.findIndex(s => s && s.k === 'torch'));
+  await page.keyboard.press(`Digit${slot + 1}`);
+  await page.waitForTimeout(300);
+  const burst = bot.next(m => m.t === 'burst', { timeout: 10000 });
+  await page.keyboard.down('KeyR');
+  await page.waitForTimeout(WG.RULES.COMBAT.HEAVY.HOLD * 1000 + 250);
+  await page.keyboard.up('KeyR');
+  await burst;
+  await page.waitForFunction(() => window.__dbg.combat().bursts > 0, null, { timeout: 3000 });
+  await page.waitForFunction(() => window.__dbg.stats.inv.torch === 1, null, { timeout: 5000 });
 });
 
 test('a double-tap of Shift rolls you a few metres', async () => {

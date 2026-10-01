@@ -327,6 +327,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li>They're drawn to frogs who are alone or frightened.</li>
         <li>If one reaches you, you're knocked down: &minus;<span data-r="KNOCK.HEALTH"></span> health, +<span data-r="KNOCK.DREAD"></span> dread, and half of what you carry spills into a sack on the ground where you fell. Go back for it&hellip; carefully.</li>
         <li data-feature="combat">They can be fought: it takes a few blows (blows in firelight, lantern light or by torchlight, and silver, hit twice as hard), and one that breaks scatters into fog. It forms again where it broke, later that night.</li>
+        <li data-feature="combat">They come for you more slowly while you're in light (a torch in hand, or a fire or lantern close by): at <span data-r="COMBAT.LIGHT_SLOW"></span>&times; their pace.</li>
       </ul></details>
     </section>
 
@@ -336,6 +337,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li><b>Heavy swing:</b> hold the attack for a moment, then let go. It hits <span data-r="COMBAT.HEAVY.MULT"></span>&times; as hard and costs <span data-r="COMBAT.HEAVY.ENERGY"></span> energy.</li>
         <li><b>Roll:</b> double-tap <kbd>Shift</kbd> (on a phone, swipe the Attack button). For <span data-r="COMBAT.DODGE.TIME"></span> s nothing can touch you, for <span data-r="COMBAT.DODGE.ENERGY"></span> energy. Every creature's attack is marked on the ground before it lands: that's your moment.</li>
         <li><b>Light is a weapon:</b> holding a torch, or close to a lit fire or lantern, your blows carry light. The things of the fog don't like it.</li>
+        <li><b>Throw a torch:</b> with a torch in hand, a heavy swing throws it. It flies up to <span data-r="COMBAT.THROW.RANGE"></span> m, stops at the first thing in its way, and bursts into fire: <span data-r="COMBAT.THROW.DAMAGE"></span> damage (fire and light) to everything within <span data-r="COMBAT.THROW.RADIUS"></span> m. The torch is gone.</li>
         <li><b>Down, not dead:</b> a blow that would kill you leaves you down instead. A friend can pick you up by holding <kbd>E</kbd> beside you within <span data-r="COMBAT.DOWNED.TIME"></span> s. Otherwise you come to at your hearth (or on the beach), aching.</li>
       </ul>
       <h3>Weapons</h3>
@@ -348,6 +350,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td>Spear</td><td data-r="COMBAT.WEAPONS.spear.damage"></td><td data-r="COMBAT.WEAPONS.spear.reach"></td><td>The longest reach, in a narrow line</td></tr>
         <tr><td>Club</td><td data-r="COMBAT.WEAPONS.club.damage"></td><td data-r="COMBAT.WEAPONS.club.reach"></td><td>Slow, and throws whatever it hits a long way back</td></tr>
         <tr><td>Sling</td><td data-r="COMBAT.WEAPONS.sling.damage"></td><td data-r="COMBAT.WEAPONS.sling.reach"></td><td>Throws a stone from your bag at the first thing in line (flax from the Stairs)</td></tr>
+        <tr><td>Torch</td><td data-r="COMBAT.WEAPONS.torch.damage"></td><td data-r="COMBAT.WEAPONS.torch.reach"></td><td>Burns, and carries light. A heavy swing throws it (see above)</td></tr>
         <tr><td>Fists</td><td data-r="COMBAT.WEAPONS.fist.damage"></td><td data-r="COMBAT.WEAPONS.fist.reach"></td><td>Better than nothing</td></tr>
       </table></div>
     </section>
@@ -542,6 +545,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <p class="muted">Newest first.</p>
       <ul class="log">
         <li data-feature="torchlight"><b>Torches above ground:</b> a torch in hand lights the way, pushes the fog back and keeps you warm, anywhere, and burns down. <kbd>G</kbd> plants it in the ground as a small light for everyone; <kbd>E</kbd> takes it back.</li>
+        <li data-feature="combat"><b>Fighting:</b> a torch can be swung (it burns) or thrown with a heavy swing, bursting into fire where it lands. Light also slows down what comes out of the fog for you.</li>
         <li><b>The sun and moon glow:</b> a warm halo and slow-turning beams round the sun, a silvery halo round the moon (brighter the fuller it is). Both dim in rain and storms.</li>
         <li><b>Fixed:</b> walking off a cliff now falls instead of jumping you straight to the bottom, and the camera follows you down a long fall instead of showing the ground; the sleeping blanket's edge by your head falls onto the ground.</li>
         <li data-feature="combat"><b>Fighting:</b> swords, a spear, a club and a sling; heavy swings, rolling out of the way, and being picked up by a friend when you're down. The Stilled can be broken into fog, for a while.</li>

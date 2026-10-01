@@ -151,13 +151,16 @@
         spear: { damage: 9, reach: 2.9, arc: .35, swing: .6, knock: .5, uses: 120 },
         club: { damage: 11, reach: 1.8, arc: .7, swing: .75, knock: 2.2, uses: 140 },
         sling: { damage: 7, reach: 14, arc: .12, swing: .9, knock: .3, uses: 150, ammo: 'stone' },
+        torch: { damage: 4, reach: 1.7, arc: .8, swing: .5, knock: .4, tags: ['fire'] },   // a lit torch swung (a heavy swing throws it: THROW)
       },
+      THROW: { RANGE: 9, RADIUS: 2.5, DAMAGE: 12 },   // a torch thrown (heavy, with one in hand): a burst of fire where it lands
       HEAVY: { HOLD: .45, MULT: 1.8, ENERGY: 12, SWING: 1.4 },   // hold the attack this long: more damage, for energy and a slower swing
       COMBO: { WINDOW: 1.2, MULT: 1.4, KNOCK: 1.8 },   // a sword's third hit within WINDOW s of the last
       LAG: .15,                 // seconds of slack for where a creature was when you swung
       DODGE: { TIME: .35, DIST: 3.2, ENERGY: 10, GAP: .8 },   // untouchable for TIME s while rolling DIST m; at most one every GAP s
       DOWNED: { TIME: 20, REVIVE: 1.5, REACH: 2.5, HEALTH: 30 },   // seconds friends have to pick you up (holding E for REVIVE s, within REACH m); health after
       LIGHT: 7,                 // a lit fire or lantern this close, or a torch in hand: your blows carry light (the Stilled are weak to it)
+      LIGHT_SLOW: .5,           // ...and the Stilled stalking you move this much slower
       STILLED_HP: 12,           // the Stilled take a few blows to break (1 without combat)
       REFORM: 90,               // seconds before a broken Stilled forms again where it broke (at night, in fog)
     },

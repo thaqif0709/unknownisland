@@ -28,7 +28,7 @@ const methods = {
   // The weapon in p's hand ({ key, ...stats }), or bare hands.
   weaponOf(p) {
     const h = this.held(p), W = C().WEAPONS;
-    const key = h && W[h.key] ? h.key : 'fist';
+    const key = h && W[h.key] && (h.key !== 'torch' || this.count(p, 'torch') > 0) ? h.key : 'fist';
     return { key, ...W[key] };
   },
   // A torch in hand, or a lit fire or lantern close by: your blows carry light.
@@ -47,6 +47,7 @@ const methods = {
     if (!on() || p.dead || this.downed(p) || p.knockedUntil > now || this.watching(p)) return;
     const w = this.weaponOf(p);
     heavy = !!heavy && p.energy >= K.HEAVY.ENERGY && !p.exhausted;
+    if (heavy && w.key === 'torch') return this.throwTorch(p, a);   // a heavy swing with a torch throws it
     const swing = w.swing * (heavy ? K.HEAVY.SWING : 1) * 1000;
     if (now - (p.lastAttackAt || 0) < swing - K.LAG * 1000) return;   // too soon (with the same slack as the aim)
     p.lastAttackAt = now;
@@ -68,7 +69,7 @@ const methods = {
         .map(m => ({ m, d: Math.hypot(m.x - p.x, m.z - p.z) }))
         .filter(({ m, d }) => d <= w.reach && angleDiff(Math.atan2(m.x - p.x, m.z - p.z), p.face) <= w.arc + Math.atan2(1, Math.max(d, .5)))
         .sort((x, y) => x.d - y.d)[0];
-      this.broadcast({ t: 'shot', id: p.id, x: r2(p.x), z: r2(p.z), a: r2(p.face), to: target ? [r2(target.m.x), r2(target.m.z)] : null });
+      this.broadcast({ t: 'shot', id: p.id, x: r2(p.x), z: r2(p.z), a: r2(p.face), to: target ? [r2(target.m.x), r2(target.m.z)] : null, under: p.under || 0 });
       if (target) this.strike(p, target.m, amount, tags, knock);
       this.wornBy(p, w.key);
       return this.sendMe(p);
@@ -87,6 +88,29 @@ const methods = {
     }
     if (hits) { p.lastHitAt = now; this.wornBy(p, w.key); }
     if (heavy) this.sendMe(p);
+  },
+  // A torch thrown where you aim: it lands on the first creature in line (or THROW.RANGE m
+  // off) and bursts into fire, burning everything within THROW.RADIUS (fire and light).
+  throwTorch(p, a) {
+    const now = Date.now(), K = C(), T = K.THROW;
+    if (now - (p.lastAttackAt || 0) < K.WEAPONS.torch.swing * K.HEAVY.SWING * 1000 - K.LAG * 1000) return;
+    if (!this.take(p, 'torch', 1)) return;
+    p.lastAttackAt = now;
+    if (num(a)) p.face = a;
+    p.energy = Math.max(0, p.energy - K.HEAVY.ENERGY);
+    const first = this.mobs.list.filter(m => !m.gone && !m.dead && caveOfMob(m) === (p.under || null))
+      .map(m => ({ m, d: Math.hypot(m.x - p.x, m.z - p.z) }))
+      .filter(({ m, d }) => d <= T.RANGE && angleDiff(Math.atan2(m.x - p.x, m.z - p.z), p.face) <= .25 + Math.atan2(1, Math.max(d, .5)))
+      .sort((x, y) => x.d - y.d)[0];
+    const x = first ? first.m.x : p.x + Math.sin(p.face) * T.RANGE, z = first ? first.m.z : p.z + Math.cos(p.face) * T.RANGE;
+    this.fx(p, 'heavy');
+    this.broadcast({ t: 'shot', id: p.id, k: 'torch', x: r2(p.x), z: r2(p.z), a: r2(p.face), to: [r2(x), r2(z)], under: p.under || 0 });
+    this.broadcast({ t: 'burst', x: r2(x), z: r2(z), r: T.RADIUS, under: p.under || 0 });
+    for (const m of [...this.mobs.list]) {
+      if (m.gone || m.dead || caveOfMob(m) !== (p.under || null) || Math.hypot(m.x - x, m.z - z) > T.RADIUS) continue;
+      this.strike(p, m, T.DAMAGE, ['fire', 'light', 'torch'], 0);
+    }
+    this.sendMe(p);
   },
   // One blow on a creature: damage (its weaknesses multiply it), and a shove away from you.
   strike(p, m, amount, tags, knock) {
