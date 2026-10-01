@@ -37,7 +37,8 @@ const send = m => page.evaluate(m => window.__dbg.send({ t: 'test', id: Math.flo
 test('the Stairs’ things arrive and are drawn as themselves', async () => {
   await send({ do: 'open', region: 'stair' });
   await send({ do: 'place', x: 0, z: -900 });
-  await page.waitForFunction(() => [...window.__dbg.chunkObjs().values()].some(o => o.type === 'herb' && o.mesh), null, { timeout: 90000 });
+  // (chunks keep arriving for a while; standing stones are rare, so wait for each kind)
+  await page.waitForFunction(() => ['flint', 'herb', 'flax', 'standing'].every(t => [...window.__dbg.chunkObjs().values()].some(o => o.type === t && o.mesh)), null, { timeout: 90000 });
   const kinds = await page.evaluate(() => {
     const seen = {};
     for (const o of window.__dbg.chunkObjs().values()) if (o.mesh && window.UI.things[o.type]) seen[o.type] = !!o.parts;

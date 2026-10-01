@@ -475,7 +475,8 @@ The browser side is one part, `108-the-stairs.js`, through `UI.things` (models, 
 solidity, swing), `UI.itemIcons` and `UI.bugLooks`, plus `public/js/mobs/leaning.js`. Tests:
 `tests/server/stair.test.js`, `tests/browser/stairs.test.js`.
 (The start screen's "What's new" box and its Hidden Pages link were taken out on 1 Oct; the
-Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), sitting by a lit clay hearth for 3 s saves it as where you
+Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), holding V (sit) by a lit clay hearth sleeps there (`UI.sitHold` in
+`145-hearth-checkpoints.js`; a tap only sits), and 3 s asleep saves it as where you
 wake (`server/systems/checkpoints.js`, `respawnPoint`; browser `145-hearth-checkpoints.js`:
 the pennant, the map flag). The sleep look is in `120-castaways.js` `poseCastaway`: `sleepK`
 eases in over about half a second, then the shut eyes (`av.eyesShut`), the z sprites from the top of

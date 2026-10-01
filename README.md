@@ -170,7 +170,7 @@ the land without moving anything already there.
 
 Travelling between lit lanterns (paying lamp oil by distance) is the `fasttravel` flag.
 
-Hearth checkpoints are the `checkpoints` flag: sit by a lit clay hearth to wake there after a
+Hearth checkpoints are the `checkpoints` flag: hold V by a lit clay hearth to sleep there, and wake there after a
 knockdown or collapsing.
 
 When you switch something on for players, add a line to the Hidden Pages changelog (linked
