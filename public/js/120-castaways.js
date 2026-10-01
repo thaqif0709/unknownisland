@@ -349,13 +349,13 @@
     const g0 = groundAt(ox, oz);
     const toWorld = (u, w) => [ox + u * cy + w * sy, oz - u * sy + w * cy];   // (u along the lying body, w across it)
     const parts = [];
-    av.body.traverse(m => { if (m.isMesh && !isIn(m, av.head)) parts.push(m); });
+    av.body.traverse(m => { if (m.isMesh && (!isIn(m, av.head) || m.material === throatM)) parts.push(m); });   // the body, and the throat (tucked in up to the chin)
     av.head.getWorldPosition(hp);
     const headU = (hp.x - ox) * cy - (hp.z - oz) * sy;   // how far along the body the head is
     const U0 = -.62, U1 = headU - .14, W0 = -.42, W1 = .55, NU = 32, NW = 22;
     // the top edge reaches further up on the front (+w: where the chest and arms are), tucked
     // under the chin, and stays lower at the back of the neck
-    const topU = j => { const w = W0 + (W1 - W0) * j / NW; return U1 + .26 * Math.min(1, Math.max(0, (w + .05) / .35)); };
+    const topU = j => { const w = W0 + (W1 - W0) * j / NW; return U1 + .42 * Math.min(1, Math.max(0, (w + .05) / .35)); };
     const uAt = (i, j) => U0 + (topU(j) - U0) * i / NU;
     // the body's height under each point of a grid
     const H = [];
