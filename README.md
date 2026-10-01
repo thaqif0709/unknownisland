@@ -70,6 +70,8 @@ Environment*). Existing players aren't affected.
   You can fight (the `combat` flag, on): click (or R) to swing what you're holding, hold it for a
   heavy swing, double-tap Shift to roll, and hold E beside a friend who's down to pick them up.
   A heavy swing with a torch throws it to burst into fire.
+  With the `fishing` flag: make a rod, hold E facing the sea or a spring to cast, E again when
+  it bites, and land it with a little game; cook fish at a fire.
   Tools are items too (the `tools` flag, on): hold one (1-8) to use it. They wear out, break
   into one of their material, and can be mended at a lit hearth (hold it, press E).
 - **Calling out:** press **C** (phones: **Call**) and friends nearby hear you from your

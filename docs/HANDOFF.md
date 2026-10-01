@@ -201,6 +201,17 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
+- **Fishing (P7, flag `fishing`, off).** `server/systems/fishing.js`: `cast` (a rod in hand;
+  the bobber lands `CAST.MIN`-`MAX` m out by how long E was held, in the sea or a spring's pool),
+  a bite after `BITE.MIN`-`MAX` s (sooner at night, in rain, on a rising tide, at full moon,
+  with bait, which the bite takes), `hook` within `HOOK` s, then P8's minigames by rarity
+  (`FISHING.GAMES`; rare: two); landed: bag, journal, rod wear; lost: the line snaps (`SNAP`
+  uses). Walking `REACH` m off, putting the rod away or being knocked down reels in. A friend's
+  `fish-help` adds `HELP` s (`minigames.extend`). `cookFish` (asked by `fires.js`) turns a raw
+  fish into `cooked_fish`. Fish in `server/content/fish.js` (silverfin, pool minnow, lantern
+  fish). Browser `public/js/393-fishing.js`: hold E to charge (ring), bobbers and lines for
+  everyone, the bite tag, the reeling pose, the rod model (`UI.heldModels`) and icons. Tests:
+  `tests/server/fishing.test.js` (10), `tests/browser/fishing.test.js`.
 - **Fighting (P6, flag `combat`, on).** `server/systems/combat.js`: `attack` (the
   weapon in hand, `RULES.COMBAT.WEAPONS`; reach and arc with `LAG` slack; heavy, a sword's
   combo, the sling's stones; tags for weaknesses incl. 'light' and 'silver'; a shove), `dodge`

@@ -44,4 +44,17 @@ const chopsLeft = (o, island) => WG.chopsFor(o, o.state, island.day, island.time
 // Shallow sea, where a bucket can be filled (and a player can stand).
 const seaNear = from => spotNear(from, h => h < .5 && h > -.6, { step: 2, max: 400 });
 
-module.exports = { WG, dist, objectsWithState, nearest, besideSpot, spotNear, landNear, seaNear, chopsLeft };
+// A spot on land with open sea 6-10 m in front, looking out from the middle of the island
+// (fishing, P7): { x, z, face }. a0 is where round the island to start looking.
+function shoreSpot(a0 = 0) {
+  for (let a = a0; a < a0 + Math.PI * 2; a += .15) {
+    const dx = Math.sin(a), dz = Math.cos(a);
+    for (let r = 20; r < 300; r += .5) {
+      const h = WG.heightAt(dx * r, dz * r);
+      if (h > .25 && h < 3 && [6, 8, 10].every(d => WG.heightAt(dx * (r + d), dz * (r + d)) < -.1)) return { x: dx * r, z: dz * r, face: a };
+    }
+  }
+  return null;
+}
+
+module.exports = { WG, dist, objectsWithState, nearest, besideSpot, spotNear, landNear, seaNear, chopsLeft, shoreSpot };

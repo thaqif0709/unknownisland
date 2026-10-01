@@ -158,10 +158,24 @@
       STILLED_HP: 12,           // the Stilled take a few blows to break (1 without combat)
       REFORM: 90,               // seconds before a broken Stilled forms again where it broke (at night, in fog)
     },
+    // Fishing (P7, flag fishing). The fish themselves are in server/content/fish.js.
+    FISHING: {
+      CAST: { MIN: 3, MAX: 12, CHARGE: 1.2 },   // the bobber lands MIN-MAX m out, by how long E was held (CHARGE s for the furthest)
+      BITE: { MIN: 5, MAX: 40, NIGHT: .7, RAIN: .75, RISING: .8, FULL_MOON: .8, BAIT: .6 },   // seconds to a bite, times these when they hold
+      HOOK: 1,                  // seconds to press E once the bobber goes under
+      REACH: 2.5,               // walk this far from where you cast and you reel in
+      // the game that decides the catch, by how rare the fish is (rare: two in a row)
+      GAMES: { common: { level: 'easy', n: 1 }, uncommon: { level: 'medium', n: 1 }, rare: { level: 'hard', n: 2 }, strange: { level: 'hard', n: 1, type: 'trivia' } },
+      HELP: 1, HELP_REACH: 4,   // a friend this close presses E once per catch: a second more
+      SNAP: 3,                  // a lost fish snaps the line: the rod loses this many uses
+      SPRING_R: 2.2,            // a spring's pool, from its middle (m)
+      LANDING_R: 420,           // the Landing's waters, from the middle of the world (other regions' fish come with their packs)
+      COOKED: 34,               // a cooked fish fills you this much (raw ones: ITEM_INFO)
+    },
     // Tools that wear out (P3, flag tools): how many uses each lasts, when it warns you (a share
     // of its uses left), and what a repair at a lit hearth costs (a share of its recipe).
     TOOLS: {
-      USES: { shovel: 80, pickaxe: 60, axe: 120, ironpick: 200 },
+      USES: { shovel: 80, pickaxe: 60, axe: 120, ironpick: 200, rod: 40 },   // (the rod: a catch is a use, a snapped line FISHING.SNAP)
       WARN: .2,
       REPAIR: .5,
     },
@@ -211,7 +225,8 @@
     shovel: 'Shovel', pickaxe: 'Stone pickaxe', axe: 'Copper axe', ironpick: 'Iron pickaxe',   // (tools: items with the tools flag, P3)
     sword_wood: 'Wooden sword', sword_bronze: 'Bronze sword', sword_iron: 'Iron sword', sword_silver: 'Silver sword', sword_obsidian: 'Obsidian sword',
     spear: 'Spear', club: 'Club', sling: 'Sling',   // (weapons, P6)
-    flint: 'Flint', herbs: 'Healing herbs', flax: 'Flax', bricks: 'Old bricks', tin: 'Tin ore' };   // (the last five: the Stairs, C3)
+    flint: 'Flint', herbs: 'Healing herbs', flax: 'Flax', bricks: 'Old bricks', tin: 'Tin ore',   // (the Stairs, C3)
+    rod: 'Fishing rod', bait: 'Bait', silverfin: 'Silverfin', pool_minnow: 'Pool minnow', lantern_fish: 'Lantern fish', cooked_fish: 'Cooked fish' };   // (fishing, P7)
   // More about an item than its name (all optional): kind 'food' is eaten from a slot (food,
   // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise).
   const ITEM_INFO = {
@@ -227,6 +242,10 @@
     sword_wood: { kind: 'weapon', returns: 'wood' }, sword_bronze: { kind: 'weapon', returns: 'copper' },
     sword_iron: { kind: 'weapon', returns: 'iron' }, sword_silver: { kind: 'weapon' }, sword_obsidian: { kind: 'weapon' },
     spear: { kind: 'weapon', returns: 'stone' }, club: { kind: 'weapon', returns: 'wood' }, sling: { kind: 'weapon' },
+    // fishing (P7, flag fishing): the rod wears like a tool; raw fish can be eaten, but cook them at a fire
+    rod: { kind: 'tool', tool: 'rod', returns: 'wood' },
+    silverfin: { kind: 'food', food: 8, cooks: 'cooked_fish' }, pool_minnow: { kind: 'food', food: 5, cooks: 'cooked_fish' },
+    lantern_fish: { kind: 'food', food: 6, cooks: 'cooked_fish' }, cooked_fish: { kind: 'food', food: RULES.FISHING.COOKED },
   };
   const itemInfo = key => {
     const i = ITEM_INFO[key] || {};
@@ -283,6 +302,11 @@
       desc: 'Heavy, sharp and long-lasting.' },
     { id: 'sling', kind: 'item', name: 'Sling', cost: { wood: 1, flax: 2 }, gives: { sling: 1 }, flag: 'combat',
       desc: 'A flax cord and pouch. Throws a stone from your bag at whatever you aim at, far off.' },
+    // fishing (P7)
+    { id: 'rod', kind: 'item', name: 'Fishing rod', cost: { wood: 3, copper: 1 }, gives: { rod: 1 }, flag: 'fishing',
+      desc: 'A springy pole, a line of twisted bark and a copper hook. Hold it, face the water and hold E to cast.' },
+    { id: 'bait', kind: 'item', name: 'Bait', cost: { berries: 1, seeds: 1 }, gives: { bait: 3 }, flag: 'fishing',
+      desc: 'Mashed berries and seeds. Carry some and fish bite sooner; each bite takes one.' },
   ];
 
   // Cloak patches: stitched from things you have found. Each helps, and costs.

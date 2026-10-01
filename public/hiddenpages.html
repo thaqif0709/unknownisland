@@ -102,7 +102,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <b>Surviving</b><a href="#survival">Food, water, health</a><a href="#water">Clean water &amp; buckets</a><a href="#moving">Moving, jumping, sitting</a><a href="#time">Day, night, moon, weather</a>
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
     <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#fighting" data-feature="combat">Fighting</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
-    <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a><a href="#minigames" data-feature="fishing">Landing a fish</a>
+    <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a><a href="#fishing" data-feature="fishing">Fishing</a><a href="#minigames" data-feature="fishing">Landing a fish</a>
     <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#stairs" data-feature="region-stair">The Stairs</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
     <b>History</b><a href="#changelog">Changelog</a>
   </div></nav>
@@ -136,6 +136,8 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr data-feature="combat"><td>Click (mouse-look) or <kbd>R</kbd></td><td>Attack where you aim; hold, then let go, for a heavy swing</td></tr>
         <tr data-feature="combat"><td><kbd>Shift</kbd> twice, quickly</td><td>Roll out of the way</td></tr>
         <tr data-feature="combat"><td><kbd>E</kbd> (hold) beside a friend who's down</td><td>Pick them up</td></tr>
+        <tr data-feature="fishing"><td><kbd>E</kbd> (hold, a rod in hand)</td><td>Cast: let go to throw (the longer you hold, the further). <kbd>E</kbd> again when it bites hooks the fish; while nothing bites it reels in</td></tr>
+        <tr data-feature="fishing"><td><kbd>E</kbd> beside a friend landing a fish</td><td>Grab the line with them: a second more, once a catch</td></tr>
         <tr><td><kbd>E</kbd> (hold, with something to eat or drink in hand)</td><td>Eat or drink one (food in a slot, or a bucket of clean water). Keep holding for the next</td></tr>
         <tr><td><kbd>F</kbd></td><td>Quick-build a campfire</td></tr>
         <tr><td><kbd>V</kbd></td><td>Sit down / get up<span data-feature="checkpoints">. <b>Hold</b> it by a lit clay hearth to sleep there, and wake there</span></td></tr>
@@ -420,6 +422,25 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <div class="scroll"><table id="patches"><tr><th>Patch</th><th>Needs</th><th>Helps</th><th>Costs</th></tr></table></div></details>
     </section>
 
+    <section id="fishing" data-feature="fishing"><h2>Fishing</h2>
+      <ul>
+        <li><b>A rod:</b> from the recipe book (wood and a little copper for the hook). Hold it (<kbd>1</kbd>&ndash;<kbd>8</kbd>) like a tool; it wears down too<span data-feature="tools">, and mends at a lit hearth</span>.</li>
+        <li><b>Cast:</b> face the sea or a spring's pool, hold <kbd>E</kbd> and let go. The longer you hold (up to <span data-r="FISHING.CAST.CHARGE"></span> s), the further the bobber flies: <span data-r="FISHING.CAST.MIN"></span> to <span data-r="FISHING.CAST.MAX"></span> m.</li>
+        <li><b>Wait:</b> something bites after <span data-r="FISHING.BITE.MIN"></span> to <span data-r="FISHING.BITE.MAX"></span> seconds. Sooner at night, in the rain, while the tide is coming in, under a full moon, and with <b>bait</b> in your bag (berries and seeds, from the recipe book; each bite takes one).</li>
+        <li><b>Hook it:</b> when the bobber goes under, press <kbd>E</kbd> within <span data-r="FISHING.HOOK"></span> s. Too slow and it gets away (the next one will come). <kbd>E</kbd> while nothing is biting reels in, and so does walking more than <span data-r="FISHING.REACH"></span> m off.</li>
+        <li><b>Land it:</b> a little game decides it (below). Lose and the line snaps: the rod loses <span data-r="FISHING.SNAP"></span> uses.</li>
+        <li><b>Together:</b> beside a friend who's landing a fish, press <kbd>E</kbd> to grab the line: <span data-r="FISHING.HELP"></span> s more on their game, once each.</li>
+        <li><b>Cook it:</b> with a raw fish in hand, press <kbd>E</kbd> at a lit fire. A cooked fish fills you up by <span data-r="FISHING.COOKED"></span>; a raw one only a little. Catches go in the journal too, with where and when they bite.</li>
+      </ul>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The Landing's fish <span class="muted">(click to show)</span></summary>
+      <table>
+        <tr><th>Fish</th><th>Where and when</th><th>Landing it</th></tr>
+        <tr><td>Silverfin</td><td>The sea, day or night</td><td>Common: one easy game</td></tr>
+        <tr><td>Pool minnow</td><td>The spring pools, any time; it bites twice as often with bait</td><td>Uncommon: one medium game</td></tr>
+        <tr><td>Lantern fish</td><td>The sea, on full-moon nights only</td><td>Rare: two hard games in a row</td></tr>
+      </table></details>
+    </section>
+
     <section id="minigames" data-feature="fishing"><h2>Landing a fish</h2>
       <p>When something bites, a short game decides whether you land it. The bar under the title is the time you have; a wrong answer, running out of time, or closing it (<kbd>Esc</kbd>) and the fish is gone. Rarer fish give harder games.</p>
       <table>
@@ -533,6 +554,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="fishing"><b>Fishing:</b> make a rod, hold <kbd>E</kbd> to cast into the sea or a spring, hook what bites and land it with a little game. Friends can grab the line, and fish cook on a fire.</li>
         <li data-feature="combat"><b>Fighting:</b> a torch can be swung (it burns) or thrown with a heavy swing, bursting into fire where it lands. Light also slows down what comes out of the fog for you.</li>
         <li><b>The sun and moon glow:</b> a warm halo and slow-turning beams round the sun, a silvery halo round the moon (brighter the fuller it is). Both dim in rain and storms.</li>
         <li><b>Fixed:</b> walking off a cliff now falls instead of jumping you straight to the bottom, and the camera follows you down a long fall instead of showing the ground; the sleeping blanket's edge by your head falls onto the ground.</li>

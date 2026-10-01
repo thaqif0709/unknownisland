@@ -28,6 +28,7 @@ const JOURNAL = [
   { key: 'lantern_fish', category: 'moon', name: 'Lantern fish', rarity: 'rare', description: 'Swims into the shallows under a full moon, lit from inside.' },
   // fish
   { key: 'silverfin', category: 'tide', name: 'Silverfin', rarity: 'common', description: 'Washed up with the tide, still cold. Good to eat.' },
+  { key: 'pool_minnow', flag: 'fishing', category: 'fish', name: 'Pool minnow', rarity: 'uncommon', description: 'A quick little fish from the spring pools, bright as a dropped needle. Nobody knows how it got up here.' },
   // things the tide should not bring
   { key: 'door_in_sand', category: 'strange', name: 'A door in the sand', rarity: 'rare', description: 'Standing upright, frame and all. It will not open. There is nothing behind it.' },
   { key: 'ringing_bell', category: 'strange', name: 'A bell on a plank', rarity: 'rare', description: 'It rings on its own, even when the sea is flat.' },

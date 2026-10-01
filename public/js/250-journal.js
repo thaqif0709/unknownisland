@@ -1,6 +1,6 @@
   // ================= Journal (a tattoo flash sheet) =================
   let journal = { entries: [], firsts: {}, mine: {} };
-  const JCATS = [['bugs', 'Bugs'], ['moon', 'Under the full moon'], ['shells', 'Shells'], ['glass', 'Sea glass'], ['tide', 'From the tide'], ['strange', 'Strange tides'], ['relics', 'Left by the stones'], ['stilled', 'Things in the fog']];
+  const JCATS = [['bugs', 'Bugs'], ['moon', 'Under the full moon'], ['shells', 'Shells'], ['glass', 'Sea glass'], ['tide', 'From the tide'], ['fish', 'On the line'], ['strange', 'Strange tides'], ['relics', 'Left by the stones'], ['stilled', 'Things in the fog']];
   const iconCache = new Map();
   // Each entry gets a small inked design, drawn once.
   function flashIcon(key, known) {
@@ -78,6 +78,11 @@
       fill({ glass_green: '#7FBF8A', glass_blue: '#6FA3D0', glass_amber: '#E0A33A', glass_violet: '#A88BD8' }[key],
         () => { g.moveTo(30, 58); g.lineTo(52, 26); g.lineTo(90, 40); g.lineTo(96, 76); g.lineTo(58, 94); g.closePath(); });
       g.beginPath(); g.moveTo(52, 26); g.lineTo(62, 60); g.lineTo(96, 76); g.moveTo(62, 60); g.lineTo(58, 94); g.stroke();
+    } else if (key === 'pool_minnow') {   // (P7) small and quick, a bright stripe
+      fill('#9FB7A8', () => g.ellipse(56, 60, 26, 10, 0, 0, Math.PI * 2));
+      fill('#9FB7A8', () => { g.moveTo(80, 60); g.lineTo(96, 48); g.lineTo(96, 72); g.closePath(); });
+      g.strokeStyle = '#E8F0E6'; g.beginPath(); g.moveTo(36, 60); g.lineTo(76, 60); g.stroke(); g.strokeStyle = INK;
+      g.fillStyle = INK; g.beginPath(); g.arc(40, 57, 2.5, 0, 7); g.fill();
     } else if (key === 'silverfin') {
       fill('#B9C3C6', () => g.ellipse(54, 60, 34, 16, 0, 0, Math.PI * 2));
       fill('#B9C3C6', () => { g.moveTo(86, 60); g.lineTo(106, 44); g.lineTo(106, 76); g.closePath(); });
