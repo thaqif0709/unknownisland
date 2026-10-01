@@ -34,6 +34,7 @@ const methods = {
       energy: 100, exhausted: false, rest: 0, wantSprint: false, running: false,
       dread: m.dread || 0, fog: 0, knockedUntil: 0, camYaw: null, lastKnockAt: 0, patches, hoodDown: !!saved.hoodDown,
       lastPosAt: Date.now(), nextActAt: 0, checkpoint: m.checkpoint ?? null,
+      lanternsSeen: Array.isArray(saved.lanternsSeen) ? saved.lanternsSeen.filter(Number.isInteger) : [],   // W10
     };
     this.players.set(p.id, p);
 

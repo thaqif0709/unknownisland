@@ -284,20 +284,6 @@ kbd.k{font-family:var(--hand);font-weight:600;border:2px solid var(--ink);border
 .card button:hover{filter:brightness(1.07)}
 .card button:disabled{opacity:.6;cursor:wait}
 .card button:focus-visible,.card input:focus-visible,.tabs button:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
-.news{margin-top:14px;border:2.5px solid var(--ink);border-radius:14px;background:#FBF4E3;box-shadow:3px 3px 0 var(--ink);text-align:left}
-.news summary{cursor:pointer;list-style:none;padding:8px 12px;font-size:18px;display:flex;align-items:baseline;gap:8px}
-.news summary::-webkit-details-marker{display:none}
-.news summary::after{content:'\25BE';margin-left:auto;color:var(--soft);transition:transform .2s}
-.news[open] summary::after{transform:rotate(180deg)}
-.news summary b{color:var(--rose)}
-#newsWhen{font-size:14px;color:var(--soft)}
-#newsNew{font-style:normal;font-size:12px;font-weight:600;background:var(--ochre);color:var(--ink);border:2px solid var(--ink);border-radius:8px 3px 8px 3px;padding:0 7px}
-#newsNew.seen{display:none}
-.news ul{margin:0;padding:0 14px 0 30px;max-height:min(34vh,240px);overflow-y:auto;touch-action:pan-y}
-.news li{font-size:16px;line-height:1.4;margin:0 0 7px}
-.news li b{color:var(--card-ink)}
-.news .keys{margin:2px 12px 10px;font-size:15px}
-.news a{color:var(--blue)}
 .card button.link{background:none;color:var(--soft);font-size:16px;font-weight:400;padding:4px;margin-top:8px;text-decoration:underline}
 .tabs{display:flex;gap:6px;margin-top:16px}
 .tabs button{flex:1;margin:0;font-size:18px;padding:6px;background:none;color:var(--card-ink);border:2px solid transparent;border-radius:18px}
@@ -577,12 +563,6 @@ html.inkcursor #mapCanvas.dragging{cursor:grabbing!important}
       <p id="readyText"></p>
       <p class="keys">WASD to walk, Shift to sprint, drag to look around, E to use things, B for the recipe book, Esc for settings. On a phone, use the left thumb stick and the buttons.</p>
       <button type="button" id="goIsland">Go to the island</button>
-      <details class="news" id="news" hidden>
-        <summary><b>What's new</b><span id="newsWhen"></span><i id="newsNew">new</i></summary>
-        <ul id="newsList"></ul>
-        <p class="keys"><a href="/hiddenpages#changelog" target="_blank" rel="noopener">Everything that's changed</a></p>
-      </details>
-      <p class="keys" style="text-align:center;margin-top:8px"><a href="/hiddenpages" target="_blank" rel="noopener">How to play: the Hidden Pages</a></p>
       <button type="button" class="link" id="logout">Log out</button>
     </div>
 

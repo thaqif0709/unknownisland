@@ -353,12 +353,16 @@
     av.head.getWorldPosition(hp);
     const headU = (hp.x - ox) * cy - (hp.z - oz) * sy;   // how far along the body the head is
     const U0 = -.62, U1 = headU - .14, W0 = -.42, W1 = .55, NU = 32, NW = 22;
+    // the top edge reaches further up on the front (+w: where the chest and arms are), tucked
+    // under the chin, and stays lower at the back of the neck
+    const topU = j => { const w = W0 + (W1 - W0) * j / NW; return U1 + .26 * Math.min(1, Math.max(0, (w + .05) / .35)); };
+    const uAt = (i, j) => U0 + (topU(j) - U0) * i / NU;
     // the body's height under each point of a grid
     const H = [];
     for (let i = 0; i <= NU; i++) {
       H.push([]);
       for (let j = 0; j <= NW; j++) {
-        const u = U0 + (U1 - U0) * i / NU, w = W0 + (W1 - W0) * j / NW, [x, z] = toWorld(u, w);
+        const u = uAt(i, j), w = W0 + (W1 - W0) * j / NW, [x, z] = toWorld(u, w);
         rayFrom.set(x, g0 + 4, z); drapeRay.set(rayFrom, rayDown);
         const hit = drapeRay.intersectObjects(parts, false)[0];
         H[i].push(hit ? Math.max(0, hit.point.y - groundAt(x, z)) : 0);
@@ -374,7 +378,7 @@
         h = Math.max(h, hn - SLOPE * Math.hypot(a * du, b * dw));
       }
       const edge = Math.min(i, NU - i, j, NW - j);
-      let u = U0 + du * i, w = W0 + dw * j;
+      let u = uAt(i, j), w = W0 + dw * j;
       // the hem: wavy, and pushed in and out a little, so it isn't a rectangle
       const along = i === 0 || i === NU ? j / NW : i / NU;          // how far along this edge (0-1)
       const wave = Math.sin(along * Math.PI * 5 + (j === 0 ? 0 : 2)) * .06 + Math.sin(along * Math.PI * 2 + 1) * .04;

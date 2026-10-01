@@ -3,7 +3,7 @@ id: W10
 title: Fast travel between lit lanterns
 lane: world
 owner: thaqif
-status: on-hold
+status: done
 depends: [F2, F5]
 flag: fasttravel
 size: ½ session
@@ -22,14 +22,15 @@ server/systems/lanterns.js, public/js/lanterns.js
 
 ## Done when
 
-- [ ] Travel works only between lit lanterns and costs oil.
-- [ ] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
-- [ ] This file's `status` set to `done` in the PR that finishes it.
+- [x] Travel works only between lit lanterns and costs oil.
+- [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
+- [x] This file's `status` set to `done` in the PR that finishes it.
 
 ## Notes
 
-On hold: Cut in round 1, Keep in round 3. Confirm.
+Kept (Thaqif, 1 Oct). You remember a lantern by standing in its light; both ends must be lit.
 
 ## Log
 
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->
+2026-10-01 thaqif: done behind `fasttravel` (server/systems/lanterntravel.js, public/js/265-lantern-travel.js, tests).

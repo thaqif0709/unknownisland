@@ -77,7 +77,7 @@
     if (e.code === prefs.binds.book) togglePanel('book');
     if (e.code === prefs.binds.journal) togglePanel('journal');
     if (e.code === prefs.binds.hood) toggleHood();
-    if (e.code === prefs.binds.sit) setSitting(!sitting);
+    if (e.code === prefs.binds.sit && !(UI.sitHold && UI.sitHold.down())) setSitting(!sitting);   // (by a lit hearth, holding it sleeps: 145)
     if (e.code === prefs.binds.call) callOut();
     if (/^Digit[1-8]$/.test(e.code) || /^Numpad[1-8]$/.test(e.code)) selectSlot(+e.code.slice(-1) - 1);
     if (e.code === prefs.binds.drop) dropHeld(e.shiftKey);

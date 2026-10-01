@@ -16,7 +16,7 @@ const { Minigames } = require('./minigames');
 // optional hooks onTick(dt), onDawn(sunrises) and onJoin(p) (extra welcome fields) run
 // alongside the core loop. See docs/roadmap/CONTRACTS.md section 2.
 const SYSTEMS = ['journal', 'tides', 'bugs', 'weather', 'time', 'chat', 'board', 'patches', 'players',
-  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves', 'checkpoints', 'stair', 'minigames', 'combat'];
+  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves', 'checkpoints', 'lanterntravel', 'stair', 'minigames', 'combat'];
 
 class Island {
   constructor(store, data) {
@@ -190,7 +190,7 @@ class Island {
       const { wood, stone, inventory } = this.inventorySave(p);
       return {
         playerId: p.id, ...this.savedSpot(p), face: r2(p.face), health: r2(p.health), hunger: r2(p.hunger),
-        thirst: r2(p.thirst), wood, stone, inventory: { ...inventory, hoodDown: !!p.hoodDown }, dread: r2(p.dread), checkpoint: p.checkpoint ?? null,
+        thirst: r2(p.thirst), wood, stone, inventory: { ...inventory, hoodDown: !!p.hoodDown, lanternsSeen: p.lanternsSeen || [] }, dread: r2(p.dread), checkpoint: p.checkpoint ?? null,
       };
     });
     const objects = [...this.dirty].map(id => {
