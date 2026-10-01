@@ -56,6 +56,17 @@ code{font:13.5px ui-monospace,Menlo,Consolas,monospace;background:var(--chip);bo
 [data-feature]:not(.live){display:none}
 /* ...and what those features replace disappears once they do. */
 [data-feature-off].gone-live{display:none}
+/* search */
+.search{position:relative;margin:0 0 6px}
+.search input{width:100%;font:inherit;font-size:15px;padding:7px 30px 7px 10px;border:2px solid var(--ink);border-radius:12px;background:var(--card);color:var(--ink)}
+.search input:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.search kbd{position:absolute;right:8px;top:7px;font-size:12px;color:var(--soft);border:1.5px solid var(--line);border-radius:5px;padding:0 5px}
+.search input:not(:placeholder-shown) + kbd{display:none}
+#qInfo{margin:4px 2px 0;font-size:13px;min-height:1em}
+.s-hide{display:none!important}
+nav a.s-dim{opacity:.35}
+mark.hit{background:#F3D27A;color:inherit;border-radius:3px;padding:0 1px}
+.s-inside{display:inline-block;margin-left:6px;font-size:12px;font-weight:600;color:var(--rose);border:1.5px solid var(--rose);border-radius:8px;padding:0 6px}
 details.spoiler{border:2px dashed var(--line);border-radius:12px;margin:8px 0;padding:0 12px}
 details.spoiler[open]{border-style:solid;padding-bottom:8px}
 details.spoiler summary{cursor:pointer;padding:8px 0;list-style:none;font-weight:500}
@@ -84,7 +95,9 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <a class="play" href="/">Play &rsaquo;</a>
   </header>
 
-  <nav aria-label="Contents"><div class="cols">
+  <nav aria-label="Contents">
+    <div class="search" role="search"><input type="search" id="q" placeholder="Search the pages" aria-label="Search the Hidden Pages" autocomplete="off"><kbd>/</kbd><p id="qInfo" class="muted" aria-live="polite"></p></div>
+    <div class="cols">
     <b>Start</b><a href="#start">Getting started</a><a href="#controls">Controls</a><a href="#hud">The screen</a>
     <b>Surviving</b><a href="#survival">Food, water, health</a><a href="#water">Clean water &amp; buckets</a><a href="#moving">Moving, jumping, sitting</a><a href="#time">Day, night, moon, weather</a>
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
@@ -518,6 +531,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <p class="muted">Newest first.</p>
       <ul class="log">
         <li data-feature="combat"><b>Fighting:</b> swords, a spear, a club and a sling; heavy swings, rolling out of the way, and being picked up by a friend when you're down. The Stilled can be broken into fog, for a while.</li>
+        <li><b>Search the Hidden Pages:</b> type in the box above the contents (or press <kbd>/</kbd>) and only what mentions it stays, highlighted. Spoilers stay closed, with a tag when something inside matches. <kbd>Esc</kbd> clears it.</li>
         <li><b>Fixed:</b> <kbd>Esc</kbd> with a window open (the recipe book, the journal, the bag...) only closes it. With nothing open, <kbd>Esc</kbd> opens settings.</li>
         <li data-feature="checkpoints"><b>Sleeping is a hold:</b> by a lit hearth, tap <kbd>V</kbd> to sit and <b>hold</b> it to sleep there. The blanket now tucks in under your chin.</li>
         <li><b>A tidier start screen:</b> the "What's new" box and the Hidden Pages link are gone from it. The Hidden Pages are still in Settings, and this changelog is where changes are listed.</li>
@@ -616,6 +630,92 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     if (d.chains && d.chains.landing) $('chainLen').textContent = d.chains.landing;
     $('liveNote').textContent = `(Live numbers; the island is on day ${d.day}.)`;
   }).catch(() => { $('liveNote').textContent = '(The island is asleep; the journal list will show once it wakes.)'; });
+
+  // ---- search: as you type, show only the sections and lines that mention it, highlighted.
+  // Spoilers stay closed (a "match inside" tag says there's something in one), and text for
+  // features that are switched off is never shown.
+  const q = $('q'), info = $('qInfo'), main = document.querySelector('main');
+  const off = el => !!el.closest('[data-feature]:not(.live), [data-feature-off].gone-live');
+  const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’‘]/g, "'");
+  // a word matches where a word starts ("oil" finds "oil" and "oils", not "boils")
+  const starts = (low, t) => { for (let i = low.indexOf(t); i >= 0; i = low.indexOf(t, i + 1)) if (i === 0 || !/[a-z0-9]/.test(low[i - 1])) return true; return false; };
+  const has = (el, w) => !off(el) && w.every(t => starts(norm(el.textContent), t));
+  function clear() {
+    main.querySelectorAll('mark.hit').forEach(m => m.replaceWith(document.createTextNode(m.textContent)));
+    main.querySelectorAll('.s-inside').forEach(t => t.remove());
+    document.querySelectorAll('.s-hide').forEach(el => el.classList.remove('s-hide'));
+    document.querySelectorAll('nav a.s-dim').forEach(a => a.classList.remove('s-dim'));
+    main.normalize();
+  }
+  // Highlight each word in the text under el.
+  function mark(el, w) {
+    const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), nodes = [];
+    while (walk.nextNode()) nodes.push(walk.currentNode);
+    for (const n of nodes) {
+      if (n.parentNode.closest('script,style,mark')) continue;
+      const text = n.textContent, low = norm(text), spans = [];
+      for (const t of w) for (let i = low.indexOf(t); i >= 0; i = low.indexOf(t, i + 1)) if (i === 0 || !/[a-z0-9]/.test(low[i - 1])) spans.push([i, i + t.length]);
+      if (!spans.length) continue;
+      spans.sort((a, b) => a[0] - b[0]);
+      const frag = document.createDocumentFragment(); let at = 0;
+      for (const [a, b] of spans) {
+        if (a < at) continue;
+        frag.append(text.slice(at, a));
+        const m = document.createElement('mark'); m.className = 'hit'; m.textContent = text.slice(a, b); frag.append(m);
+        at = b;
+      }
+      frag.append(text.slice(at)); n.replaceWith(frag);
+    }
+  }
+  // Show the parts of `box` that match (lists and tables line by line); true if any did.
+  function filter(box, w) {
+    let any = false;
+    for (const el of [...box.children]) {
+      if (el.tagName === 'H2') continue;
+      let keep;
+      const blocks = el.tagName === 'DIV' && [...el.children].some(c => /^(DIV|TABLE|UL|OL|P|H3|DETAILS)$/.test(c.tagName));
+      if (el.tagName === 'UL' || el.tagName === 'OL' || el.tagName === 'TBODY' || blocks) keep = filter(el, w);   // (a flagged block, the tide list, a table's wrapper ...)
+      else if (el.tagName === 'TABLE') {
+        keep = false;
+        for (const body of el.tBodies) keep = filter(body, w) || keep;
+        // heading rows (only th) stay while any row under them does
+        const rows = [...el.rows];
+        rows.forEach((r, i) => {
+          if (r.querySelector('td')) return;
+          let k = i + 1, any = false;
+          while (k < rows.length && rows[k].querySelector('td')) { if (!rows[k].classList.contains('s-hide')) any = true; k++; }
+          r.classList.toggle('s-hide', !any && !(i === 0 && keep));   // (the first row: the column names)
+        });
+      }
+      else keep = has(el, w);
+      if (el.tagName === 'DETAILS' && keep && !el.open) { const s = el.querySelector('summary'); if (s && !s.querySelector('.s-inside')) s.insertAdjacentHTML('beforeend', '<span class="s-inside">match inside</span>'); }
+      el.classList.toggle('s-hide', !keep);
+      if (keep && el.tagName !== 'UL' && el.tagName !== 'OL' && el.tagName !== 'TBODY' && el.tagName !== 'TABLE') mark(el, w);
+      any = any || keep;
+    }
+    return any;
+  }
+  function search() {
+    clear();
+    const w = norm(q.value).split(/\s+/).filter(Boolean);
+    if (!w.length) { info.textContent = ''; return; }
+    let n = 0;
+    for (const sec of main.querySelectorAll('section')) {
+      if (off(sec)) continue;
+      const title = sec.querySelector('h2'), whole = title && has(title, w);
+      const hit = whole || filter(sec, w);
+      if (whole) { [...sec.querySelectorAll('.s-hide')].forEach(el => el.classList.remove('s-hide')); mark(title, w); }
+      sec.classList.toggle('s-hide', !hit);
+      const link = document.querySelector(`nav a[href="#${sec.id}"]`); if (link) link.classList.toggle('s-dim', !hit);
+      if (hit) n++;
+    }
+    info.textContent = n ? `Found in ${n} section${n > 1 ? 's' : ''}.` : 'Nothing found. Try another word.';
+  }
+  let qt = 0;
+  q.addEventListener('input', () => { clearTimeout(qt); qt = setTimeout(search, 120); });
+  q.addEventListener('keydown', e => { if (e.key === 'Escape') { q.value = ''; search(); } });
+  // "/" jumps to the search box
+  document.addEventListener('keydown', e => { if (e.key === '/' && document.activeElement !== q && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); q.focus(); } });
 })();
 </script>
 </body>
