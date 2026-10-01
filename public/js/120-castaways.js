@@ -379,8 +379,17 @@
         rayFrom.set(x, g0 + 4, z); drapeRay.set(rayFrom, rayDown);
         if (drapeRay.intersectObjects(headParts, false).length) { top = u - .05; break; }
       }
-      topAt.push(Math.max(U0 + .3, top));
+      topAt.push(top < headU + .35 ? Math.max(U0 + .3, top) : null);
     }
+    // strips with no head over them (out beside it) don't run on past it: they end level with
+    // their neighbours, so the cloth there falls away to the ground instead of standing up
+    // in a flap; then soften the line so the edge curves round the head
+    for (let j = 0; j <= NW; j++) if (topAt[j] == null) {
+      let k = 1; while (topAt[j - k] == null && topAt[j + k] == null && k <= NW) k++;
+      topAt[j] = topAt[j - k] ?? topAt[j + k] ?? U1;
+    }
+    const limit = topAt.slice();   // (smoothing never takes it into the head)
+    for (let pass = 0; pass < 2; pass++) { const t0 = topAt.slice(); for (let j = 0; j <= NW; j++) topAt[j] = Math.min(limit[j], (t0[Math.max(0, j - 1)] + t0[j] * 2 + t0[Math.min(NW, j + 1)]) / 4); }
     const topU = j => topAt[j];
     const uAt = (i, j) => U0 + (topU(j) - U0) * i / NU;
     // the body's height under each point of a grid
