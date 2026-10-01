@@ -5,11 +5,12 @@
   // since the start screen comes before the welcome). Put the newest notes here when you
   // switch something on for players; the full history is the Hidden Pages changelog.
   const NEWS = {
-    id: '2026-09-30e',
-    when: '30 Sept',
+    id: '2026-10-01a',
+    when: '1 Oct',
     lines: [
+      { flag: 'region-stair', html: '<b>The Stairs come alive.</b> Flint, healing herbs, flax, old brick walls and tin to gather; bugs of their own; an old mine to explore (bring a torch). And on windy nights, stay near the standing stones.' },
       { flag: 'bigworld', html: '<b>The island is much bigger.</b> Where you arrive is only the Landing: cross the sandy neck on its north shore. Some new lands are open; the rest wait behind a wall of fog, the Veil.' },
-      { flag: 'bigworld', html: '<b>A first look:</b> the new lands are bare for now. Their creatures and stories come later.' },
+      { flag: 'bigworld', html: '<b>A first look:</b> the Weeping Wood and the Mire are still bare. Their creatures and stories come later.' },
       { flag: 'farview', html: '<b>You can see for kilometres</b>, out to the mountains.' },
       { flag: 'bigworld', html: '<b>The map</b> (M) fills in wherever anyone walks. Drag it and zoom it.' },
       { flag: 'slots', html: '<b>A proper bag.</b> 8 slots along the bottom, 30 more in your bag (I, or Bag on a phone). Drag things between them. Berries and coconuts are carried now, to eat later: hold E with one in hand to eat it.' },
