@@ -97,6 +97,7 @@
     return null;
   }
   function act() {
+    if (UI.bosses && UI.bosses.act()) return;   // at a beaten boss's echo (C0)
     if (UI.rafts && UI.rafts.act()) return;   // a raft or a zip line: aboard, off, set down, tie, ride (P10)
     if (UI.fishing && UI.fishing.act()) return;   // a rod in hand, or a friend's line to help with (P7)
     const ba = state === 'play' && cooldown <= 0 && net && knockT <= 0 ? bucketAction() : null;

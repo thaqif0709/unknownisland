@@ -201,6 +201,17 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
+- **Bosses (C0, flag `bosses`, off).** `server/systems/bosses.js` and `server/bosses/` (one
+  file per boss: a mob definition plus region, next, hp, appear, phases, trophy). A finished
+  chain's `summonBoss(region)` calls its boss; it appears when `appear.when` holds, at x, z.
+  Frogs within `BOSSES.ARENA` take part and scale its health (`PER_FROG`); phases by health;
+  nobody standing for `WIPE` s: it leaves whole and returns after `appear.cooldown`. Beaten:
+  trophies (journal keys) for everyone who fought, the chain's `bossDay`, `openRegion(next)`,
+  an echo for latecomers (`boss-echo`). Saved in the `bosses` table (migration 0010) so a
+  restart resumes a fight. The practice boss (the Straw Giant, `/boss practice` for admins)
+  is the test. Browser `public/js/396-bosses.js` (health bar, map mark, camera shake, echo)
+  and `public/js/mobs/boss-practice.js`. Tests: `tests/server/bosses.test.js` (5),
+  `tests/browser/bosses.test.js`.
 - **Rafts and zip lines (P10, flag `rafts`, on).** `server/systems/rafts.js`: a raft item set
   on deep water (`raft-place`), boarded by up to `RAFT.SEATS` (`raft-board`); the first aboard
   paddles (`raft-steer`), the server moves the raft (`RAFT.SPEED`, a river's `CURRENT` in the

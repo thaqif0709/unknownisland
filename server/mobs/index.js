@@ -30,6 +30,8 @@ for (const name of ['stilled', 'dummy', 'crawler', 'leaning']) {
   if (!def.kind || !def.states || !def.states[def.start || 'idle']) throw new Error(`mobs/${name}.js: needs kind, states and a start state`);
   KINDS[def.kind] = def;
 }
+// and every boss (C0): a boss file is a mob definition too (server/bosses/)
+for (const b of Object.values(require('../bosses').BOSSES)) KINDS[b.kind] = b;
 
 class Mobs {
   constructor(island) {

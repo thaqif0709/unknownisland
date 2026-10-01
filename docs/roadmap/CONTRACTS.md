@@ -364,6 +364,21 @@ island.summonBoss(regionId)      // W8 calls this when a chain finishes; stub (F
 // stone's boss hint) and calls island.openRegion(nextRegion).
 ```
 
+As built (C0, flag `bosses`): a boss file in `server/bosses/` is a mob definition plus
+`{ id, name, kind, region, next, hp, appear: { when(island, boss), x, z, cooldown }, phases:
+[{ below, name }], trophy: { relic, patch } }`, listed in `server/bosses/index.js` (which the mob
+engine also registers as kinds). `server/systems/bosses.js` keeps `island.bossState` (id ->
+{ state: 'waiting' | 'fighting' | 'beaten', x, z, mob, phase, frogs, present, earned, returnAt })
+and the `bosses` table (migration 0010). `island.summonBoss(region)` calls the region's boss
+(`island.bossCall(id, { x, z })`, which admins reach with `/boss <id>` and tests with
+`test boss { boss, x, z }`); it appears when `appear.when` holds (and its cooldown after a
+wipe has passed). Its states use `island.bossOf(mob)`, `island.bossTarget(b, players)`,
+`island.bossStep(b, mob, a, step)` and `mob.phase`; its `onDeath` calls
+`island.bossBeaten(mob)`. Messages: `{ t: 'boss', id, name, state, x, z, r, hp, max, phase,
+phases, mob }`, `{ t: 'bossfx', id, k, x, z }` (a heavy blow: the camera shakes), and from
+the client `{ t: 'boss-echo', id }`. The welcome has `bosses`. Client: `public/js/396-bosses.js`
+(bar, map mark, shake, echo; `UI.bosses`), each boss's look in `public/js/mobs/boss-<id>.js`.
+
 Where and when a boss appears is in its region file, which W8 already reads:
 `bossHint: { stone: 'shore', text: 'At the lowest tide. The east sand.' }` (what the stone
 says while the boss waits). A region's chain is `requests: ['key1', ...]` in the same file;

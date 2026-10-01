@@ -197,6 +197,10 @@ full health. Beaten once per island; drops a cloak patch and a relic for everyon
 an "echo" at the same spot lets latecomers earn the patch. Server state machine per boss,
 saved in a `bosses` table so a restart resumes the fight.
 
+(C0 as built: the arena, scaling, wipe and echo are as above; trophies are journal keys,
+a relic and the one a cloak patch needs; a practice boss, the Straw Giant, exists only for
+testing the system: admins call it with `/boss practice`.)
+
 | Region | Boss | When/where | The trick |
 |---|---|---|---|
 | Landing | The Tidewife (wreck crab) | lowest tide, east sands | hit the barnacle eyes when it rears; fire burns its kelp; beat it before the tide turns |

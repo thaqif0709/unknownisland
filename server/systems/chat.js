@@ -47,6 +47,14 @@ const methods = {
         const m = this.mobs.spawn(kind, p.x + Math.sin(p.face) * 6, p.z + Math.cos(p.face) * 6, { face: p.face + Math.PI });
         return sys(`A ${kind} (#${m.id}) appears.`);
       }
+      // ...and call a boss here, to try one (C0): /boss practice
+      if (cmd === 'boss' && isAdmin(p)) {
+        const id = String(rest[0] || '').toLowerCase(), ids = Object.keys(require('../bosses').BOSSES);
+        if (!WG.feature('bosses')) return sys('Bosses are switched off (the bosses flag).');
+        if (!ids.includes(id)) return sys(`Which boss? ${ids.join(', ')}`);
+        this.bossCall(id, { x: p.x + Math.sin(p.face) * 10, z: p.z + Math.cos(p.face) * 10, again: true });
+        return sys('It is coming.');
+      }
       // ...and play a minigame (P8): /minigame trivia hard
       if (cmd === 'minigame' && isAdmin(p)) {
         const type = String(rest[0] || '').toLowerCase(), types = this.minigames.constructor.types();

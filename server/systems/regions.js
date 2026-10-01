@@ -2,7 +2,7 @@
 // starts behind the Veil, a wall of fog you can't walk through: step onto a locked region's
 // land and you're turned around. A region is opened (openRegion) when its way is earned
 // (the previous region's boss, C0), and the Veil lifts at the next dawn. Opened stays open.
-// Also the boss placeholder (C0). Where frogs wake is P4's, in checkpoints.js.
+// The bosses that open them are C0's (systems/bosses.js). Where frogs wake is P4's, in checkpoints.js.
 // See docs/roadmap/CONTRACTS.md sections 6, 10 and 11.
 const WG = require('../shared/world-gen');
 
@@ -43,13 +43,7 @@ const methods = {
     p.lastVeilAt = now;
     p.dread = Math.min(100, p.dread + VEIL_DREAD);
   },
-
-  // Placeholder: a region's request chain is done and its boss should appear (C0).
-  summonBoss(regionId) {
-    console.log(`[island ${this.id}] boss summoned for ${regionId} (no boss system yet)`);
-    this.store.insertEvent(this.id, 'boss_summoned', { region: regionId, day: this.day })
-      .catch(e => console.error('[island] boss event not saved', e.message));
-  },
+  // (summonBoss, which a finished chain calls, is in systems/bosses.js: C0.)
 };
 
 // Messages from the client this system answers (msg.t -> handler; `this` is the Island).
