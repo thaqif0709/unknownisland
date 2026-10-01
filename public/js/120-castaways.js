@@ -341,10 +341,23 @@
     av.body.traverse(m => { if (m.isMesh && (!isIn(m, av.head) || m.material === throatM)) parts.push(m); });   // the body, and the throat (tucked in up to the chin)
     av.head.getWorldPosition(hp);
     const headU = (hp.x - ox) * cy - (hp.z - oz) * sy;   // how far along the body the head is
-    const U0 = -.62, U1 = headU - .14, W0 = -.42, W1 = .55, NU = 32, NW = 22;
+    // how far the body reaches each way (along it, u; across it, w), from every vertex of the
+    // body below the neck, so the cloth always reaches past it with a margin
+    let uMin = 0, wMin = 0, wMax = 0;
+    const v = new THREE.Vector3();
+    for (const m of parts) {
+      const pos = m.geometry.attributes.position;
+      for (let k = 0; k < pos.count; k += 2) {
+        v.fromBufferAttribute(pos, k).applyMatrix4(m.matrixWorld);
+        const du = (v.x - ox) * cy - (v.z - oz) * sy, dw = (v.x - ox) * sy + (v.z - oz) * cy;
+        if (du > headU - .1) continue;   // the head end is the top edge's business
+        uMin = Math.min(uMin, du); wMin = Math.min(wMin, dw); wMax = Math.max(wMax, dw);
+      }
+    }
+    const U0 = uMin - .16, U1 = headU - .14, W0 = wMin - .16, W1 = wMax + .16, NU = 32, NW = 22;
     // the top edge reaches further up on the front (+w: where the chest and arms are), tucked
     // under the chin, and stays lower at the back of the neck
-    const topU = j => { const w = W0 + (W1 - W0) * j / NW; return U1 + .42 * Math.min(1, Math.max(0, (w + .05) / .35)); };
+    const topU = j => { const w = W0 + (W1 - W0) * j / NW; const mid = (wMin + wMax) / 2; return U1 + .42 * Math.min(1, Math.max(0, (w - mid + .05) / .35)); };
     const uAt = (i, j) => U0 + (topU(j) - U0) * i / NU;
     // the body's height under each point of a grid
     const H = [];
