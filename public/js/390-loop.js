@@ -299,7 +299,10 @@
     } else {
       // Past the lowest orbit angle the camera stops sinking, comes in closer
       // behind the frog and tilts up, so you can look at the sky and treetops.
-      camLift += (((climb || glide || flying) ? hop.y : (hop.floor || 0)) - camLift) * Math.min(1, dt * 6);   // follow you up onto a rock (or a trunk, or a glide), smoothly
+      // follow you up onto a rock (or a trunk, or a glide), smoothly; and down a long fall (higher
+      // above the ground than any jump goes), so the view stays on you instead of the ground below
+      const liftTo = (climb || glide || flying) ? hop.y : hop.air ? Math.max(hop.floor || 0, hop.y - JUMP_TOP) : (hop.floor || 0);
+      camLift += (liftTo - camLift) * Math.min(1, dt * (hop.air && hop.y > JUMP_TOP ? 12 : 6));
       const py = (myCave ? myFloor() : Math.max(heightAt(px, pz), -.75)) + camLift, LOW = .18;   // in a cave: its floor (W9)
       const up = Math.max(0, LOW - pitch), orbit = Math.max(pitch, LOW - up * .12);
       const dist = camDist * (1 - Math.min(up, 1) * .45);

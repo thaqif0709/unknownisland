@@ -88,6 +88,11 @@
     return f;
   }
   function stepHop(h, dt) {   // own frog: simple physics
+    stepHopInner(h, dt);
+    h.gPrev = groundAt(px, pz); h.xPrev = px; h.zPrev = pz;   // for noticing a cliff edge next frame
+  }
+  const JUMP_TOP = JUMP_V * JUMP_V * 3 / (2 * GRAVITY);   // the highest a full-charge jump goes (about 2.6 m)
+  function stepHopInner(h, dt) {
     if (flying) { h.floor = 0; h.air = true; h.charge = -1; h.land = 0; return; }   // flying moves you (387-creative.js)
     if (climb) { h.floor = 0; h.air = false; h.charge = -1; h.abs = null; glide = false; return; }   // climbing moves you (385-climbing.js)
     if (h.charge >= 0) { h.charge += dt; if (!canJump()) h.charge = -1; }
@@ -109,7 +114,13 @@
     }
     else {
       h.abs = null;
-      if (h.y > h.floor + .02) { h.air = true; h.v = 0; }   // walked off the edge: drop
+      // walked off a cliff (the ground under you dropped far more steeply than any slope you can
+      // walk down): fall from where you were, rather than snapping down to the ground below
+      const g = groundAt(px, pz), drop = h.gPrev != null ? h.gPrev - g : 0;
+      if (!myCave && drop > .35 && drop > Math.hypot(px - h.xPrev, pz - h.zPrev) * 1.5) {
+        h.air = true; h.v = 0; h.y += drop; h.abs = g + h.y; h.fwd = 0;
+      }
+      else if (h.y > h.floor + .02) { h.air = true; h.v = 0; }   // walked off the edge: drop
       else h.y = h.floor;
       if (h.land > 0) h.land -= dt;
     }
