@@ -16,5 +16,12 @@ const BUGS = [
   { key: 'stone_beetle', when: 'day', biomes: ['meadow', 'highland'], weight: 4, region: 'stair', flag: 'region-stair' },
   { key: 'terrace_grasshopper', when: 'day', biomes: ['meadow'], weight: 5, region: 'stair', flag: 'region-stair' },
   { key: 'wind_moth', when: 'night', biomes: ['meadow', 'highland'], weight: 1.5, region: 'stair', flag: 'region-stair', minH: 90 },
+  // only in the Weeping Wood (C4, flag region-wood)
+  { key: 'lantern_beetle', when: 'night', biomes: ['forest'], weight: 4, region: 'wood', flag: 'region-wood' },
+  { key: 'glasswing', when: 'day', biomes: ['forest'], weight: 4, region: 'wood', flag: 'region-wood' },
+  { key: 'bark_mantis', when: 'any', biomes: ['forest'], weight: 1.2, region: 'wood', flag: 'region-wood', minH: 15 },
+  // only in the Teeth (C6, flag region-teeth): up in the snow
+  { key: 'snow_moth', when: 'night', biomes: ['highland', 'peak'], weight: 3, region: 'teeth', flag: 'region-teeth', minH: 260 },
+  { key: 'ice_louse', when: 'day', biomes: ['highland', 'peak'], weight: 4, region: 'teeth', flag: 'region-teeth', minH: 200 },
 ];
 module.exports = { BUGS };

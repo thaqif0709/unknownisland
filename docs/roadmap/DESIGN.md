@@ -13,7 +13,8 @@ How it's split into tasks: [README.md](README.md). How the pieces talk to each o
 
 - **Size:** 5 × 5 km, about 15 km² of land (today: 350 × 335 m, 0.075 km²).
 - **Walking across:** about 18 min straight, 24–27 min by a real route.
-- **Heights:** up to about 600 m in the Teeth, snow above 400 m.
+- **Heights:** up to about 600 m in the Teeth, snow above 260 m (C6: above about 300 m the
+  Teeth are nearly all cliff, so the snowfields had to come lower than the 400 m first planned).
 - **Today's island is kept** as **The Landing**, same shape, everything built on it stays.
 - **Day length:** 20 min, of which 15 min day and 5 min night (confirmed; W6 done).
 - **Log in** where you logged out (as now).
@@ -185,6 +186,14 @@ spawns in its region.
 | Ashen Shore | The Ashen | burning footprints | a thrown bucket of water |
 | Hollow | The Dreaming | look like your friends on the map | calling out (real friends answer) |
 
+(C6 as built: the Frozen come with a blizzard (a storm, or rain at night, up in the Teeth's
+snow); their touch takes 30 warmth; fire melts them and they won't go for a frog by one; a frog
+beside a boulder or on rock too steep for snow is safe.)
+
+(C4 as built: the Hung's weakness is light, not their vine: they won't drop on a frog with
+a torch in hand or by a fire or lantern, and a ring on the ground shows where one will land.
+They knock you down rather than lift you. No wind chimes.)
+
 Each kind gets a journal entry for surviving an encounter; its weakness goes in a spoiler
 box on the Hidden Pages.
 
@@ -201,6 +210,18 @@ saved in a `bosses` table so a restart resumes the fight.
 -1.5 m, about four minutes of fight in a 20-minute day; her kelp takes 35% of a blow until 40
 fire damage burns it, her shell 60%, her eyes 250% while she rears; her shell makes a patch,
 wading at walking speed at the cost of the Stilled noticing you more.)
+
+(C6 as built: the White Ram comes at nightfall to a snowfield ringed with cliffs and leaves at
+daybreak; a blizzard blows the whole time it's out. Its fleece lets 30% of a blow through; it
+paws (a line on the ground) and charges along it; charging into a cliff or a boulder dazes it
+and blows land twice over; it won't charge a frog by a fire or holding a torch. No avalanches.
+Its fleece makes a patch: warmth drains half as fast, the Frozen notice you from further.)
+
+(C4 as built: the Hanging Mother comes at night under the tallest trees and leaves at dawn;
+there are no canopy walkways yet, so her three vines hang to the ground around her and are
+cut there; light (torch, fire, lantern) is what blinds her, and hurts her twice over once
+she's down; her silk makes a patch, climbing 1.5x as fast at the cost of the Hung reaching
+further. Rafts are a Landing craft already (P10), so the Wood doesn't add them.)
 
 (C0 as built: the arena, scaling, wipe and echo are as above; trophies are journal keys,
 a relic and the one a cloak patch needs; a practice boss, the Straw Giant, exists only for

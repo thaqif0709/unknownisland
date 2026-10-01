@@ -13,6 +13,13 @@ const FISH = [
     hint: 'in the spring pools; it likes bait' },
   { key: 'lantern_fish', water: ['sea'], region: 'landing', when: 'night', moon: 'full', weight: 4, rarity: 'rare',
     hint: 'in the sea on full-moon nights' },
+  // the Weeping Wood (C4, flag region-wood)
+  { key: 'catfish', water: ['river'], region: 'wood', when: 'any', weight: 10, rarity: 'common', flag: 'region-wood',
+    hint: 'in the Weeping Wood’s river, day or night' },
+  { key: 'glass_carp', water: ['river'], region: 'wood', when: 'day', weight: 5, bait: 2, rarity: 'uncommon', flag: 'region-wood',
+    hint: 'in the Weeping Wood’s river by day; it likes bait' },
+  { key: 'ice_char', water: ['ice'], region: 'teeth', when: 'any', weight: 10, bait: 1.5, rarity: 'uncommon', flag: 'region-teeth',
+    hint: 'through the ice holes high in the Teeth' },
 ];
 
 module.exports = { FISH };

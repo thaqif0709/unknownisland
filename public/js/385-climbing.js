@@ -1,4 +1,5 @@
   // ================= Climbing and gliding (P9, flag travel) =================
+  const climbSpeed = () => RULES.TRAVEL.CLIMB_SPEED * (myPatches.includes('silk_patch') ? 1.5 : 1);   // (the Mother's silk patch, C4)
   // Walk into a climbable palm (the tall ones) or a cliff (ground steeper than
   // RULES.TRAVEL.CLIFF_SLOPE, which you can't walk up) to grab it. W and S climb, A and D
   // go round the trunk or along the cliff, Space lets go. Climbing uses energy; with
@@ -66,7 +67,7 @@
       if (!o || o.state.gone) { letGo(); return; }
       const top = topOf(o), R = (o.r || .35) + .35;
       if (tired) hop.y -= TR.SLIDE_SPEED * dt;   // out of breath: slide down
-      else { hop.y += iz * TR.CLIMB_SPEED * dt; climb.ang += ix * 1.4 * dt; }
+      else { hop.y += iz * climbSpeed() * dt; climb.ang += ix * 1.4 * dt; }
       px = o.x + Math.sin(climb.ang) * R; pz = o.z + Math.cos(climb.ang) * R;
       face = climb.ang + Math.PI;   // facing the trunk
       if (hop.y <= 0) { hop.y = 0; if (iz < 0 || tired) climb = null; return; }   // back on the ground
@@ -80,7 +81,7 @@
     const s = WG.slopeAt(px, pz);
     if (s.g < TR.CLIFF_SLOPE * .75) { climb = null; return; }   // over the top
     const nx = -s.gx / s.g, nz = -s.gz / s.g;   // out from the face (downhill)
-    const up = tired ? -TR.SLIDE_SPEED : iz * TR.CLIMB_SPEED, across = tired ? 0 : ix * TR.CLIMB_SPEED * .6;
+    const up = tired ? -TR.SLIDE_SPEED : iz * climbSpeed(), across = tired ? 0 : ix * climbSpeed() * .6;
     const run = 1 / Math.max(1, s.g);   // climbing 1 m up a steep face moves you less than 1 m across
     const mx = px - nx * up * run * dt + nz * across * dt, mz = pz - nz * up * run * dt - nx * across * dt;
     if (heightAt(mx, mz) > .3 && !veilBlocks(mx, mz)) { px = mx; pz = mz; }

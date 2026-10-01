@@ -85,8 +85,9 @@ const COMMANDS = {
     return { pots: this.fires.filter(f => f.pot).map(f => f.id) };
   },
   // Set the clock (0 = midnight, .5 = noon; night is before .22 and from .8), the weather,
-  // and/or the player's hunger.
-  set(p, { time, weather, hunger, thirst, health, energy, day }) {
+  // and/or the player's hunger (and the like; warmth: the Teeth's, C6).
+  set(p, { time, weather, hunger, thirst, health, energy, day, warmth }) {
+    if (typeof warmth === 'number') { p.warmth = warmth; p.warmthSent = null; }
     if (typeof day === 'number') this.day = day;   // (the moon follows the day: WG.moonPhase)
     if (typeof health === 'number') { p.health = health; this.sendMe(p); }
     if (typeof energy === 'number') { p.energy = energy; this.sendMe(p); }

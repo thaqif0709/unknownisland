@@ -24,19 +24,28 @@ const on = () => WG.feature('fishing');
 const F = () => RULES.FISHING;
 const rand = (a, b) => a + Math.random() * (b - a);
 
-// What water is at (x, z): 'sea', 'spring' or null (land).
+// What water is at (x, z): 'sea', 'spring', 'river' or null (land). ('ice': an ice hole in the
+// Teeth, which onCast finds itself.)
 function waterAt(x, z) {
   const sp = WG.nearestSpring(x, z);
   if (Math.hypot(x - sp.x, z - sp.z) < F().SPRING_R) return 'spring';
-  return heightAt(x, z) < 0 ? 'sea' : null;
+  if (heightAt(x, z) >= 0) return null;
+  // a river (out in the wider world): within a river's width of its line
+  if (WG.feature('bigworld') && WG.RIVERS.some(pts => pts.some((a, i) => i > 0 && segDist(x, z, pts[i - 1], a) < F().RIVER_R))) return 'river';
+  return 'sea';
 }
-const regionOfWater = (x, z) => (Math.hypot(x, z) < F().LANDING_R ? 'landing' : null);
+function segDist(x, z, a, b) {
+  const dx = b[0] - a[0], dz = b[1] - a[1], t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
+}
+// Whose water: the Landing's, or (in the wider world) the region it's in.
+const regionOfWater = (x, z) => (Math.hypot(x, z) < F().LANDING_R ? 'landing' : WG.feature('bigworld') ? WG.worldRegionAt(x, z) : null);
 
 const methods = {
   // The fish that could bite in this water now, with their weights.
   fishFor(water, x, z, bait) {
     const night = WG.nightFactor(this.time) > .5, region = regionOfWater(x, z);
-    return CONTENT.FISH.filter(f => f.water.includes(water) && f.region === region
+    return CONTENT.FISH.filter(f => f.water.includes(water) && f.region === region && (!f.flag || WG.feature(f.flag))
       && (f.when === 'any' || (f.when === 'night') === night)
       && (!f.moon || (f.moon === 'full' && this.env.fullMoon)) && (!f.weather || (f.weather === 'rain' && this.env.rain)))
       .map(f => ({ f, w: f.weight * (bait && f.bait ? f.bait : 1) }));
@@ -68,8 +77,9 @@ const methods = {
     if (p.fishing) return this.reelIn(p);
     const C = F().CAST, k = num(power) ? Math.max(0, Math.min(1, power)) : .5;
     if (num(a)) p.face = a;
-    const d = C.MIN + (C.MAX - C.MIN) * k, x = p.x + Math.sin(p.face) * d, z = p.z + Math.cos(p.face) * d;
-    const water = waterAt(x, z);
+    const hole = this.iceHoleNear ? this.iceHoleNear(p) : null;   // by an ice hole (the Teeth, C6) the line drops through it
+    const d = C.MIN + (C.MAX - C.MIN) * k, x = hole ? hole.x : p.x + Math.sin(p.face) * d, z = hole ? hole.z : p.z + Math.cos(p.face) * d;
+    const water = hole ? 'ice' : waterAt(x, z);
     if (!water) return this.send(p, { t: 'toast', msg: 'The bobber lands on dry ground. Face the water and cast again.' });
     const bait = this.count(p, 'bait') > 0;
     p.fishing = { x: r2(x), z: r2(z), ox: p.x, oz: p.z, water, bait, state: 'wait', biteAt: Date.now() + this.biteWait(bait) * 1000, helped: new Set() };

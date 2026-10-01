@@ -105,7 +105,8 @@
       // leaping off a cliff drops you to the ground below (and a glide carries you out over it).
       const g = groundAt(px, pz);
       if (h.abs == null) h.abs = g + h.y;
-      if (updateGlide(h)) h.v = -RULES.TRAVEL.GLIDE_FALL; else h.v -= GRAVITY * dt;
+      if (updateGlide(h)) h.v = -RULES.TRAVEL.GLIDE_FALL * ((stats.inv.leaf_glider || 0) > 0 && WG.feature('region-wood') ? RULES.WOOD.GLIDER_FALL : 1);   // (a leaf glider in the bag sinks slower, C4)
+      else h.v -= GRAVITY * dt;
       h.abs += h.v * dt; h.y = h.abs - g;
     } else if (h.air) h.v -= GRAVITY * dt, h.y += h.v * dt;
     if (h.air) {

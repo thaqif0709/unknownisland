@@ -201,6 +201,10 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
+- **The White Ram (C6, flag `region-teeth`, off; the Teeth's boss).** See the Teeth's pack below.
+- **The Hanging Mother (C4, flag `region-wood`, off; the Wood's boss).** See the Wood's pack
+  below. Bosses now may have `kinds` (their own helper mobs, registered with the mob engine),
+  `onAppear(island, b)` and `onGone(island, b)` (after a wipe, leaving or being beaten).
 - **The Tidewife (C1, flag `bosses`, on; the Landing's boss).** `server/bosses/tidewife.js`:
   called by the Landing's chain (`region: 'landing'`, `next: 'stair'`), she appears on the east
   sand (140, -40) when `Caves.tideLevel` is below -2.5 and leaves whole once it's rising past
@@ -534,6 +538,47 @@ and journal entries carry `region`/`flag`, and its chain is in `server/content/s
 The browser side is one part, `108-the-stairs.js`, through `UI.things` (models, E labels,
 solidity, swing), `UI.itemIcons` and `UI.bugLooks`, plus `public/js/mobs/leaning.js`. Tests:
 `tests/server/stair.test.js`, `tests/browser/stairs.test.js`.
+The Weeping Wood's pack (C4, flag `region-wood`, off) follows the same pattern:
+`server/regions/wood.js` (`spawnMore`: giant, resin, vine, fruit, bigleaf, amber; the
+`roothollow` cave; `requests`, `bossHint`), `server/systems/wood.js` (E: an axe hews
+`RULES.WOOD.HARDWOOD` a day from a giant, the rest are picked or dug), its Stilled
+`server/mobs/hung.js` (night, under giants near frogs in the Wood: `hang`, out of reach
+through `adjust`; a frog in the dark within `HUNG.REACH` gets a ring (`creak`), then it
+drops and knocks; not on a frog `inLight`), river fish (`fishing.js` `waterAt` gives
+`'river'` near `WG.RIVERS` in the big world; fish may carry `flag`), the bow (`WEAPONS.bow`,
+`ammo: 'arrow'`), resin torches and the leaf glider (`380-jumping.js`: glide falls at
+`RULES.WOOD.GLIDER_FALL` while you carry one). Its boss, the Hanging Mother
+(`server/bosses/mother.js`, `next: 'mire'`): night only, leaves at dawn; out of reach while
+up (`adjust`), her shadow (a circle telegraph) chases a frog not `inLight` and she drops;
+her three vines are mob kinds of her own (`kinds: [mother_vine]`, grown in `onAppear`, cut in
+`onGone`); the last one cut sets her `fallen` for `FALLEN` s (light hurts her 2x), then the
+vines grow back. Trophies `mother_eye`, `mother_silk` (the `silk_patch`: climb 1.5x as fast,
+`385-climbing.js`; the Hung reach 1.5 m further). Browser: `109-the-wood.js` (models, labels,
+icons, the bow in hand through `UI.heldModels`, bug looks), `public/js/mobs/hung.js`,
+`public/js/mobs/mother.js`. `RULES.TRAVEL.MAX_HEIGHT` is 95 so the giants can be climbed.
+Tests: `tests/server/wood.test.js` (8), `tests/browser/wood.test.js` (3).
+The Teeth's pack (C6, flag `region-teeth`, off), the same way: `server/regions/teeth.js`
+(`spawnMore`: ice, crystal, pinesap, hare, icehole, silver `ore`; the `icecave`, dug into the
+cliff at (-4, -2750); `requests`, `bossHint`), `server/systems/teeth.js` (E on them;
+`teethBlizzard()`: up there a storm or fog storm is a blizzard, so is rain at night, and always
+while the Ram fights, sent as `teeth {blizzard}`; `inTeeth`, `inSnow` (above
+`RULES.TEETH.SNOW_LINE`, 260 m: above about 300 m the Teeth are nearly all cliff),
+`onBareRock`, `flameNear`, `iceHoleNear`: `fishing.js` `onCast` drops the line down the hole,
+water `'ice'`). Warmth is `server/systems/warmth.js`: `p.warmth` 0-100 (not saved), drained in
+the Teeth by `warmthDrain(p)` (`RULES.TEETH.WARMTH`: snow, night, blizzard, hood down; a fur
+cloak carried, the `fleece_patch`), given back by `p.warm` (fires, lanterns, torches) or by
+leaving the cold; at 0, `FREEZE` health a second (cause `'freeze'`); `chill(p, n)`; sent as
+`warmth {v}` and `welcome.warmth`. Its Stilled, `server/mobs/frozen.js`: only in blizzards above
+the snow line, walk at a frog who isn't warm, in light or `onBareRock`; touch `chill`s
+`FROZEN.DRAIN`; a flame near melts them. Its boss, the White Ram (`server/bosses/ram.js`,
+`next: 'ash'`, at (802, -2994): a snowfield with rock 10-28 m off in every direction): from
+nightfall to daybreak; fleece lets `FLEECE` of a blow through; `stalk` then `paw` (a line
+telegraph) then `charge` along it, trampling; `rockAhead` (steep ground or a boulder) ends a
+charge in `dazed` (blows `SKULL` times); won't go for a frog who is warm or in light. Trophies
+`ram_horn`, `ram_fleece`. Browser: `112-the-teeth.js` (models, icons, bugs, the warmth bar and
+frost, falling snow and the blizzard's white fog, `UI.teeth` for tests), snow on the ground in
+`040-terrain.js` and no flowers in it (`090`), `public/js/mobs/frozen.js`, `public/js/mobs/ram.js`.
+Tests: `tests/server/teeth.test.js` (9), `tests/browser/teeth.test.js` (3).
 (The start screen's "What's new" box and its Hidden Pages link were taken out on 1 Oct; the
 Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), holding V (sit) by a lit clay hearth sleeps there (`UI.sitHold` in
 `145-hearth-checkpoints.js`; a tap only sits), and 3 s asleep saves it as where you

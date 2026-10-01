@@ -3,7 +3,7 @@ id: C4
 title: Region pack: The Weeping Wood
 lane: content
 owner: edvin
-status: todo
+status: doing
 depends: [W5, W8, W9, P3, P9]
 flag: region-wood
 size: 2–3 sessions
@@ -28,11 +28,16 @@ server/regions/wood.js, new mob and boss files, server/content/*
 
 ## Done when
 
-- [ ] Playable from opening to beating the Hanging Mother, which opens the Mire.
+- [x] Playable from opening to beating the Hanging Mother, which opens the Mire.
 - [ ] Holds 30 fps on a mid-range phone (thinner undergrowth).
-- [ ] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
+- [x] `npm test` passes; Hidden Pages, its changelog, HANDOFF.md and README.md updated where players or developers would notice.
 - [ ] This file's `status` set to `done` in the PR that finishes it.
 
 ## Log
 
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->
+- 2026-10-01 edvin: first half, behind `region-wood` (off): the giants (climbable, hardwood
+  by axe), resin, vines, fruit, giant leaves, amber; bow and arrows, resin torches, leaf
+  glider; river fish; three bugs; the Hung; the root hollow; the 5-request chain; the Hanging
+  Mother (opens the Mire). Still to do: walkways, rain and mist, waterfalls; and checking
+  30 fps on a phone (can't be measured here).

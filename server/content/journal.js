@@ -9,6 +9,22 @@ const JOURNAL = [
   { key: 'stone_beetle', flag: 'region-stair', category: 'bugs', name: 'Stone beetle', rarity: 'common', description: 'Grey and ridged, like a pebble that changed its mind. Warm from the sun.' },
   { key: 'terrace_grasshopper', flag: 'region-stair', category: 'bugs', name: 'Terrace grasshopper', rarity: 'common', description: 'Jumps from one step to the next and never falls. Show-off.' },
   { key: 'wind_moth', flag: 'region-stair', category: 'bugs', name: 'Wind moth', rarity: 'rare', description: 'Only flies high on the steps at night, sideways on the wind. It never lands where you think.' },
+  // the Weeping Wood (C4)
+  { key: 'lantern_beetle', flag: 'region-wood', category: 'bugs', name: 'Lantern beetle', rarity: 'common', description: 'Its back glows like a coal you could hold. They gather where the Hung hang, and nobody knows why.' },
+  { key: 'glasswing', flag: 'region-wood', category: 'bugs', name: 'Glasswing', rarity: 'uncommon', description: 'You only see it when it crosses something: a leaf, a face, the sun.' },
+  { key: 'bark_mantis', flag: 'region-wood', category: 'bugs', name: 'Bark mantis', rarity: 'rare', description: 'Exactly the colour of the giants’ bark, and exactly as patient. It was watching you first.' },
+  { key: 'hung_seen', flag: 'region-wood', category: 'stilled', name: 'The Hung', rarity: 'rare', description: 'Pale shapes hanging from the high branches by long arms. In the dark they let go. A light kept them up there.' },
+  { key: 'catfish', flag: 'region-wood', category: 'fish', name: 'River catfish', rarity: 'common', description: 'Whiskers as long as your arm and a face like an old frog. It doesn’t mind the dark water at all.' },
+  { key: 'glass_carp', flag: 'region-wood', category: 'fish', name: 'Glass carp', rarity: 'uncommon', description: 'You can see its heart, and the river through it. It tastes of almost nothing.' },
+  { key: 'mother_silk', flag: 'region-wood', category: 'relics', name: 'A strand of the Mother’s silk', rarity: 'rare', description: 'Thicker than vine rope and colder than the river. It still sways when there is no wind.' },
+  { key: 'mother_eye', flag: 'region-wood', category: 'relics', name: 'The Hanging Mother’s eye', rarity: 'rare', description: 'Milky, the size of a coconut, and light. It looks up.' },
+  // the Teeth (C6)
+  { key: 'snow_moth', flag: 'region-teeth', category: 'bugs', name: 'Snow moth', rarity: 'uncommon', description: 'White on white, it only shows when it flies against the dark. It is warm to hold, which seems unfair.' },
+  { key: 'ice_louse', flag: 'region-teeth', category: 'bugs', name: 'Ice louse', rarity: 'common', description: 'A tiny clear thing that lives in the ice and crawls out to bask. You can see it shiver.' },
+  { key: 'ice_char', flag: 'region-teeth', category: 'fish', name: 'Ice char', rarity: 'uncommon', description: 'Red-bellied and silver-backed, from water that should be too cold for anything. It flaps like it is angry about it.' },
+  { key: 'frozen_seen', flag: 'region-teeth', category: 'stilled', name: 'The Frozen', rarity: 'rare', description: 'Figures white with frost that come with the blizzard and walk into the wind. Their hands take the warmth out of you. They wouldn’t come near the fire, or the rocks.' },
+  { key: 'ram_horn', flag: 'region-teeth', category: 'relics', name: 'The White Ram’s horn', rarity: 'rare', description: 'One curl of it is longer than you are. There is ice in the rings, and it never melts.' },
+  { key: 'ram_fleece', flag: 'region-teeth', category: 'relics', name: 'A hank of the White Ram’s fleece', rarity: 'rare', description: 'Thick, greasy and warmer than a fire. It smells of snow.' },
   { key: 'leaning_seen', flag: 'region-stair', category: 'stilled', name: 'The Leaning', rarity: 'rare', description: 'Pale shapes on the steps that lean into the wind and only move when it blows. You stood behind a stone and it went past.' },
   // shells
   { key: 'spiral_shell', category: 'shells', name: 'Spiral shell', rarity: 'common', description: 'Hold it to your ear and it hums. Everything here hums.' },
