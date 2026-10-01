@@ -112,6 +112,7 @@
       fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
       slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
+      combat: false,     // P6: weapons, attacking (left click, hold for heavy), dodging (double-tap Shift), downed and revived
       tools: false,      // P3: tools are items in the bag, used from your hand, that wear out (needs slots)
       'region-stair': false,   // C3: the Stairs' own things (flint, herbs, flax, ruins, standing stones, tin), bugs, the Leaning, the old mine, its request chain
     },
@@ -121,6 +122,37 @@
       FLY_SPEED: 30,           // across, where the camera looks
       RISE_SPEED: 14,          // up (Space) and down (Shift)
       MAX_HEIGHT: 200,         // above the ground or the sea
+    },
+    // Fighting (P6, flag combat). Per weapon: damage a hit, reach (m), arc (half-angle either
+    // side of where you aim, radians), swing (seconds between attacks), knock (m it pushes a
+    // creature back), uses (how long it lasts; it wears like a tool with the tools flag),
+    // combo (swords: the third hit in a row hits harder and knocks back), ammo (the sling throws
+    // a stone from your bag), tags (damage types a creature can be weak to, e.g. silver).
+    // Axes and pickaxes count; bare hands are 'fist'.
+    COMBAT: {
+      WEAPONS: {
+        fist: { damage: 3, reach: 1.5, arc: .8, swing: .5, knock: .3 },
+        axe: { damage: 7, reach: 1.8, arc: .8, swing: .55, knock: .6 },
+        pickaxe: { damage: 6, reach: 1.8, arc: .6, swing: .6, knock: .5 },
+        ironpick: { damage: 8, reach: 1.8, arc: .6, swing: .6, knock: .5 },
+        shovel: { damage: 4, reach: 1.8, arc: .7, swing: .6, knock: .8 },
+        sword_wood: { damage: 6, reach: 1.9, arc: .9, swing: .4, knock: .5, uses: 80, combo: true },
+        sword_bronze: { damage: 10, reach: 2, arc: .9, swing: .4, knock: .6, uses: 150, combo: true },
+        sword_iron: { damage: 13, reach: 2, arc: .9, swing: .4, knock: .7, uses: 200, combo: true },
+        sword_silver: { damage: 13, reach: 2, arc: .9, swing: .4, knock: .7, uses: 250, combo: true, tags: ['silver'] },
+        sword_obsidian: { damage: 18, reach: 2.1, arc: .9, swing: .4, knock: .8, uses: 300, combo: true },
+        spear: { damage: 9, reach: 2.9, arc: .35, swing: .6, knock: .5, uses: 120 },
+        club: { damage: 11, reach: 1.8, arc: .7, swing: .75, knock: 2.2, uses: 140 },
+        sling: { damage: 7, reach: 14, arc: .12, swing: .9, knock: .3, uses: 150, ammo: 'stone' },
+      },
+      HEAVY: { HOLD: .45, MULT: 1.8, ENERGY: 12, SWING: 1.4 },   // hold the attack this long: more damage, for energy and a slower swing
+      COMBO: { WINDOW: 1.2, MULT: 1.4, KNOCK: 1.8 },   // a sword's third hit within WINDOW s of the last
+      LAG: .15,                 // seconds of slack for where a creature was when you swung
+      DODGE: { TIME: .35, DIST: 3.2, ENERGY: 10, GAP: .8 },   // untouchable for TIME s while rolling DIST m; at most one every GAP s
+      DOWNED: { TIME: 20, REVIVE: 1.5, REACH: 2.5, HEALTH: 30 },   // seconds friends have to pick you up (holding E for REVIVE s, within REACH m); health after
+      LIGHT: 7,                 // a lit fire or lantern this close, or a torch in hand: your blows carry light (the Stilled are weak to it)
+      STILLED_HP: 12,           // the Stilled take a few blows to break (1 without combat)
+      REFORM: 90,               // seconds before a broken Stilled forms again where it broke (at night, in fog)
     },
     // Tools that wear out (P3, flag tools): how many uses each lasts, when it warns you (a share
     // of its uses left), and what a repair at a lit hearth costs (a share of its recipe).
@@ -170,6 +202,8 @@
   const ITEMS = { wood: 'Wood', stone: 'Stone', clay: 'Clay', copper: 'Copper ore', iron: 'Iron ore', seeds: 'Seeds', oil: 'Lamp oil', torch: 'Torch',
     berries: 'Berries', coconut: 'Coconut',
     shovel: 'Shovel', pickaxe: 'Stone pickaxe', axe: 'Copper axe', ironpick: 'Iron pickaxe',   // (tools: items with the tools flag, P3)
+    sword_wood: 'Wooden sword', sword_bronze: 'Bronze sword', sword_iron: 'Iron sword', sword_silver: 'Silver sword', sword_obsidian: 'Obsidian sword',
+    spear: 'Spear', club: 'Club', sling: 'Sling',   // (weapons, P6)
     flint: 'Flint', herbs: 'Healing herbs', flax: 'Flax', bricks: 'Old bricks', tin: 'Tin ore' };   // (the last five: the Stairs, C3)
   // More about an item than its name (all optional): kind 'food' is eaten from a slot (food,
   // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise).
@@ -182,10 +216,15 @@
     pickaxe: { kind: 'tool', tool: 'pick', returns: 'stone' },
     ironpick: { kind: 'tool', tool: 'pick', returns: 'iron' },
     axe: { kind: 'tool', tool: 'axe', returns: 'copper' },
+    // weapons (P6, flag combat): one to a slot, wearing out like tools; stats in RULES.COMBAT.WEAPONS
+    sword_wood: { kind: 'weapon', returns: 'wood' }, sword_bronze: { kind: 'weapon', returns: 'copper' },
+    sword_iron: { kind: 'weapon', returns: 'iron' }, sword_silver: { kind: 'weapon' }, sword_obsidian: { kind: 'weapon' },
+    spear: { kind: 'weapon', returns: 'stone' }, club: { kind: 'weapon', returns: 'wood' }, sling: { kind: 'weapon' },
   };
   const itemInfo = key => {
     const i = ITEM_INFO[key] || {};
     if (i.kind === 'tool') return { ...i, stack: 1, uses: RULES.TOOLS.USES[key] };
+    if (i.kind === 'weapon') return { ...i, stack: 1, uses: RULES.COMBAT.WEAPONS[key].uses };
     return { ...i, stack: i.stack || (i.kind === 'food' ? RULES.SLOTS.FOOD_STACK : RULES.SLOTS.STACK) };
   };
 
@@ -224,6 +263,19 @@
       desc: 'Pressed from seeds. An offering for the old stone lanterns: one lights a lantern for about two days.' },
     { id: 'torch', kind: 'item', name: 'Torch', cost: { wood: 2, seeds: 1 }, gives: { torch: 1 }, flag: 'caves',
       desc: 'A stick wrapped in seed-oil rags. Hold it for light underground, where it burns for about five minutes.' },
+    // weapons (P6, flag combat): made in your hands, held to fight (stats in RULES.COMBAT.WEAPONS)
+    { id: 'sword_wood', kind: 'item', name: 'Wooden sword', cost: { wood: 4 }, gives: { sword_wood: 1 }, flag: 'combat',
+      desc: 'A practice blade. Three quick strikes in a row: the third knocks them back.' },
+    { id: 'spear', kind: 'item', name: 'Spear', cost: { wood: 3, stone: 2 }, gives: { spear: 1 }, flag: 'combat',
+      desc: 'A stone point on a long shaft. Reaches further than anything else, in a narrow line.' },
+    { id: 'club', kind: 'item', name: 'Club', cost: { wood: 6, stone: 1 }, gives: { club: 1 }, flag: 'combat',
+      desc: 'Slow and heavy. Whatever it hits is thrown back.' },
+    { id: 'sword_bronze', kind: 'item', name: 'Bronze sword', cost: { wood: 1, copper: 3, tin: 1 }, gives: { sword_bronze: 1 }, flag: 'combat',
+      desc: 'Copper and tin from the Stairs, worked together. Harder and keener than wood.' },
+    { id: 'sword_iron', kind: 'item', name: 'Iron sword', cost: { wood: 1, iron: 4 }, gives: { sword_iron: 1 }, flag: 'combat',
+      desc: 'Heavy, sharp and long-lasting.' },
+    { id: 'sling', kind: 'item', name: 'Sling', cost: { wood: 1, flax: 2 }, gives: { sling: 1 }, flag: 'combat',
+      desc: 'A flax cord and pouch. Throws a stone from your bag at whatever you aim at, far off.' },
   ];
 
   // Cloak patches: stitched from things you have found. Each helps, and costs.

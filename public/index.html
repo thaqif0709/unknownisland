@@ -381,6 +381,11 @@ input{font-family:var(--hand);font-size:18px;padding:6px 10px;color:var(--card-i
 .xhair.use .tk,.xhair.use .tk-bg{opacity:0}
 .xhair.hit .ring,.xhair.hit .tk{stroke:var(--rose)}
 .xhair.hit .dot{fill:var(--rose)}
+/* fighting (P6, flag combat): down, and picking a friend up */
+.downtag,.revivetag{position:fixed;left:50%;bottom:calc(var(--invH,80px) + 70px);transform:translateX(-50%);z-index:5;pointer-events:none;
+  font-family:var(--hand);font-weight:600;font-size:17px;padding:5px 14px;border:2px solid var(--ink);border-radius:14px;background:rgba(245,236,215,.95);color:var(--ink)}
+.downtag{background:#E6C9C0}
+.downtag.hidden,.revivetag.hidden{display:none}
 /* creative mode (admins, for testing): a small tag at the top */
 .creativetag{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translateX(-50%);z-index:5;pointer-events:none;
   font-family:var(--hand);font-weight:600;font-size:15px;padding:3px 12px;border:2px solid var(--ink);border-radius:12px;background:#F2D68A;color:var(--ink)}
@@ -444,6 +449,7 @@ html.inkcursor #mapCanvas.dragging{cursor:grabbing!important}
   <button class="small" id="btnMap" type="button">Map</button>
   <button class="small" id="btnBook" type="button">Recipes</button>
   <button class="small" id="btnBag" type="button" hidden>Bag</button>
+  <button class="small" id="btnAttack" type="button" hidden>Attack</button>
   <button class="small" id="btnRun" type="button" aria-pressed="false">Run</button>
   <button id="btnAct" type="button">Act</button>
 </div>

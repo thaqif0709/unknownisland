@@ -38,6 +38,7 @@ class Mobs {
     this.nextId = 1;
     this.kindState = {};   // per kind, for its tick() (timers and such)
   }
+  static def(kind) { return KINDS[kind] || null; }   // a kind's definition (P6: its radius, for hitting it)
   static kinds() { return Object.keys(KINDS); }
   def(kind) { return KINDS[kind]; }
   of(kind) { return this.list.filter(m => m.kind === kind && !m.gone); }
@@ -47,7 +48,8 @@ class Mobs {
   spawn(kind, x, z, opts = {}) {
     const def = KINDS[kind];
     if (!def) throw new Error(`no mob kind "${kind}"`);
-    const mob = { face: 0, ...opts, id: this.nextId++, kind, x, z, hp: opts.hp ?? def.hp ?? 1, state: opts.state || def.start || 'idle', t: 0 };
+    const hp = opts.hp ?? def.hp ?? 1;
+    const mob = { face: 0, ...opts, id: this.nextId++, kind, x, z, hp, maxHp: hp, state: opts.state || def.start || 'idle', t: 0 };
     this.list.push(mob);
     return mob;
   }
@@ -63,7 +65,7 @@ class Mobs {
     mob.hp = Math.max(0, mob.hp - dmg);
     const hit = { amount: dmg, source: tags, from };
     if (def.onHit) def.onHit(this.island, mob, hit);
-    this.island.broadcast({ t: 'mobhit', id: mob.id, hp: r2(mob.hp), max: def.hp, dmg: r2(dmg) });
+    this.island.broadcast({ t: 'mobhit', id: mob.id, hp: r2(mob.hp), max: mob.maxHp ?? def.hp, dmg: r2(dmg) });
     if (mob.hp <= 0) {
       mob.dead = true;
       if (def.onDeath) def.onDeath(this.island, mob, hit);

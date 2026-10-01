@@ -30,6 +30,7 @@ const methods = {
   async knock(p) {
     const now = Date.now(), K = RULES.KNOCK;
     if (p.dead || p.knockedUntil > now) return;
+    if (this.combatGuard(p, K.HEALTH)) return;   // fighting (P6): rolled clear, or the blow downs you
     p.knockedUntil = now + K.DOWN_MS;
     p.health = Math.max(1, p.health - K.HEALTH);
     p.dread = Math.min(100, p.dread + K.DREAD);

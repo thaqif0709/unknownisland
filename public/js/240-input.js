@@ -4,7 +4,8 @@
     ['forward', 'Walk forward', 'KeyW'], ['back', 'Walk back', 'KeyS'], ['left', 'Walk left', 'KeyA'], ['right', 'Walk right', 'KeyD'],
     ['sprint', 'Sprint (hold)', 'ShiftLeft'], ['act', 'Use / pick up', 'KeyE'], ['build', 'Quick-build campfire', 'KeyF'],
     ['book', 'Recipe book', 'KeyB'], ['journal', 'Journal', 'KeyJ'], ['map', 'Map', 'KeyM'], ['chat', 'Open chat', 'Enter'], ['hood', 'Hood up / down', 'KeyT'], ['drop', 'Drop held item (Shift: all)', 'KeyG'], ['jump', 'Jump (hold to leap higher and forward)', 'Space'], ['cycle', 'Next item slot (Shift: back)', 'KeyQ'], ['sit', 'Sit down / get up', 'KeyV'], ['call', 'Call out to friends', 'KeyC'],
-    ['inventory', 'Open the bag', 'KeyI', 'slots'],   // a 4th value: only shown while that flag is on
+    ['inventory', 'Open the bag', 'KeyI', 'slots'],
+    ['attack', 'Attack (hold: heavy; or click with mouse-look)', 'KeyR', 'combat'],   // a 4th value: only shown while that flag is on
   ];
   const DEFAULT_BINDS = Object.fromEntries(ACTIONS.map(([a, , k]) => [a, k]));
   const PREFS_KEY = 'unknown-island-prefs';
@@ -204,6 +205,18 @@
       case 'pickaxe': case 'ironpick': handle();
         fill(key === 'ironpick' ? '#9AA4B0' : '#A9A193', () => { g.moveTo(24, 10); g.quadraticCurveTo(44, 12, 56, 32); g.quadraticCurveTo(44, 22, 34, 22); g.lineTo(30, 18); g.closePath(); }); break;
       case 'axe': handle(); fill('#D9803A', () => { g.moveTo(36, 12); g.quadraticCurveTo(56, 12, 56, 30); g.lineTo(42, 30); g.lineTo(36, 22); g.closePath(); }); break;
+      // weapons (P6): a blade on the diagonal, a spear, a club, a sling
+      case 'sword_wood': case 'sword_bronze': case 'sword_iron': case 'sword_silver': case 'sword_obsidian': {
+        const col = { sword_wood: '#B98A62', sword_bronze: '#C08A4A', sword_iron: '#9AA4B0', sword_silver: '#E6EAF0', sword_obsidian: '#3A3646' }[key];
+        fill(col, () => { g.moveTo(22, 42); g.lineTo(48, 10); g.lineTo(54, 8); g.lineTo(52, 14); g.lineTo(26, 46); g.closePath(); });
+        g.lineWidth = 5; g.beginPath(); g.moveTo(18, 38); g.lineTo(30, 50); g.stroke();   // the guard
+        g.lineWidth = 6; g.strokeStyle = INK; g.beginPath(); g.moveTo(22, 46); g.lineTo(12, 56); g.stroke();
+        g.lineWidth = 3.5; g.strokeStyle = '#8A6A52'; g.beginPath(); g.moveTo(22, 46); g.lineTo(12, 56); g.stroke(); g.strokeStyle = INK; g.lineWidth = 3; break; }
+      case 'spear': g.lineWidth = 5; g.beginPath(); g.moveTo(10, 56); g.lineTo(46, 18); g.stroke(); g.lineWidth = 3; g.strokeStyle = '#A57A55'; g.beginPath(); g.moveTo(10, 56); g.lineTo(46, 18); g.stroke(); g.strokeStyle = INK;
+        fill('#A9A193', () => { g.moveTo(44, 14); g.lineTo(56, 6); g.lineTo(50, 20); g.closePath(); }); break;
+      case 'club': fill('#9A7055', () => { g.moveTo(14, 54); g.lineTo(20, 58); g.lineTo(52, 22); g.quadraticCurveTo(56, 8, 44, 10); g.closePath(); }); break;
+      case 'sling': g.lineWidth = 2; g.beginPath(); g.moveTo(14, 12); g.quadraticCurveTo(20, 40, 32, 46); g.quadraticCurveTo(44, 40, 50, 12); g.stroke();
+        fill('#C8B48A', () => g.ellipse(32, 46, 9, 6, 0, 0, 7)); break;
     }
     const url = c.toDataURL(); itemIcons.set(key, url); return url;
   }

@@ -325,6 +325,30 @@ island.combat.damagePlayer(p, amount, { from, knock })   // -> downed state, rev
 island.combat.onDowned(p) / onRevived(p)
 ```
 
+As built (P6 first part, flag `combat`): the methods are on the island itself (`server/systems/combat.js`):
+
+- `island.damagePlayer(p, amount, { knock })` -> 'dodged' | 'downed' | 'knocked' | 'hurt'. A blow
+  while rolling misses; one that would take the last of your health leaves you down instead of
+  dead; `knock: true` knocks you down as `island.knock(p)` does. Anything that hurts players
+  (bosses, C0) should call this, or `island.knock(p)`, which now asks `island.combatGuard(p,
+  amount)` first. `island.dodging(p)` for creatures that do something else to you (a drag, a
+  shove) after the blow: skip it while that's true.
+- Down: `p.downedUntil` (and `p.knockedUntil` the same, so you can't move or act). Broadcasts
+  `{ t: 'downed', id, until }` and `{ t: 'revived', id, by }` (`by` null when time ran out).
+  A friend sends `{ t: 'revive', id }` and, `DOWNED.REVIVE` s later, `{ t: 'revive', id, done }`.
+  Out of time: the hearth (checkpoints, P4) or `respawnPoint` (the beach). Optional hooks
+  `island.onDowned(p)` / `island.onRevived(p)` are called if something defines them.
+- Attacking: `{ t: 'attack', heavy, a }` (a = where you aim). Weapons and their stats are
+  `RULES.COMBAT.WEAPONS` (axes and pickaxes count; 'fist' bare-handed); weapons are items
+  (`ITEM_INFO` kind 'weapon', one to a slot, worn like tools). Hits go through
+  `island.mobs.hit(mob, { amount, source, from })` with source tags: the weapon's type
+  ('sword', 'spear', 'club', 'sling', 'fist', 'axe', 'pick', 'shovel'), its `tags` ('silver'),
+  'light' (a torch in hand, or a lit fire or lantern within `COMBAT.LIGHT`) and 'heavy'. So a
+  creature says what hurts it with `weak: { light: 2, silver: 2, ... }`. A blow shoves a
+  creature `knock` m back (not one in a cave: `mob.cave` or `mob.under` set).
+- Dodging: `{ t: 'dodge' }`; `p.dodgeUntil`. `island.mobs.constructor.def(kind)` gives a kind's
+  definition. Mobs now have `maxHp` (spawn `opts.hp` overrides the kind's `hp`).
+
 ## 10. Bosses (C0)
 
 ```js

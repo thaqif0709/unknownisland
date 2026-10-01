@@ -25,9 +25,7 @@ module.exports = {
     strike(mob, island, dt, { players }) {
       for (const p of players) {
         if (!island.mobs.inTelegraph(mob, p.x, p.z)) continue;
-        p.health = Math.max(1, p.health - 10);
-        island.send(p, { t: 'toast', msg: 'The straw dummy slams the ground where you stood.' });
-        island.sendMe(p);
+        if (island.damagePlayer(p, 10) === 'hurt') island.send(p, { t: 'toast', msg: 'The straw dummy slams the ground where you stood.' });   // (dodged or downed with combat, P6)
       }
       mob.telegraphed = null;
       return 'recover';

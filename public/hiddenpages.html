@@ -88,7 +88,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <b>Start</b><a href="#start">Getting started</a><a href="#controls">Controls</a><a href="#hud">The screen</a>
     <b>Surviving</b><a href="#survival">Food, water, health</a><a href="#water">Clean water &amp; buckets</a><a href="#moving">Moving, jumping, sitting</a><a href="#time">Day, night, moon, weather</a>
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
-    <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
+    <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#fighting" data-feature="combat">Fighting</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
     <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a><a href="#minigames" data-feature="fishing">Landing a fish</a>
     <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#stairs" data-feature="region-stair">The Stairs</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
     <b>History</b><a href="#changelog">Changelog</a>
@@ -119,6 +119,9 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td><kbd>G</kbd> / <kbd>Shift</kbd>+<kbd>G</kbd></td><td>Drop one / all of the held item</td></tr>
         <tr data-feature="slots"><td><kbd>I</kbd></td><td>Open the bag (drag stacks between the bag and the hotbar; phones: the <b>Bag</b> button)</td></tr>
         <tr data-feature="tools"><td><kbd>E</kbd> at a lit hearth, worn tool in hand</td><td>Mend the tool</td></tr>
+        <tr data-feature="combat"><td>Click (mouse-look) or <kbd>R</kbd></td><td>Attack where you aim; hold, then let go, for a heavy swing</td></tr>
+        <tr data-feature="combat"><td><kbd>Shift</kbd> twice, quickly</td><td>Roll out of the way</td></tr>
+        <tr data-feature="combat"><td><kbd>E</kbd> (hold) beside a friend who's down</td><td>Pick them up</td></tr>
         <tr><td><kbd>E</kbd> (hold, with something to eat or drink in hand)</td><td>Eat or drink one (food in a slot, or a bucket of clean water). Keep holding for the next</td></tr>
         <tr><td><kbd>F</kbd></td><td>Quick-build a campfire</td></tr>
         <tr><td><kbd>V</kbd></td><td>Sit down / get up<span data-feature="checkpoints">. By a lit clay hearth: sleep there, and wake there</span></td></tr>
@@ -309,7 +312,30 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li>They can't enter light or clear air: fires and lit lanterns make safe circles.</li>
         <li>They're drawn to frogs who are alone or frightened.</li>
         <li>If one reaches you, you're knocked down: &minus;<span data-r="KNOCK.HEALTH"></span> health, +<span data-r="KNOCK.DREAD"></span> dread, and half of what you carry spills into a sack on the ground where you fell. Go back for it&hellip; carefully.</li>
+        <li data-feature="combat">They can be fought: it takes a few blows (blows in firelight, lantern light or by torchlight, and silver, hit twice as hard), and one that breaks scatters into fog. It forms again where it broke, later that night.</li>
       </ul></details>
+    </section>
+
+    <section id="fighting" data-feature="combat"><h2>Fighting</h2>
+      <ul>
+        <li><b>Attack:</b> with mouse-look, click; or press <kbd>R</kbd>; on a phone, the <b>Attack</b> button. You swing what's in your hand where you're aiming: a weapon, an axe or pickaxe, or your fists.</li>
+        <li><b>Heavy swing:</b> hold the attack for a moment, then let go. It hits <span data-r="COMBAT.HEAVY.MULT"></span>&times; as hard and costs <span data-r="COMBAT.HEAVY.ENERGY"></span> energy.</li>
+        <li><b>Roll:</b> double-tap <kbd>Shift</kbd> (on a phone, swipe the Attack button). For <span data-r="COMBAT.DODGE.TIME"></span> s nothing can touch you, for <span data-r="COMBAT.DODGE.ENERGY"></span> energy. Every creature's attack is marked on the ground before it lands: that's your moment.</li>
+        <li><b>Light is a weapon:</b> holding a torch, or close to a lit fire or lantern, your blows carry light. The things of the fog don't like it.</li>
+        <li><b>Down, not dead:</b> a blow that would kill you leaves you down instead. A friend can pick you up by holding <kbd>E</kbd> beside you within <span data-r="COMBAT.DOWNED.TIME"></span> s. Otherwise you come to at your hearth (or on the beach), aching.</li>
+      </ul>
+      <h3>Weapons</h3>
+      <p>Made from the recipe book, held like a tool (<kbd>1</kbd>&ndash;<kbd>8</kbd>), and worn down with use<span data-feature="tools"> (mend them at a lit hearth, like tools)</span>.</p>
+      <div class="scroll"><table>
+        <tr><th>Weapon</th><th>Damage</th><th>Reach (m)</th><th>What's special</th></tr>
+        <tr><td>Wooden sword</td><td data-r="COMBAT.WEAPONS.sword_wood.damage"></td><td data-r="COMBAT.WEAPONS.sword_wood.reach"></td><td>Three quick strikes in a row: the third hits harder and knocks back</td></tr>
+        <tr><td>Bronze sword</td><td data-r="COMBAT.WEAPONS.sword_bronze.damage"></td><td data-r="COMBAT.WEAPONS.sword_bronze.reach"></td><td>The same, keener (needs tin from the Stairs)</td></tr>
+        <tr><td>Iron sword</td><td data-r="COMBAT.WEAPONS.sword_iron.damage"></td><td data-r="COMBAT.WEAPONS.sword_iron.reach"></td><td>The same, heavier and long-lasting</td></tr>
+        <tr><td>Spear</td><td data-r="COMBAT.WEAPONS.spear.damage"></td><td data-r="COMBAT.WEAPONS.spear.reach"></td><td>The longest reach, in a narrow line</td></tr>
+        <tr><td>Club</td><td data-r="COMBAT.WEAPONS.club.damage"></td><td data-r="COMBAT.WEAPONS.club.reach"></td><td>Slow, and throws whatever it hits a long way back</td></tr>
+        <tr><td>Sling</td><td data-r="COMBAT.WEAPONS.sling.damage"></td><td data-r="COMBAT.WEAPONS.sling.reach"></td><td>Throws a stone from your bag at the first thing in line (flax from the Stairs)</td></tr>
+        <tr><td>Fists</td><td data-r="COMBAT.WEAPONS.fist.damage"></td><td data-r="COMBAT.WEAPONS.fist.reach"></td><td>Better than nothing</td></tr>
+      </table></div>
     </section>
 
     <section id="lanterns"><h2>Stone lanterns</h2>
@@ -470,6 +496,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="death"><h2>Getting hurt and dying</h2>
       <ul>
         <li>Hunger, thirst, the cold and the Stilled all hurt you. The screen edges glow red below half health.</li>
+        <li data-feature="combat">A creature's blow never kills you outright: it leaves you down, for a friend to pick up (see <a href="#fighting">Fighting</a>).</li>
         <li>If your health hits zero you collapse. You wake up back on the beach<span data-feature="checkpoints"> (or by the hearth you last slept at)</span> with fresh stats: <b>you keep your tools, but lose everything you were carrying.</b></li>
       </ul>
     </section>
@@ -481,6 +508,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="combat"><b>Fighting:</b> swords, a spear, a club and a sling; heavy swings, rolling out of the way, and being picked up by a friend when you're down. The Stilled can be broken into fog, for a while.</li>
         <li data-feature="tools"><b>Tools wear out:</b> tools are carried in your bag and used from your hand. They wear down with every use, break into one of their material, and can be mended at a lit hearth.</li>
         <li data-feature="region-stair"><b>The Stairs come alive:</b> flint, healing herbs, flax, old brick walls, standing stones and tin; three bugs of their own; something that comes out on windy nights; an old mine; and the Stairs' own run of carvings.</li>
         <li data-feature="checkpoints"><b>Sleeping looks like sleeping:</b> you curl up by a hearth in half a second, under a thick blanket in your cloak's colour that drapes over you and spills onto the ground, eyes closed, with z's floating up out of your head.</li>
