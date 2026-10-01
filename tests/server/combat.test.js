@@ -1,7 +1,7 @@
 // Fighting (P6, flag combat): swings hit what's in reach and in the arc, a sword's third quick
 // hit knocks back, heavy swings cost energy, the sling throws stones, a roll dodges a blow,
-// a blow that would kill you leaves you down for a friend to pick up, and the Stilled break
-// into fog.
+// a blow that would kill you leaves you down for a friend to pick up, the Stilled break into
+// fog, and a torch swings with fire or is thrown to burst. (Night fights: combat-night.test.js.)
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { startServer } = require('../helpers/server');
@@ -92,6 +92,35 @@ test('the sling throws a stone from the bag at the first creature in line', asyn
   assert.deepEqual(hits.map(h => h.id), [d.id]);
   await c.settle();
   assert.equal(c.me.inv.stone, 1, 'one stone thrown');
+});
+
+test('a torch swings with fire, and a heavy swing throws it to burst where it lands', async () => {
+  const { c, at } = await fighter('torch');
+  await hold(c, 'torch');
+  await c.test('give', { inv: { torch: 1 } });   // two in all
+  const close = await spawn(c, 'dummy', at.x, at.z + 1.4);
+  const [h] = await swing(c);
+  assert.equal(h.id, close.id);
+  assert.equal(h.dmg, W.torch.damage * 2, 'a lit torch burns (the dummy is weak to fire)');
+  await c.test('mobHit', { mob: close.id, amount: 1000 });   // out of the way
+  const first = await spawn(c, 'dummy', at.x, at.z + 6);
+  const next = await spawn(c, 'dummy', at.x + 1, at.z + 6 + 1);   // within the burst
+  const clear = await spawn(c, 'dummy', at.x + K.THROW.RADIUS + 2, at.z + 6);   // outside it
+  await sleep(W.torch.swing * K.HEAVY.SWING * 1000);
+  const n = c.messages.length;
+  const burst = c.next(m => m.t === 'burst');
+  c.send({ t: 'attack', a: 0, heavy: true });
+  const b = await burst;
+  assert.ok(Math.hypot(b.x - first.x, b.z - first.z) < .01, 'lands on the first one in line');
+  assert.equal(b.r, K.THROW.RADIUS);
+  await sleep(200);
+  const hits = c.messages.slice(n).filter(m => m.t === 'mobhit');
+  assert.deepEqual(hits.map(x => x.id).sort(), [first.id, next.id].sort(), 'everything in the burst, nothing past it');
+  assert.ok(hits.every(x => x.dmg === K.THROW.DAMAGE * 2));
+  assert.ok(c.messages.slice(n).some(m => m.t === 'shot' && m.k === 'torch'), 'seen flying');
+  await c.settle();
+  assert.equal(c.me.inv.torch, 1, 'one torch thrown');
+  assert.ok(clear);
 });
 
 test('a roll dodges the blow; too tired, you can’t roll', async () => {

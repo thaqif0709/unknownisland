@@ -74,7 +74,8 @@ module.exports = {
       if (!best) return;
       const dx = best.x - s.x, dz = best.z - s.z, d = Math.hypot(dx, dz);
       if (d < S.REACH) { module.exports.onTouch(island, s, best, now); return; }
-      const step = Math.min(d, S.SPEED * dt), base = Math.atan2(dx, dz);
+      const slow = WG.feature('combat') && island.inLight && island.inLight(best) ? RULES.COMBAT.LIGHT_SLOW : 1;   // (P6) light slows them
+      const step = Math.min(d, S.SPEED * dt * slow), base = Math.atan2(dx, dz);
       for (const off of [0, .6, -.6, 1.2, -1.2]) {   // go round clear patches if it can
         const nx = s.x + Math.sin(base + off) * step, nz = s.z + Math.cos(base + off) * step;
         if (island.fogHere(nx, nz, lights) >= S.FOG_MIN && heightAt(nx, nz) > .2) { s.x = nx; s.z = nz; s.face = base; break; }

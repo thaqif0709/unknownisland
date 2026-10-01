@@ -81,14 +81,27 @@
     else if (m.k === 'heavy') startSwing(r.av, 'mine', .5);
     else if (m.k === 'dodge') r.rollT = 0;
   });
-  // a sling stone in flight, and a Stilled breaking into fog
-  const shots = [];
+  // a sling stone (or a thrown torch) in flight, a torch bursting into fire, and a Stilled
+  // breaking into fog
+  const shots = [], bursts = [];
   const stoneGeo = new THREE.SphereGeometry(.07, 6, 4);
+  const torchGeo = new THREE.CylinderGeometry(.04, .05, .5, 6);
+  const torchM = new THREE.MeshBasicMaterial({ color: 0xFF9A3C });
+  const burstGeo = new THREE.SphereGeometry(1, 14, 10);
+  const fxFloor = (under, x, z) => (under ? caveFloorAt(under, x, z) : groundAt(x, z));
   UI.net.on('shot', m => {
     const to = m.to || [m.x + Math.sin(m.a) * 14, m.z + Math.cos(m.a) * 14];
-    const mesh = new THREE.Mesh(stoneGeo, rockM[0]);
+    const torch = m.k === 'torch', mesh = new THREE.Mesh(torch ? torchGeo : stoneGeo, torch ? torchM : rockM[0]);
     scene.add(mesh);
-    shots.push({ mesh, x0: m.x, z0: m.z, x1: to[0], z1: to[1], t: 0, d: Math.hypot(to[0] - m.x, to[1] - m.z) });
+    shots.push({ mesh, torch, under: m.under || 0, x0: m.x, z0: m.z, x1: to[0], z1: to[1], t: 0, d: Math.hypot(to[0] - m.x, to[1] - m.z) });
+  });
+  UI.net.on('burst', m => {
+    const mesh = new THREE.Mesh(burstGeo, new THREE.MeshBasicMaterial({ color: 0xFFB050, transparent: true, opacity: .55, depthWrite: false }));
+    mesh.position.set(m.x, fxFloor(m.under, m.x, m.z) + .3, m.z);
+    mesh.scale.setScalar(.2);
+    scene.add(mesh);
+    bursts.push({ mesh, r: m.r || 2, t: 0 });
+    if (!m.under) for (let i = 0; i < 5; i++) emitPuff({ x: m.x + (Math.random() - .5) * m.r, z: m.z + (Math.random() - .5) * m.r, kind: 'campfire' });
   });
   UI.net.on('fogburst', m => { for (let i = 0; i < 6; i++) emitPuff({ x: m.x + (Math.random() - .5) * .8, z: m.z + (Math.random() - .5) * .8, kind: 'campfire' }); });
 
@@ -158,13 +171,22 @@
         if (k >= 1) { if (net) net.send({ t: 'revive', id: revivingId, done: true }); revivingId = null; reviveRing.classList.add('hidden'); }
       }
     }
-    // sling stones
+    // sling stones and thrown torches (a torch flies slower, higher, tumbling)
     for (let i = shots.length - 1; i >= 0; i--) {
       const s = shots[i];
-      s.t += dt * 30 / Math.max(1, s.d);
+      s.t += dt * (s.torch ? 16 : 30) / Math.max(1, s.d);
       const k = Math.min(1, s.t), x = s.x0 + (s.x1 - s.x0) * k, z = s.z0 + (s.z1 - s.z0) * k;
-      s.mesh.position.set(x, groundAt(x, z) + 1 + Math.sin(k * Math.PI) * .6, z);
+      s.mesh.position.set(x, fxFloor(s.under, x, z) + 1 + Math.sin(k * Math.PI) * (s.torch ? 1.4 : .6), z);
+      if (s.torch) s.mesh.rotation.x += dt * 12;
       if (k >= 1) { scene.remove(s.mesh); shots.splice(i, 1); }
     }
+    // a torch's burst: a flash of fire that swells to its reach and fades
+    for (let i = bursts.length - 1; i >= 0; i--) {
+      const b = bursts[i];
+      b.t += dt / .6;
+      b.mesh.scale.setScalar(Math.max(.2, Math.min(1, b.t * 1.6)) * b.r);
+      b.mesh.material.opacity = .55 * Math.max(0, 1 - b.t);
+      if (b.t >= 1) { scene.remove(b.mesh); b.mesh.material.dispose(); bursts.splice(i, 1); }
+    }
   });
-  if (window.__dbg) __dbg.combat = () => ({ downed: !!downedEnd, rolling: !!roll, others: [...downedOthers.keys()] });
+  if (window.__dbg) __dbg.combat = () => ({ downed: !!downedEnd, rolling: !!roll, others: [...downedOthers.keys()], bursts: bursts.length, shots: shots.length });

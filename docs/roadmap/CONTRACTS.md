@@ -325,7 +325,7 @@ island.combat.damagePlayer(p, amount, { from, knock })   // -> downed state, rev
 island.combat.onDowned(p) / onRevived(p)
 ```
 
-As built (P6 first part, flag `combat`): the methods are on the island itself (`server/systems/combat.js`):
+As built (P6, flag `combat`): the methods are on the island itself (`server/systems/combat.js`):
 
 - `island.damagePlayer(p, amount, { knock })` -> 'dodged' | 'downed' | 'knocked' | 'hurt'. A blow
   while rolling misses; one that would take the last of your health leaves you down instead of
@@ -346,6 +346,11 @@ As built (P6 first part, flag `combat`): the methods are on the island itself (`
   'light' (a torch in hand, or a lit fire or lantern within `COMBAT.LIGHT`) and 'heavy'. So a
   creature says what hurts it with `weak: { light: 2, silver: 2, ... }`. A blow shoves a
   creature `knock` m back (not one in a cave: `mob.cave` or `mob.under` set).
+- A heavy swing with a torch in hand throws it instead (`island.throwTorch`): broadcasts
+  `{ t: 'shot', id, k: 'torch', x, z, a, to, under }` and `{ t: 'burst', x, z, r, under }`, and
+  hits everything within `THROW.RADIUS` with source ['fire', 'light', 'torch']. (A sling's
+  `shot` has no `k`.) `island.inLight(p)` is public: the Stilled use it to slow down
+  (`COMBAT.LIGHT_SLOW`); other fog creatures can do the same.
 - Dodging: `{ t: 'dodge' }`; `p.dodgeUntil`. `island.mobs.constructor.def(kind)` gives a kind's
   definition. Mobs now have `maxHp` (spawn `opts.hp` overrides the kind's `hp`).
 
