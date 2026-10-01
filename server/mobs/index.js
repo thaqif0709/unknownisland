@@ -9,6 +9,7 @@
 //     tick(island, dt, ctx) {},              // optional, once a tick for the whole kind (spawning, fading)
 //     touch: .6,                             // optional: onTouch runs for players this close (plus radius)
 //     onTouch(island, mob, p) {},            // knockdown, drag, drain warmth...
+//     adjust(island, mob, dmg, tags, from) {},   // optional, before damage: returns the amount (armour, weak spots)
 //     onHit(island, mob, hit) {},            // optional, after damage (before a death)
 //     onDeath(island, mob, hit) {},          // optional
 //     view(mob) { return extra; },           // optional small extra for the snapshot (e.g. a pose)
@@ -64,6 +65,7 @@ class Mobs {
     const def = KINDS[mob.kind], tags = [].concat(source);
     let dmg = amount;
     for (const tag of tags) if (def.weak && def.weak[tag]) dmg *= def.weak[tag];
+    if (def.adjust) dmg = Math.max(0, def.adjust(this.island, mob, dmg, tags, from));
     mob.hp = Math.max(0, mob.hp - dmg);
     const hit = { amount: dmg, source: tags, from };
     if (def.onHit) def.onHit(this.island, mob, hit);

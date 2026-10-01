@@ -197,6 +197,11 @@ full health. Beaten once per island; drops a cloak patch and a relic for everyon
 an "echo" at the same spot lets latecomers earn the patch. Server state machine per boss,
 saved in a `bosses` table so a restart resumes the fight.
 
+(C1 as built: the Tidewife comes when the tide is below -2.5 m and leaves when it rises past
+-1.5 m, about four minutes of fight in a 20-minute day; her kelp takes 35% of a blow until 40
+fire damage burns it, her shell 60%, her eyes 250% while she rears; her shell makes a patch,
+wading at walking speed at the cost of the Stilled noticing you more.)
+
 (C0 as built: the arena, scaling, wipe and echo are as above; trophies are journal keys,
 a relic and the one a cloak patch needs; a practice boss, the Straw Giant, exists only for
 testing the system: admins call it with `/boss practice`.)

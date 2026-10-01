@@ -116,6 +116,15 @@ const COMMANDS = {
     done.catch(() => {});
     return this.minigames.solution(p) || { error: 'did not start' };
   },
+  // A mob into a state now ({ mob: its id, state }), to test what happens in it.
+  mobState(p, { mob, state }) {
+    const m = this.mobs.byId(mob);
+    if (!m) return { error: `no mob ${mob}` };
+    this.mobs.setState(m, state);
+    return { state: m.state };
+  },
+  // A region's chain done: its boss is called, as when the last request is answered (C1).
+  summonBoss(p, { region }) { this.summonBoss(region); return { bosses: this.bossState ? [...this.bossState.values()].map(b => this.bossView(b)) : [] }; },
   // Call a boss to (x, z) now (C0): { boss: its id, x, z }; the reply has its state.
   boss(p, { boss, x, z }) {
     const b = this.bossCall(boss, { x, z, again: true });

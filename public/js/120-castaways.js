@@ -229,7 +229,7 @@
   }
   function removeCastaway(av) { scene.remove(av.root); sleepZs(av, 0, 0); sleepBlanket(av, 0, 0); }
   // Cloak patches: small stitched squares in the colour of what they were made from.
-  const PATCH_COL = { moon_wing: 0xF3EAD6, violet_charm: 0xA88BD8, firefly_jar: 0xE8F27A, silverfin_scale: 0xB9C3C6, conch_charm: 0xE3A89A };
+  const PATCH_COL = { moon_wing: 0xF3EAD6, violet_charm: 0xA88BD8, firefly_jar: 0xE8F27A, silverfin_scale: 0xB9C3C6, conch_charm: 0xE3A89A, tide_shell: 0x6F8F7A };
   // [angle round the robe from the front, height]; placed on the robe's surface
   const PATCH_SPOTS = [[.55, .6], [-.35, .92], [2.6, .75]].map(([a, y]) => { const r = .38 - (y - .35) / .78 * .18 + .025; return [Math.sin(a) * r, y, Math.cos(a) * r, a]; });
   const stitchM = new THREE.MeshBasicMaterial({ color: 0x2B211F });

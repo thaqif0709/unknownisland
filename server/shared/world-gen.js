@@ -360,6 +360,7 @@
     { key: 'firefly_jar', name: 'Firefly jar', needs: 'firefly', perk: 'A small light of your own that pushes the fog back.', cost: 'The Stilled notice you from further away.' },
     { key: 'silverfin_scale', name: 'Silverfin scale', needs: 'silverfin', perk: 'Fires warm you from further away.', cost: 'The Stilled notice you more easily.' },
     { key: 'conch_charm', name: 'Conch charm', needs: 'conch', perk: 'Friends calm you twice as much.', cost: 'You get hungry faster.' },
+    { key: 'tide_shell', name: 'Tidewife shell', needs: 'tidewife_shell', perk: 'You wade as fast as you walk.', cost: 'The Stilled notice you more easily.' },   // (C1: kept by those who beat her)
   ];
   const MOON_NAMES = ['Drowning Moon', 'thin crescent', 'half moon', 'swelling moon', 'full moon', 'waning moon', 'half moon', 'old crescent'];
   // day 1 is a full moon (a gentle first night); the first Drowning Moon is day 5

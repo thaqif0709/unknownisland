@@ -40,6 +40,8 @@ const methods = {
     const t = this.content.tide.find(x => x.entry === key);
     if (t && t.weight > 0) return `Washed up on the beaches in the morning${t.minDay > 1 ? `, from day ${t.minDay} on` : ''}${t.kind === 'strange' ? '. The tide brings at most one strange thing a day' : ''}.`;
     if (t) return 'Left at a carving stone when someone answers what it asks.';
+    const boss = Object.values(require('../bosses').BOSSES).find(b => b.trophy && (b.trophy.relic === key || b.trophy.patch === key));
+    if (boss) return `Kept by everyone who beats ${boss.name.replace(/^The /, 'the ')} (or touches its echo afterwards).`;   // (C1)
     return '';
   },
   journalView(p) {

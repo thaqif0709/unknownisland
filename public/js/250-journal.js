@@ -36,6 +36,14 @@
       fill('#B3AC9F', () => g.arc(60, 60, 36, 0, Math.PI * 2));
       fill('#2B211F', () => g.ellipse(60, 60, 18, 12, 0, 0, Math.PI * 2));
       g.fillStyle = '#E9E1CF'; g.beginPath(); g.arc(66, 56, 4, 0, 7); g.fill();
+    } else if (key === 'tidewife_eye') {   // (C1) a barnacle with a dark, wet eye in it
+      fill('#B8B0A0', () => { g.moveTo(30, 92); g.lineTo(40, 40); g.lineTo(80, 40); g.lineTo(90, 92); g.closePath(); });
+      fill('#2B3A3C', () => g.ellipse(60, 46, 18, 9, 0, 0, 7));
+      g.fillStyle = '#9FD3E6'; g.beginPath(); g.arc(66, 44, 3.5, 0, 7); g.fill();
+    } else if (key === 'tidewife_shell') {   // (C1) a curl of old hull, planks grown together
+      fill('#6E5646', () => { g.moveTo(20, 86); g.quadraticCurveTo(30, 26, 92, 30); g.quadraticCurveTo(70, 60, 98, 90); g.closePath(); });
+      g.beginPath(); for (const k of [.3, .55, .8]) { g.moveTo(20 + k * 10, 86 - k * 50); g.quadraticCurveTo(60, 58, 96, 88 - k * 40); } g.stroke();
+      g.fillStyle = '#B8B0A0'; [[44, 62], [62, 70], [76, 52]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill(); g.stroke(); });
     } else if (key === 'old_tooth') {
       fill('#EBD9C3', () => { g.moveTo(30, 30); g.quadraticCurveTo(80, 20, 92, 96); g.quadraticCurveTo(70, 60, 30, 50); g.closePath(); });
       g.beginPath(); g.moveTo(36, 40); g.quadraticCurveTo(66, 38, 82, 80); g.stroke();

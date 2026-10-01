@@ -39,7 +39,7 @@
   UI.net.on('boss', setBoss);
   UI.net.on('welcome', m => { bossList.forEach(b => b.echo && scene.remove(b.echo)); bossList.clear(); (m.bosses || []).forEach(setBoss); });
   UI.net.on('mobhit', m => { bossList.forEach(b => { if (b.mob === m.id) { b.hp = m.hp; b.max = m.max; } }); });
-  UI.net.on('bossfx', m => { if (Math.hypot(m.x - px, m.z - pz) < BR().SHAKE) bossShake = Math.max(bossShake, .45); });
+  UI.net.on('bossfx', m => { if (m.k === 'slam' && Math.hypot(m.x - px, m.z - pz) < BR().SHAKE) bossShake = Math.max(bossShake, .45); });   // (heavy blows only)
 
   const nearEcho = () => { let best = null; bossList.forEach(b => { if (b.state === 'beaten' && Math.hypot(b.x - px, b.z - pz) < BR().ECHO) best = b; }); return best; };
   UI.bosses = {

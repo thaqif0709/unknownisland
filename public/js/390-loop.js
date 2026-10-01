@@ -175,7 +175,7 @@
         const dx = rx * ix + fx * iz, dz = rz * ix + fz * iz;
         // a bit slower through the air, so you can land on the rock you jumped at instead of sailing past it
         // (and none while gliding: the glide's drift carries you, steered by the keys)
-        const spd = glide ? 0 : ((myCave ? caveDepth() > CAVE.WADE : heightAt(px, pz) < .1) ? RULES.WADE_SPEED : RULES.WALK_SPEED) * WG.speedMult(running, nrg.exhausted) * Math.min(1, l) * (hop.air ? .6 : 1);
+        const spd = glide ? 0 : ((myCave ? caveDepth() > CAVE.WADE : heightAt(px, pz) < .1) && !myPatches.includes('tide_shell') ? RULES.WADE_SPEED : RULES.WALK_SPEED) * WG.speedMult(running, nrg.exhausted) * Math.min(1, l) * (hop.air ? .6 : 1);
         let nx = px + dx * spd * dt, nz = pz + dz * spd * dt;
         if (l > .08 && !leaping && tryGrab(dx / l, dz / l)) { nx = px; nz = pz; }   // walked into a climbable trunk or cliff: grab it
         else if (cliffBlocks(nx, nz)) { nx = px; nz = pz; }   // too steep to walk up
