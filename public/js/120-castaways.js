@@ -94,6 +94,17 @@
         add(new THREE.ConeGeometry(.022, .2, 5), head, 0, -.45, -.1).rotation.x = -Math.PI / 2; break; }
       case 'shovel': add(new THREE.CylinderGeometry(.02, .024, .46, 6), logM, 0, -.26, 0);   // a flat blade at the end
         add(new THREE.BoxGeometry(.13, .15, .02), rockM[1], 0, -.53, 0); break;
+      // weapons (P6): a grip in the fist, the rest hanging down
+      case 'sword_wood': case 'sword_bronze': case 'sword_iron': case 'sword_silver': case 'sword_obsidian': {
+        const blade = softShared({ sword_wood: 0xB98A62, sword_bronze: 0xC08A4A, sword_iron: 0x9AA4B0, sword_silver: 0xDDE3EA, sword_obsidian: 0x2E2B3A }[key]);
+        add(new THREE.CylinderGeometry(.022, .022, .12, 6), logM, 0, -.04, 0);
+        add(new THREE.BoxGeometry(.16, .025, .04), logM, 0, -.11, 0);
+        add(new THREE.BoxGeometry(.05, .46, .015), blade, 0, -.35, 0); break; }
+      case 'spear': add(new THREE.CylinderGeometry(.018, .02, .9, 6), logM, 0, -.2, 0);
+        add(new THREE.ConeGeometry(.04, .14, 5), rockM[1], 0, -.72, 0).rotation.x = Math.PI; break;
+      case 'club': add(new THREE.CylinderGeometry(.06, .025, .5, 7), logM, 0, -.26, 0); break;
+      case 'sling': add(new THREE.CylinderGeometry(.006, .006, .3, 4), softShared(0xD9C9A6), 0, -.15, 0);
+        add(new THREE.SphereGeometry(.04, 6, 4), softShared(0xC8B48A), 0, -.31, 0); break;
       default: add(new THREE.BoxGeometry(.12, .12, .12), sackM, 0, 0, 0);
     }
     shadows(g);
@@ -128,7 +139,7 @@
     av.armR.rotation.y = 0; if (av.body) av.body.rotation.y = 0;   // a swing cut short by the next starts square
     // (holding a tool for the job, P3: that one, an iron pickaxe say; else the usual)
     const job = kind === 'chop' ? 'axe' : kind === 'mine' ? 'pick' : null, own = av.heldKey && WG.ITEM_INFO[av.heldKey];
-    setSwingTool(av, !job ? null : own && own.tool === job ? av.heldKey : job === 'axe' ? 'axe' : 'pickaxe');
+    setSwingTool(av, !job ? null : own && (own.tool === job || own.kind === 'weapon') ? av.heldKey : job === 'axe' ? 'axe' : 'pickaxe');   // (a weapon swings as itself, P6)
   }
 
   // A frog castaway in a simple hooded cloak: part wizard, part wanderer.

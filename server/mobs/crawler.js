@@ -196,6 +196,7 @@ module.exports = {
         scream(mob, island, cave);
         for (const p of players) {
           if (!inCave(p, cave) || !island.mobs.inTelegraph(mob, p.x, p.z)) continue;
+          if (island.dodging(p)) { island.send(p, { t: 'toast', msg: 'You roll clear.' }); continue; }   // (P6)
           island.knock(p);
           // dragged: to a dry spot further from the mouth
           const lv = level(island, cave), here = nearestNode(cave, p.x, p.z), s0 = cave.nodes[here].s;

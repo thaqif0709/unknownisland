@@ -98,6 +98,7 @@ module.exports = {
         return;
       }
       if (now - (p.lastKnockAt || 0) < RULES.STILLED.KNOCK_COOLDOWN_MS) return;
+      if (island.dodging(p)) return;   // rolled clear (P6)
       p.lastKnockAt = now;
       island.knock(p);
       // thrown downwind, down the slope if it can

@@ -67,6 +67,8 @@ Environment*). Existing players aren't affected.
   **I** opens your 30-slot bag (phones: **Bag**): drag stacks between it and the hotbar.
   Coconuts and berries go in it, and holding **E** with one in hand eats it (the `slots` flag,
   on; `FEATURES=-slots` goes back to the old 8 slots without losing anything).
+  With the `combat` flag you can fight: click (or R) to swing what you're holding, hold it for a
+  heavy swing, double-tap Shift to roll, and hold E beside a friend who's down to pick them up.
   With the `tools` flag, tools are items too: hold one (1-8) to use it. They wear out, break
   into one of their material, and can be mended at a lit hearth (hold it, press E).
 - **Calling out:** press **C** (phones: **Call**) and friends nearby hear you from your

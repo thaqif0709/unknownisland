@@ -4,7 +4,7 @@ const { RULES, ITEMS } = WG;
 const { r2, cleanBuckets, REACH_SLACK } = require('./util');
 
 // Tools saved in a sack: well-formed ones only.
-const cleanTools = list => (Array.isArray(list) ? list : []).filter(t => t && typeof t.k === 'string' && WG.itemInfo(t.k).kind === 'tool')
+const cleanTools = list => (Array.isArray(list) ? list : []).filter(t => t && typeof t.k === 'string' && WG.itemInfo(t.k).uses)   // (tools, P3, and weapons, P6)
   .map(t => ({ k: t.k, d: Math.max(1, Math.min(WG.itemInfo(t.k).uses, t.d | 0 || WG.itemInfo(t.k).uses)) }));
 
 const methods = {
@@ -38,7 +38,7 @@ const methods = {
       items = { buckets: [b] };
     } else {
       if (typeof key !== 'string' || !(key in ITEMS)) return;
-      if (WG.itemInfo(key).kind === 'tool' && p.slots && WG.feature('tools')) return;   // tools drop from their slot, wear and all
+      if (WG.itemInfo(key).uses && p.slots && (WG.feature('tools') || WG.feature('combat'))) return;   // tools and weapons drop from their slot, wear and all
       n = Math.min(Math.max(1, count | 0), this.count(p, key));
       if (n <= 0) return;
       this.take(p, key, n);

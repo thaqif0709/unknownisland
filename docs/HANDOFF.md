@@ -201,6 +201,18 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
+- **Fighting (P6, flag `combat`, off; first part).** `server/systems/combat.js`: `attack` (the
+  weapon in hand, `RULES.COMBAT.WEAPONS`; reach and arc with `LAG` slack; heavy, a sword's
+  combo, the sling's stones; tags for weaknesses incl. 'light' and 'silver'; a shove), `dodge`
+  (`p.dodgeUntil`; `players.js` allows the roll's speed), `damagePlayer` / `combatGuard`
+  (`systems/stilled.js`'s `knock` asks it first; the Crawler and the Leaning skip a rolling
+  player; the dummy uses it), down and `revive` (a friend's held E; out of time: hearth or
+  beach). The Stilled get `STILLED_HP` and `weak: { light, silver }`, break into fog
+  (`fogburst`) and re-form after `REFORM` s at night. Browser `public/js/392-combat.js`: click
+  (pointer locked), R or the Attack button; hold for heavy; double-tap Shift to roll; the down
+  countdown and the hold-E ring to pick a friend up; sling stones; weapon models (120) and
+  icons (240). Not yet: a thrown torch, light making creatures slower, silver and obsidian
+  recipes (region packs). Tests: `tests/server/combat.test.js` (8), `tests/browser/combat.test.js`.
 - **Tools that wear out (P3, flag `tools`, off; needs `slots`).** Tools are items (`ITEMS.pickaxe`
   etc., `ITEM_INFO` kind 'tool'), one to a slot with `d`, their uses left (`RULES.TOOLS.USES`).
   `inventory.js`: `toolFor(p, job)` (the tool in hand with the flag), `wearTool` (a use; warns at
