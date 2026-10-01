@@ -108,7 +108,9 @@ and a river, Hollow (200, -2350) a crater, Teeth (350, -3150) up to about 600 m,
 - **The Stilled can be broken into fog** but re-form later that night.
 - (P6 as built so far: weapons wear out like tools; the bronze sword needs tin and the sling
   flax, both from the Stairs; silver and obsidian swords have stats but no recipes until their
-  region packs; the attack key is R as well as the click, for anyone without mouse-look.)
+  region packs; the attack key is R as well as the click, for anyone without mouse-look; the
+  torch is thrown with a heavy swing while it's in hand, and the Stilled move at half speed
+  towards someone in light.)
 
 ## 6. Hearth checkpoints
 
