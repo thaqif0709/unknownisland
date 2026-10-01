@@ -39,6 +39,7 @@
       case 'bug': { const e = journal.entries.find(e => e.key === o.key); return `Catch the ${(e ? e.name : 'bug').toLowerCase()}`; }
       case 'lantern': {
         const oil = (stats.inv.oil || 0) > 0;
+        if (o.lit && UI.lanternTravel && UI.lanternTravel.ways(o).length) return 'Travel by lantern light, or add oil';   // W10
         if (o.lit) return oil ? `Add lamp oil (burns ${Math.ceil(o.fuel / RULES.DAY_LEN * 24)} more hours)` : 'A lit stone lantern';
         if (!oil && o.reclaim < 1) return `Gone cold. The fog is creeping back (${Math.round(o.reclaim * 100)}%)`;
         if (!oil) return o.big ? `Great stone lantern (needs lamp oil from ${o.need} frogs)` : 'Old stone lantern (needs lamp oil)';
@@ -89,6 +90,7 @@
     cooldown = .45;
     if (target.type === 'board') { togglePanel('board'); return; }
     if (target.type === 'carving') { readCarving(target); return; }
+    if (target.type === 'lantern' && UI.lanternTravel && UI.lanternTravel.open(target)) return;   // somewhere to travel to (W10)
     if (['palm', 'tree', 'rock', 'fire', 'ore', 'dig', 'lantern'].includes(target.type) || (UI.things[target.type] && UI.things[target.type].swing !== undefined)) startSwing(hero, swingKindFor(target));
     net.send({ t: 'act', target: targetKey(target) });
   }

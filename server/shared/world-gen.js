@@ -112,6 +112,7 @@
       fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
       slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
+      fasttravel: false, // W10: travel between lit lanterns you've stood by, paying lamp oil
       'region-stair': false,   // C3: the Stairs' own things (flint, herbs, flax, ruins, standing stones, tin), bugs, the Leaning, the old mine, its request chain
     },
     // Creative mode, for testing only: admins (the ADMINS env var) type /creative in chat,
@@ -131,6 +132,9 @@
       EAT_GAP: .45,            // seconds between two bites or sips, at least (well under EAT_TIME: messages can bunch up on a slow connection)
     },
     // Climbing and gliding (P9, flag travel). Speeds in m/s, energy per second.
+    // Travelling between lit lanterns (W10, flag fasttravel): stand in a lit lantern's light
+    // to remember it; from one you remember, travel to another, paying oil by distance.
+    LANTERN_TRAVEL: { PER_OIL: 150, MIN_OIL: 1 },   // metres per oil, and at least this much
     TRAVEL: {
       CLIMB_SPEED: 1.6,        // up or down a trunk or a cliff
       CLIMB_ENERGY: 9,         // while moving on it

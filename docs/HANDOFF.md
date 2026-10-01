@@ -471,6 +471,13 @@ the pennant, the map flag). The sleep look is in `120-castaways.js` `poseCastawa
 eases in over about half a second, then the shut eyes (`av.eyesShut`), the z sprites from the top of
 the head (`sleepZs`) and the blanket (`sleepBlanket`/`buildBlanket`: once the pose settles,
 rays straight down measure the frog, the cloth sags from it to the ground, cloak colour). Details: CONTRACTS.md section 11.
+Travelling by lantern light (W10, flag `fasttravel`): `server/systems/lanterntravel.js`
+remembers the lit lanterns each player stands in the light of (`p.lanternsSeen`, saved in the
+inventory JSON, sent as `welcome.lanternsSeen` and `lanternsseen`) and answers
+`lanterntravel {from, to}` (both lit, you at `from`, `to` remembered, oil by
+`RULES.LANTERN_TRAVEL`). The browser part is `265-lantern-travel.js`: E at a lit lantern with
+somewhere to go opens its panel (`UI.lanternTravel.open`, hooked into `act()`). Tests:
+`tests/server/lanterntravel.test.js`, `tests/browser/lanterntravel.test.js`.
 Calling out (P11, no flag): `call` message, rate-limited in `server/systems/chat.js`
 (`RULES.CALL`), broadcast as `{ t: 'call', id, name, x, z, under }`; `285-calling-out.js`
 plays a panned, distance-faded call (muffled through a cave), a bubble, a compass note for

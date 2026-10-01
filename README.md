@@ -166,6 +166,8 @@ Leaning on windy nights, the old mine and the Stairs' run of carvings) are the `
 flag; it needs `streaming,bigworld` (and `caves` for the mine). Switching it on adds them to
 the land without moving anything already there.
 
+Travelling between lit lanterns (paying lamp oil by distance) is the `fasttravel` flag.
+
 Hearth checkpoints are the `checkpoints` flag: sit by a lit clay hearth to wake there after a
 knockdown or collapsing.
 

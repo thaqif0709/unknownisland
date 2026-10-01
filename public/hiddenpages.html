@@ -118,6 +118,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td><kbd>Q</kbd> / <kbd>Shift</kbd>+<kbd>Q</kbd></td><td>Next / previous slot, empty ones too</td></tr>
         <tr><td><kbd>G</kbd> / <kbd>Shift</kbd>+<kbd>G</kbd></td><td>Drop one / all of the held item</td></tr>
         <tr data-feature="slots"><td><kbd>I</kbd></td><td>Open the bag (drag stacks between the bag and the hotbar; phones: the <b>Bag</b> button)</td></tr>
+        <tr data-feature="fasttravel"><td><kbd>E</kbd> at a lit lantern</td><td>Travel to another lit lantern you remember (or add oil)</td></tr>
         <tr><td><kbd>E</kbd> (hold, with something to eat or drink in hand)</td><td>Eat or drink one (food in a slot, or a bucket of clean water). Keep holding for the next</td></tr>
         <tr><td><kbd>F</kbd></td><td>Quick-build a campfire</td></tr>
         <tr><td><kbd>V</kbd></td><td>Sit down / get up<span data-feature="checkpoints">. By a lit clay hearth: sleep there, and wake there</span></td></tr>
@@ -311,6 +312,14 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li>The longer an area has been held, the more oil its lantern burns (up to <span id="heldMax"></span> as much). The Drowning Moon drains all lanterns faster.</li>
         <li>All of this carries on while nobody is playing. Your inventory and journal are never touched.</li>
       </ul>
+      <div data-feature="fasttravel">
+      <h3>Travelling by lantern light</h3>
+      <ul>
+        <li>Stand in a lit lantern's light and you'll remember it: you can find your way back to that light.</li>
+        <li>At a lit lantern, <kbd>E</kbd> shows the other lit lanterns you remember, how far and which way, and what it costs: <b>1 lamp oil for every <span data-r="LANTERN_TRAVEL.PER_OIL"></span> steps</b> (at least <span data-r="LANTERN_TRAVEL.MIN_OIL"></span>). Pick one and you're there. You can still add oil to the lantern from the same list.</li>
+        <li>Both lanterns have to be lit: a cold lantern can't be travelled to or from. Keep the ones you rely on fed.</li>
+        <li>Not from a cave, while knocked down, or dead.</li>
+      </ul></div>
     </section>
 
     <section id="sleeper"><h2>The carving stones</h2>
@@ -466,6 +475,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="fasttravel"><b>Travel by lantern light:</b> stand in a lit lantern's light to remember it; at a lit lantern, <kbd>E</kbd> takes you to another lit one you remember, for lamp oil by distance.</li>
         <li data-feature="region-stair"><b>The Stairs come alive:</b> flint, healing herbs, flax, old brick walls, standing stones and tin; three bugs of their own; something that comes out on windy nights; an old mine; and the Stairs' own run of carvings.</li>
         <li data-feature="checkpoints"><b>Sleeping looks like sleeping:</b> you curl up by a hearth in half a second, under a thick blanket in your cloak's colour that drapes over you and spills onto the ground, eyes closed, with z's floating up out of your head.</li>
         <li><b>Eating and drinking, the same everywhere:</b> hold <kbd>E</kbd> with food or a bucket of clean water in hand; when the ring fills, it's gone and your meter goes up right then (a bucket takes the same short hold now; a tap won't drink). Empty hotbar slots can be picked and stepped through again.</li>
