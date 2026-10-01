@@ -110,6 +110,17 @@ function createPgStore(url) {
                ON CONFLICT (island_id, region) DO UPDATE SET opened_day = EXCLUDED.opened_day, lifted_day = EXCLUDED.lifted_day`,
       [islandId, reg.region, reg.openedDay, reg.liftedDay ?? null]);
     },
+    // Bosses (C0): where each fight stands, so a restart resumes it.
+    async loadBosses(islandId) {
+      const r = await q('SELECT boss_id, state, health, phase, defeated_at, data FROM bosses WHERE island_id = $1', [islandId]);
+      return r.rows.map(x => ({ id: x.boss_id, state: x.state, hp: x.health, phase: x.phase, defeatedAt: x.defeated_at ? new Date(x.defeated_at).getTime() : null, data: x.data || {} }));
+    },
+    async saveBoss(islandId, b) {
+      await q(`INSERT INTO bosses (island_id, boss_id, state, health, phase, defeated_at, data) VALUES ($1, $2, $3, $4, $5, $6, $7)
+               ON CONFLICT (island_id, boss_id) DO UPDATE SET state = EXCLUDED.state, health = EXCLUDED.health, phase = EXCLUDED.phase,
+               defeated_at = EXCLUDED.defeated_at, data = EXCLUDED.data`,
+      [islandId, b.id, b.state, b.hp, b.phase, b.defeatedAt ? new Date(b.defeatedAt) : null, JSON.stringify(b.data || {})]);
+    },
     // The island day a chunk was last saved on, or null.
     async loadChunkDay(islandId, chunk) {
       const r = await q('SELECT day FROM chunk_days WHERE island_id = $1 AND chunk = $2', [islandId, chunk]);
@@ -299,6 +310,8 @@ function createMemoryStore() {
     },
     async loadRegions(islandId) { return clone([...((islands.get(islandId).regions || new Map()).values())]); },
     async saveRegion(islandId, reg) { const i = islands.get(islandId); i.regions = i.regions || new Map(); i.regions.set(reg.region, clone(reg)); },
+    async loadBosses(islandId) { return clone([...((islands.get(islandId).bosses || new Map()).values())]); },
+    async saveBoss(islandId, b) { const i = islands.get(islandId); i.bosses = i.bosses || new Map(); i.bosses.set(b.id, clone(b)); },
     async loadChunkDay(islandId, chunk) { const d = (islands.get(islandId).chunkDays || new Map()).get(chunk); return d == null ? null : d; },
     async loadChunkStates(islandId, chunk) {
       const i = islands.get(islandId), m = i.chunkOf || new Map();

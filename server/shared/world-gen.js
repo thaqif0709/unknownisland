@@ -114,6 +114,7 @@
       caves: false,      // W9: caves you walk into (the Landing's sea cave), torches and the Dark
       checkpoints: false, // P4: sleep by a lit hearth to wake there after a knockdown or dying
       travel: true,      // P9 climbing (palm trunks, cliffs) and gliding with the cloak
+      bosses: false,     // C0: region bosses: summoned by a finished chain, an arena, phases, winning opens the next region
       rafts: true,       // P10: rafts on the sea and rivers (two frogs to one), zip lines anyone can ride
       fishing: true,     // P7 fishing: rods, casting, bites, P8's minigames to land them, cooking
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
@@ -164,6 +165,14 @@
       LIGHT_SLOW: .5,           // ...and the Stilled stalking you move this much slower
       STILLED_HP: 12,           // the Stilled take a few blows to break (1 without combat)
       REFORM: 90,               // seconds before a broken Stilled forms again where it broke (at night, in fog)
+    },
+    // Bosses (C0, flag bosses). Each boss is a file in server/bosses/.
+    BOSSES: {
+      ARENA: 40,                // frogs this close take part (and count for its health)
+      PER_FROG: .6,             // health × (1 + this for every frog after the first)
+      WIPE: 4,                  // seconds with nobody left standing in the arena: it leaves
+      ECHO: 3,                  // after it's beaten, an echo stays where it fell: E within this many m earns the trophy
+      SHAKE: 18,                // the camera shakes for frogs within this many m of a boss's heavy blow
     },
     // Rafts and zip lines (P10, flag rafts).
     RAFT: {

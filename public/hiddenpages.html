@@ -101,7 +101,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <b>Start</b><a href="#start">Getting started</a><a href="#controls">Controls</a><a href="#hud">The screen</a>
     <b>Surviving</b><a href="#survival">Food, water, health</a><a href="#water">Clean water &amp; buckets</a><a href="#moving">Moving, jumping, sitting</a><a href="#rafts" data-feature="rafts">Rafts &amp; zip lines</a><a href="#time">Day, night, moon, weather</a>
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
-    <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#fighting" data-feature="combat">Fighting</a><a href="#torches" data-feature="torchlight">Torches</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
+    <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#fighting" data-feature="combat">Fighting</a><a href="#bosses" data-feature="bosses">Bosses</a><a href="#torches" data-feature="torchlight">Torches</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
     <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a><a href="#fishing" data-feature="fishing">Fishing</a><a href="#minigames" data-feature="fishing">Landing a fish</a>
     <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#stairs" data-feature="region-stair">The Stairs</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
     <b>History</b><a href="#changelog">Changelog</a>
@@ -136,6 +136,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr data-feature="combat"><td>Click (mouse-look) or <kbd>R</kbd></td><td>Attack where you aim; hold, then let go, for a heavy swing</td></tr>
         <tr data-feature="combat"><td><kbd>Shift</kbd> twice, quickly</td><td>Roll out of the way</td></tr>
         <tr data-feature="combat"><td><kbd>E</kbd> (hold) beside a friend who's down</td><td>Pick them up</td></tr>
+        <tr data-feature="bosses"><td><kbd>E</kbd> at a beaten boss's echo</td><td>Earn its trophy, if you missed the fight</td></tr>
         <tr data-feature="rafts"><td><kbd>E</kbd> by a raft / on a raft</td><td>Climb aboard / step ashore (the first aboard paddles with the walking keys)</td></tr>
         <tr data-feature="rafts"><td><kbd>E</kbd> by a zip line's top post</td><td>Ride it down</td></tr>
         <tr data-feature="fishing"><td><kbd>E</kbd> (hold, a rod in hand)</td><td>Cast: let go to throw (the longer you hold, the further). <kbd>E</kbd> again when it bites hooks the fish; while nothing bites it reels in</td></tr>
@@ -387,6 +388,20 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       </ul>
     </section>
 
+    <section id="bosses" data-feature="bosses"><h2>Bosses</h2>
+      <p>Each region has a boss. When the carving stones' requests for a region are all answered, its boss is called: a stone says when and where it will come, and the map marks it.</p>
+      <ul>
+        <li><b>Everyone within <span data-r="BOSSES.ARENA"></span> m</b> takes part. Each extra frog makes it tougher (<span data-r="BOSSES.PER_FROG"></span>&times; its health more each), so bring friends, but not just for the numbers.</li>
+        <li>A bar at the top shows its health. The notches are where it changes: each boss fights harder as it weakens.</li>
+        <li>Every blow is marked on the ground before it lands (<span data-feature="combat">roll out of it, or </span>step out of it). Its heaviest shake the ground.</li>
+        <li><b>If nobody is left standing</b> for <span data-r="BOSSES.WIPE"></span> s, it leaves, whole again, and comes back at its next time.</li>
+        <li><b>Beaten:</b> everyone who fought it keeps a trophy (for the journal, and for a cloak patch). The way to the next region opens at dawn, and its stone falls quiet.</li>
+        <li>Missed it? An <b>echo</b> stays where it fell. Press <kbd>E</kbd> beside it to earn the same trophy.</li>
+      </ul>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> Each boss and its trick <span class="muted">(click to show)</span></summary>
+      <p>None of the region bosses has come to the island yet. (Admins can try the boss system on a practice boss, the Straw Giant: <code>/boss practice</code>. Fire hurts it twice over.)</p></details>
+    </section>
+
     <section id="lanterns"><h2>Stone lanterns</h2>
       <p>Old stone lanterns stand all over the island. Light one and it pushes the fog back in a wide circle, warms you, and makes a safe camp.</p>
       <ul>
@@ -584,6 +599,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="bosses"><b>Bosses:</b> when a region's carving requests are all answered, its boss comes. Fight it together (it grows tougher with each frog), watch its bar, and if you missed it, touch its echo for the trophy.</li>
         <li data-feature="rafts"><b>Rafts and zip lines:</b> build a raft, set it on the water and paddle it (a friend can ride along); string a zip line between a high post and a lower one, and anyone can slide down it.</li>
         <li><b>Dying no longer loses your things:</b> everything you carried, tools included, is left in a sack where you fell, and it stays there until someone picks it up.</li>
         <li data-feature="fishing"><b>Fishing:</b> make a rod, hold <kbd>E</kbd> to cast into the sea or a spring, hook what bites and land it with a little game. Friends can grab the line, and fish cook on a fire.</li>

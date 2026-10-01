@@ -116,6 +116,11 @@ const COMMANDS = {
     done.catch(() => {});
     return this.minigames.solution(p) || { error: 'did not start' };
   },
+  // Call a boss to (x, z) now (C0): { boss: its id, x, z }; the reply has its state.
+  boss(p, { boss, x, z }) {
+    const b = this.bossCall(boss, { x, z, again: true });
+    return b ? { boss: this.bossView(b) } : { error: `no boss ${boss}` };
+  },
   // Fishing (P7): the fish bites now ({ fish: its key, game: the minigame to land it with }).
   bite(p, { fish, game }) {
     if (!p.fishing) return { error: 'not fishing' };
