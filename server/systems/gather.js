@@ -48,14 +48,17 @@ const methods = {
 };
 
 // Chopping a tree or a palm with no coconuts left.
+// (Tools: the one for the job, in your hand with the tools flag, P3; each use wears it down.)
 function chop(p, o, { say, changed }) {
-  const s = o.state, got = this.hasTool(p, 'axe') ? 2 : 1;
+  const axe = this.toolFor(p, 'axe'), s = o.state, got = axe ? 2 : 1;
   s.hits++; this.give(p, 'wood', got);
   this.fx(p, 'swing', o.id);
-  if (s.hits >= WG.chopsFor(o, s, this.day, this.time)) { s.gone = true; s.felledDay = this.day; say(`+${got} wood. The tree comes down.`); }
-  else say(`+${got} wood`);
+  const worn = this.wearTool(p, axe);
+  if (s.hits >= WG.chopsFor(o, s, this.day, this.time)) { s.gone = true; s.felledDay = this.day; say(`+${got} wood. The tree comes down.${worn}`); }
+  else say(`+${got} wood${worn}`);
   changed();
 }
+const holdIt = (p, island, what) => island.hasTool(p, what) ? ` Hold your ${WG.ITEMS[what].toLowerCase()} (1-8) to use it.` : '';
 
 // What E does to each kind of world object (`this` is the Island).
 const uses = {
@@ -99,22 +102,23 @@ const uses = {
   },
   rock: {
     use(p, o, { say, changed }) {
-      const s = o.state, got = this.hasTool(p, 'pickaxe') ? 2 : 1;
+      const pick = this.toolFor(p, 'pick'), s = o.state, got = pick ? 2 : 1;
       s.left--; this.give(p, 'stone', got);
       if (s.left <= 0) { s.gone = true; s.goneDay = this.day; }
       this.fx(p, 'swing', o.id);
-      say(`+${got} stone`);
+      say(`+${got} stone${this.wearTool(p, pick)}`);
       changed();
     },
   },
   ore: {
     use(p, o, { say, changed }) {
-      if (!this.hasTool(p, 'pickaxe')) return say('Too hard to break by hand. You need a pickaxe.');
-      const s = o.state, got = this.hasTool(p, 'ironpick') ? 2 : 1;
+      const pick = this.toolFor(p, 'pick');
+      if (!pick) return say(`Too hard to break by hand. You need a pickaxe.${holdIt(p, this, this.hasTool(p, 'ironpick') ? 'ironpick' : 'pickaxe')}`);
+      const s = o.state, got = pick === 'ironpick' ? 2 : 1;
       s.left--; this.give(p, o.ore, got);
       if (s.left <= 0) { s.gone = true; s.goneDay = this.day; }
       this.fx(p, 'swing', o.id);
-      say(`+${got} ${ITEMS[o.ore].toLowerCase()}`);
+      say(`+${got} ${ITEMS[o.ore].toLowerCase()}${this.wearTool(p, pick)}`);
       changed();
     },
   },
@@ -122,14 +126,16 @@ const uses = {
     use(p, o, { say, changed }) {
       const s = o.state;
       if (s.dug) return say('Already dug up. It’ll settle again by morning.');
-      if (!this.hasTool(p, 'shovel')) return say('The soil is soft here. With a shovel you could dig.');
+      const shovel = this.toolFor(p, 'shovel');
+      if (!shovel) return say(`The soil is soft here. With a shovel you could dig.${holdIt(p, this, 'shovel')}`);
       s.dug = true; this.give(p, 'clay', RULES.DIG_CLAY);
       this.fx(p, 'swing', o.id);
+      const worn = this.wearTool(p, shovel);
       if (this.stormLastNight && Math.random() < .35) {   // the storm stirred things up
         const find = ['spiral_shell', 'cowrie', 'glass_green', 'glass_amber'][Math.floor(Math.random() * 4)];
-        this.discover(p, find); say(`+${RULES.DIG_CLAY} clay. The storm left something buried here.`);
-      } else if (Math.random() < RULES.SEED_CHANCE_DIG) { this.give(p, 'seeds', 1); say(`+${RULES.DIG_CLAY} clay, and some buried seeds`); }
-      else say(`+${RULES.DIG_CLAY} clay`);
+        this.discover(p, find); say(`+${RULES.DIG_CLAY} clay. The storm left something buried here.${worn}`);
+      } else if (Math.random() < RULES.SEED_CHANCE_DIG) { this.give(p, 'seeds', 1); say(`+${RULES.DIG_CLAY} clay, and some buried seeds.${worn}`); }
+      else say(`+${RULES.DIG_CLAY} clay${worn}`);
       changed();
     },
   },

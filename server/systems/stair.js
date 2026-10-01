@@ -8,11 +8,11 @@ const { ITEMS } = WG;
 // Take one of `item` (two with `tool`) from a thing that runs out after `state.left` goes.
 function dig(item, tool, verb) {
   return function (p, o, { say, changed }) {
-    const s = o.state, got = tool && this.hasTool(p, tool) ? 2 : 1;
+    const used = tool && this.toolFor(p, WG.itemInfo(tool).tool), s = o.state, got = used ? 2 : 1;   // (the tool in hand with the tools flag, P3)
     s.left--; this.give(p, item, got);
     if (s.left <= 0) { s.gone = true; s.goneDay = this.day; }
     this.fx(p, 'swing', o.id);
-    say(`${verb} +${got} ${ITEMS[item].toLowerCase()}`);
+    say(`${verb} +${got} ${ITEMS[item].toLowerCase()}${this.wearTool(p, used)}`);
     changed();
   };
 }

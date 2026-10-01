@@ -84,7 +84,8 @@ and a river, Hollow (200, -2350) a crater, Teeth (350, -3150) up to about 600 m,
   without the right one you use bare hands (slow, or can't). **Durability:** stone pickaxe
   60 uses, copper axe 120, bronze 150, iron 200, silver 250. Red at 20% with a warning.
   A broken tool vanishes and gives back one material. **Repair** at a lit hearth for half
-  its materials.
+  its materials. (P3 as built, behind its own flag `tools` since `slots` was already on: shovel
+  80 uses; tools are kept through knockdowns and death, as tools always were.)
 - **E collects** berries, coconuts and everything else into the bag (no eating on the
   spot). **Hold E ~1 s** on a food slot to eat; a ring fills round the crosshair.
   (P2: silverfin from the tide and bugs are still eaten on the spot for now; they're journal

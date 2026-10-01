@@ -8,6 +8,11 @@
 // working and the flag can be switched off again without losing anything. Buckets live in
 // p.buckets as before (buckets.js, crafting.js and drops.js change that list); syncBuckets
 // gives each one a slot, and every change goes out through inventoryView, which calls it.
+//
+// With the `tools` flag too (P3) the tools are items: { k: 'pickaxe', n: 1, d: uses left }, one
+// to a slot. The one in your hand is the one you use (toolFor), and each use wears it down
+// (wearTool); worn out, it breaks and leaves one of its material. Tools you owned before (p.tools)
+// become items the first time you join with the flag on.
 const WG = require('../shared/world-gen');
 const { RULES, ITEMS } = WG;
 const { cleanBuckets } = require('./util');
@@ -17,6 +22,10 @@ const slotCount = () => S().HOTBAR + S().BAG;
 const range = (a, b) => Array.from({ length: b - a }, (_, i) => a + i);
 const isBucket = s => !!s && s.b != null;
 const stackOf = k => WG.itemInfo(k).stack;
+const usesOf = k => WG.itemInfo(k).uses || 0;   // tools (P3): how many uses a new one has; 0 for other things
+const toolsOn = () => WG.feature('tools') && WG.feature('slots');
+// A new slot of n of k (a tool also gets its uses left, d: full unless given)
+const newSlot = (k, n, d) => (usesOf(k) ? { k, n, d: Math.max(1, Math.min(usesOf(k), d || usesOf(k))) } : { k, n });
 // Where a new item goes: the hotbar first (so what you carry shows at the bottom of the
 // screen, as it did before the bag), then the bag.
 const order = () => range(0, slotCount());
@@ -25,11 +34,11 @@ function recount(p) {
   for (const s of p.slots) if (s && !isBucket(s)) p.inv[s.k] += s.n;
 }
 // Put up to n of k into slots (existing stacks first, then empty slots). Returns how many fitted.
-function fill(slots, k, n, idx = order(k)) {
+function fill(slots, k, n, idx = order(k), d) {
   const max = stackOf(k);
   let left = n;
   for (const i of idx) { const s = slots[i]; if (left > 0 && s && s.k === k && s.n < max) { const m = Math.min(left, max - s.n); s.n += m; left -= m; } }
-  for (const i of idx) { if (left > 0 && !slots[i]) { const m = Math.min(left, max); slots[i] = { k, n: m }; left -= m; } }
+  for (const i of idx) { if (left > 0 && !slots[i]) { const m = Math.min(left, max); slots[i] = newSlot(k, m, d); left -= m; } }
   return n - left;
 }
 function room(slots, k) {
@@ -75,7 +84,7 @@ function buildSlots(inv, buckets, saved) {
     if (s.b != null) { if (ids.has(s.b) && !used.has(s.b)) { slots[i] = { b: s.b }; used.add(s.b); } return; }
     if (typeof s.k !== 'string' || !Object.prototype.hasOwnProperty.call(ITEMS, s.k)) return;
     const n = Math.min(s.n | 0, left[s.k] || 0, stackOf(s.k));
-    if (n > 0) { slots[i] = { k: s.k, n }; left[s.k] -= n; }
+    if (n > 0) { slots[i] = newSlot(s.k, n, s.d | 0); left[s.k] -= n; }   // (a tool keeps its wear)
   });
   for (const k of Object.keys(ITEMS)) {
     if (!(left[k] > 0)) continue;
@@ -89,11 +98,12 @@ const methods = {
   // ---- the items API ----
   // Add n of an item. Returns how many were added (0 for an unknown item). With slots on,
   // what doesn't fit goes in a sack at the player's feet, unless opts.sack is false.
+  // A tool can be given part-worn: opts.d is its uses left.
   give(p, key, n = 1, opts = {}) {
     if (!(key in p.inv)) return 0;
     n = Math.max(0, Math.floor(n));
     if (!p.slots) { p.inv[key] += n; return n; }
-    const got = fill(p.slots, key, n);
+    const got = fill(p.slots, key, n, order(), opts.d);
     recount(p);
     const left = n - got;
     if (left > 0 && opts.sack !== false) {
@@ -118,9 +128,56 @@ const methods = {
     return !s ? null : isBucket(s) ? { key: 'bucket', bucket: s.b } : { key: s.k };
   },
 
-  // ---- tools (items of their own once P3 lands) ----
-  hasTool(p, id) { return p.tools.includes(id); },
-  addTool(p, id) { if (!p.tools.includes(id)) p.tools.push(id); },
+  // ---- tools (items of their own with the tools flag, P3) ----
+  // Owned at all: as a tool kept forever (before P3), or one in the bag.
+  hasTool(p, id) { return p.tools.includes(id) || this.count(p, id) > 0; },
+  addTool(p, id) {
+    if (toolsOn() && p.slots) return this.give(p, id, 1);   // a new one, as an item
+    if (!p.tools.includes(id)) p.tools.push(id);
+  },
+  // The tool you'd use for a job ('axe', 'pick' or 'shovel'): its key, or null for bare hands.
+  // With the tools flag it's the one in your hand; before that, owning one was enough (the
+  // iron pickaxe first).
+  toolFor(p, job) {
+    if (!toolsOn() || !p.slots) return ({ axe: ['axe'], pick: ['ironpick', 'pickaxe'], shovel: ['shovel'] }[job] || []).find(t => this.hasTool(p, t)) || null;
+    const h = this.held(p);
+    return h && WG.itemInfo(h.key).tool === job ? h.key : null;
+  },
+  // One use of the tool in your hand. Returns what to add to the toast: a warning when it's
+  // nearly worn out, or that it broke (and the material it leaves), or ''.
+  wearTool(p, key) {
+    if (!toolsOn() || !p.slots || !key) return '';
+    const s = p.sel >= 0 ? p.slots[p.sel] : null;
+    if (!s || s.k !== key || !s.d) return '';
+    s.d--;
+    const name = ITEMS[key].toLowerCase(), back = WG.itemInfo(key).returns;
+    if (s.d <= 0) {
+      p.slots[p.sel] = null;
+      recount(p);
+      if (back) this.give(p, back, 1);
+      this.fx(p, 'break');
+      return ` Your ${name} breaks${back ? ` (you keep 1 ${ITEMS[back].toLowerCase()})` : ''}.`;
+    }
+    if (s.d === Math.floor(usesOf(key) * RULES.TOOLS.WARN)) return ` Your ${name} is wearing out (${s.d} uses left). Repair it at a lit hearth.`;
+    return '';
+  },
+  // Repairing the tool in your hand at a lit hearth, for part of its recipe (RULES.TOOLS.REPAIR).
+  // Returns a message, or null when there's nothing to repair (so E does what it usually does).
+  repairTool(p, f) {
+    if (!toolsOn() || !p.slots || !f || f.kind !== 'hearth' || !(f.fuel > 0)) return null;
+    const s = p.sel >= 0 ? p.slots[p.sel] : null;
+    if (!s || !usesOf(s.k) || s.d >= usesOf(s.k)) return null;
+    const cost = this.repairCost(s.k), name = ITEMS[s.k].toLowerCase();
+    if (!this.canAfford(p, cost)) return `Mending your ${name} needs ${Object.entries(cost).map(([k, n]) => `${n} ${ITEMS[k].toLowerCase()}`).join(', ')}.`;
+    this.spend(p, cost);
+    s.d = usesOf(s.k);
+    this.fx(p, 'swing');
+    return `You mend your ${name} in the hearth's heat. Good as new.`;
+  },
+  repairCost(key) {
+    const r = WG.recipeById(key);
+    return Object.fromEntries(Object.entries(r ? r.cost : {}).map(([k, n]) => [k, Math.max(1, Math.ceil(n * RULES.TOOLS.REPAIR))]));
+  },
 
   // ---- costs and bundles ----
   canAfford(p, cost) { return Object.entries(cost).every(([k, n]) => this.count(p, k) >= n); },
@@ -135,17 +192,20 @@ const methods = {
   // Take a share of everything carried (rounded up), e.g. when knocked down. Returns { key: n }.
   takeShare(p, share) {
     const items = {};
-    for (const [k, n] of Object.entries(p.inv)) { const lose = Math.ceil(n * share); if (lose > 0) { items[k] = lose; this.take(p, k, lose); } }
+    for (const [k, n] of Object.entries(p.inv)) {
+      if (WG.itemInfo(k).kind === 'tool') continue;   // tools stay in your hand (P3)
+      const lose = Math.ceil(n * share); if (lose > 0) { items[k] = lose; this.take(p, k, lose); }
+    }
     return items;
   },
   // Everything carried is lost (tools and buckets are kept).
   clearItems(p) {
-    if (p.slots) p.slots = p.slots.map(s => (isBucket(s) ? s : null));
-    for (const k of Object.keys(p.inv)) p.inv[k] = 0;
+    if (p.slots) { p.slots = p.slots.map(s => (isBucket(s) || (s && usesOf(s.k)) ? s : null)); recount(p); }
+    else for (const k of Object.keys(p.inv)) p.inv[k] = 0;
   },
 
   // ---- slots (flag slots) ----
-  // Take up to n from one slot. Returns { key, n } or { bucket: id } taken, or null.
+  // Take up to n from one slot. Returns { key, n } (and d, a tool's uses left) or { bucket: id } taken, or null.
   takeFromSlot(p, i, n) {
     const s = p.slots && Number.isInteger(i) ? p.slots[i] : null;
     if (!s) return null;
@@ -154,7 +214,7 @@ const methods = {
     s.n -= m;
     if (s.n <= 0) p.slots[i] = null;
     recount(p);
-    return { key: s.k, n: m };
+    return s.d ? { key: s.k, n: m, d: s.d } : { key: s.k, n: m };
   },
   // Move count from slot `from` to slot `to` (to -1: the other part, bag <-> hotbar, wherever it
   // fits). Into an empty slot, onto the same item up to its stack size, or a whole stack swaps
@@ -167,7 +227,7 @@ const methods = {
     if (!src) return false;
     if (to === -1) {
       const idx = from < S().HOTBAR ? range(S().HOTBAR, N) : range(0, S().HOTBAR);
-      if (isBucket(src)) {
+      if (isBucket(src) || src.d) {   // a bucket or a tool moves as it is
         const i = idx.find(j => !p.slots[j]);
         if (i == null) return false;
         p.slots[i] = src; p.slots[from] = null;
@@ -185,10 +245,10 @@ const methods = {
     if (!(c >= 1)) return false;
     c = Math.min(c, src.n);
     if (!dst) {
+      if (c === src.n) { p.slots[to] = src; p.slots[from] = null; return true; }   // the whole stack (a tool keeps its wear)
       p.slots[to] = { k: src.k, n: c };
-    } else if (dst.k === src.k) {
+    } else if (dst.k === src.k && dst.n < stackOf(src.k)) {
       c = Math.min(c, stackOf(src.k) - dst.n);
-      if (c <= 0) return false;
       dst.n += c;
     } else {
       if (c !== src.n) return false;   // only a whole stack swaps
@@ -206,8 +266,10 @@ const methods = {
     const saved = m.inventory || {};
     const inv = { wood: m.wood, stone: m.stone };
     for (const k of Object.keys(ITEMS)) if (!(k in inv)) inv[k] = Math.max(0, saved[k] | 0);
-    const tools = (Array.isArray(saved.tools) ? saved.tools : []).filter(t => WG.recipeById(t));
+    let tools = (Array.isArray(saved.tools) ? saved.tools : []).filter(t => WG.recipeById(t));
     const buckets = cleanBuckets(saved.buckets);
+    // the tools flag (P3): tools you owned become items (once: the list is saved empty after)
+    if (toolsOn()) { for (const t of tools) if (t in inv && !(inv[t] > 0)) inv[t] = 1; tools = []; }
     // With slots off the saved arrangement is kept as it was, for when they're back on.
     if (!WG.feature('slots')) return { inv, tools, buckets, slotsSaved: Array.isArray(saved.slots) ? saved.slots : undefined };
     const { slots, over } = buildSlots(inv, buckets, saved.slots);
