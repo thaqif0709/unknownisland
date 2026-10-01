@@ -40,6 +40,7 @@
   // The map is a glance-at-while-walking overlay, not a modal: unlike the other panels
   // it doesn't freeze movement or block key handling.
   const blocksInput = () => PANELS.some(k => k !== 'map' && !ui[k].classList.contains('gone')) || Cut.on || chatOpen();
+  let escClosedAt = -1e9;   // when Esc last closed a panel: that Esc must not also open settings (305-mouse-look.js)
   window.addEventListener('keydown', e => {
     if (waitingBind) {
       e.preventDefault();
@@ -59,7 +60,7 @@
     if (e.code === 'Escape') {
       e.preventDefault();
       if (performance.now() - lookFreedAt < 300) return;   // this Esc freed the mouse and already opened settings
-      if (panelOpen()) closePanels(); else if (state === 'play') togglePanel('settings');
+      if (panelOpen()) { closePanels(); escClosedAt = performance.now(); } else if (state === 'play') togglePanel('settings');
       return;
     }
     if (blocksInput()) {
