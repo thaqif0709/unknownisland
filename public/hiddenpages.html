@@ -258,7 +258,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     </section>
 
     <section id="craft"><h2>Crafting</h2>
-      <p>Open the recipe book with <kbd>B</kbd>. <span data-feature-off="tools">Tools are kept forever (even when you die); </span>fires are placed in front of you.</p>
+      <p>Open the recipe book with <kbd>B</kbd>. <span data-feature-off="tools">Tools are kept forever; </span>fires are placed in front of you.</p>
       <div class="scroll"><table id="recipes"><tr><th>Make</th><th>Costs</th><th>What it does</th></tr></table></div>
       <div data-feature="tools">
         <h3>Tools wear out</h3>
@@ -271,7 +271,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
           <tr><td>Iron pickaxe</td><td data-r="TOOLS.USES.ironpick"></td><td>1 iron ore</td><td>1 wood, 2 iron ore</td></tr>
           <tr><td>Shovel</td><td data-r="TOOLS.USES.shovel"></td><td>1 stone</td><td>2 wood, 1 stone</td></tr>
         </table></div>
-        <p><b>Mending:</b> hold a worn tool and press <kbd>E</kbd> at a lit clay hearth. It costs about half of what the tool took to make, and it's as good as new. Tools stay with you when you're knocked down or die; dropped in a sack, they keep their wear.</p>
+        <p><b>Mending:</b> hold a worn tool and press <kbd>E</kbd> at a lit clay hearth. It costs about half of what the tool took to make, and it's as good as new. Tools stay with you when you're knocked down. If you die they go in the sack you leave behind; in a sack, they keep their wear.</p>
       </div>
     </section>
 
@@ -554,7 +554,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <ul>
         <li>Hunger, thirst, the cold and the Stilled all hurt you. The screen edges glow red below half health.</li>
         <li data-feature="combat">A creature's blow never kills you outright: it leaves you down, for a friend to pick up (see <a href="#fighting">Fighting</a>).</li>
-        <li>If your health hits zero you collapse. You wake up back on the beach<span data-feature="checkpoints"> (or by the hearth you last slept at)</span> with fresh stats: <b>you keep your tools, but lose everything you were carrying.</b></li>
+        <li>If your health hits zero you collapse. You wake up back on the beach<span data-feature="checkpoints"> (or by the hearth you last slept at)</span> with fresh stats. <b>Everything you were carrying (tools, weapons and buckets too, worn as they were) is left in a sack where you fell</b> (at a cave's mouth if you fell underground). The sack stays until someone picks it up: go back for it, or a friend can fetch it for you.</li>
       </ul>
     </section>
 
@@ -565,6 +565,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li><b>Dying no longer loses your things:</b> everything you carried, tools included, is left in a sack where you fell, and it stays there until someone picks it up.</li>
         <li data-feature="fishing"><b>Fishing:</b> make a rod, hold <kbd>E</kbd> to cast into the sea or a spring, hook what bites and land it with a little game. Friends can grab the line, and fish cook on a fire.</li>
         <li data-feature="torchlight"><b>Torches above ground:</b> a torch in hand lights the way, pushes the fog back and keeps you warm, anywhere, and burns down. <kbd>G</kbd> plants it in the ground as a small light for everyone; <kbd>E</kbd> takes it back.</li>
         <li data-feature="combat"><b>Fighting:</b> a torch can be swung (it burns) or thrown with a heavy swing, bursting into fire where it lands. Light also slows down what comes out of the fog for you.</li>

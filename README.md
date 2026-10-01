@@ -111,8 +111,8 @@ Copper ore is on the hill, iron ore near the rocky top. Every tree, palm and bus
 has its own full-grown size; felled trees come back as saplings and grow.
 
 When you log off, your castaway leaves the island and everything is frozen until you
-come back. If you die, you wake up on the beach: you keep your tools but lose what
-you were carrying.
+come back. If you die, you wake up on the beach, and everything you were carrying (tools too) is
+left in a sack where you fell, until someone picks it up.
 
 ## The island's stranger side
 
