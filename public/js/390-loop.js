@@ -46,6 +46,18 @@
     sunDisc.position.copy(camera.position).addScaledVector(sunDir, skyD); sunDisc.visible = sunDir.y > -.12;
     moonDisc.position.copy(camera.position).addScaledVector(moonDir, skyD); moonDisc.visible = moonDir.y > -.12;
     sunDisc.scale.set(46 * skyK, 46 * skyK, 1); moonDisc.scale.set(34 * skyK, 34 * skyK, 1);
+    // their glow: brightest high in a clear sky, dimmer low down (and the moon's with its phase);
+    // the halo breathes a little and the sun's beams turn slowly
+    const sunUp = clamp((sunDir.y + .12) / .3, 0, 1), moonUp = clamp((moonDir.y + .12) / .3, 0, 1);
+    const clear = env.weather === 'storm' || env.weather === 'fogstorm' ? .25 : env.weather === 'rain' ? .5 : 1, breathe = 1 + Math.sin(elapsed * .9) * .05;
+    for (const [s, d, k] of [[sunGlow, sunDir, 190], [sunRays, sunDir, 150], [moonGlow, moonDir, 170]]) {
+      s.position.copy(camera.position).addScaledVector(d, skyD * 1.002); s.scale.set(k * skyK * breathe, k * skyK * breathe, 1);
+    }
+    const moonLit = 1 - Math.abs(((env.phase || 0) % 8) - 4) / 4;   // 1 full, 0 new
+    sunGlow.material.opacity = .85 * sunUp * clear; sunRays.material.opacity = .45 * sunUp * clear;
+    moonGlow.material.opacity = (.25 + .75 * moonLit) * moonUp * clear;
+    sunRays.material.rotation = elapsed * .03;
+    sunGlow.visible = sunRays.visible = sunDisc.visible; moonGlow.visible = moonDisc.visible;
     if (Cut.on && Cut.under > .5) sunDisc.visible = moonDisc.visible = false;
     mist.position.copy(camera.position); mist.position.y = camera.position.y + 12;
     mist.rotation.y = elapsed * .004;
