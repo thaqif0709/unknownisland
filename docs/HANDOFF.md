@@ -520,6 +520,14 @@ somewhere to go opens its panel (`UI.lanternTravel.open`, hooked into `act()`). 
 The Hidden Pages have a search box (top of the contents; the script at the end of
 `public/hiddenpages.html`): it filters sections, list items and table rows by word starts,
 keeps spoilers closed (tagged), and skips text for flags that are off.
+Torches above ground (flag `torchlight`): `server/systems/torches.js` burns a torch in hand
+outside caves too, adds torches (in hand and planted) to `lights()` and to warmth
+(`torchWarm`), and keeps planted torches in `island.torches` (not saved: they last minutes).
+G with one torch in hand (`dropitem` without `stack`) plants it (`plantTorch`); `act 't<id>'`
+takes it back (`pickTorch`). Browser: `138-torches.js` (planted models, a pool of three
+flickering lights on the nearest torches; with the flag on it takes over from the caves'
+torchlight), plus torches in the fog map (`390-loop.js`). Tests: `tests/server/torches.test.js`,
+`tests/browser/torches.test.js`.
 Calling out (P11, no flag): `call` message, rate-limited in `server/systems/chat.js`
 (`RULES.CALL`), broadcast as `{ t: 'call', id, name, x, z, under }`; `285-calling-out.js`
 plays a panned, distance-faded call (muffled through a cave), a bubble, a compass note for

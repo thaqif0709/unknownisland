@@ -79,6 +79,12 @@
       lanterns.forEach(l => { if (l.clear > 0) lights.push({ x: l.x, z: l.z, r: l.clear * k }); });   // shrinks as the fog reclaims it
       if (inGame() && myPatches.includes('firefly_jar')) lights.push({ x: px, z: pz, r: 3.5 });
       if (Cut.on && Cut.light) lights.push(Cut.light);
+      if (WG.feature('torchlight') && inGame()) {   // torches: yours, friends', planted (138-torches.js; the server agrees)
+        const R = RULES.TORCH.LIGHT;
+        if (torchOf(hero) && !myCave) lights.push({ x: px, z: pz, r: R });
+        remotes.forEach(r => { if (torchOf(r.av) && !r.dead && !r.av.under) { const q = r.remote.sample(); lights.push({ x: q.x, z: q.z, r: R }); } });
+        UI.torches.planted().forEach(p => lights.push({ x: p.x, z: p.z, r: R }));
+      }
       remotes.forEach(r => { if (r.patches && r.patches.includes('firefly_jar') && !r.dead) { const q = r.remote.sample(); lights.push({ x: q.x, z: q.z, r: 3.5 }); } });
       updateFogMap(focusX, focusZ, t, lights);
     }
@@ -291,7 +297,7 @@
       if (knockT > 0 || stats.down) { temp.textContent = 'Knocked down\u2026'; temp.className = 'temp cold'; }
       else if (nrg.exhausted) { temp.textContent = 'Exhausted. Catch your breath.'; temp.className = 'temp cold'; }
       else if (stats.fog > .5) { temp.textContent = 'The fog is thick here.'; temp.className = 'temp cold'; }
-      else if (night) { temp.textContent = stats.warm ? 'Warm by the fire' : 'Cold'; temp.className = 'temp ' + (stats.warm ? 'warm' : 'cold'); }
+      else if (night) { temp.textContent = stats.warm ? (WG.feature('torchlight') && torchOf(hero) && ![...fires.values()].some(f => f.fuel > 0 && Math.hypot(f.x - px, f.z - pz) < WG.FIRES[f.kind].warm) ? 'Warm by your torch' : 'Warm by the fire') : 'Cold'; temp.className = 'temp ' + (stats.warm ? 'warm' : 'cold'); }
       else { temp.textContent = ''; temp.className = 'temp'; }
       renderInventory();
     }

@@ -9,7 +9,8 @@ const methods = {
     const k = this.env.lightMul || 1;
     return this.fires.filter(f => f.fuel > 0).map(f => ({ x: f.x, z: f.z, r: FIRES[f.kind].warm * 1.4 * k }))
       .concat(this.lanterns.filter(l => this.clearRadius(l) > 0).map(l => ({ x: l.x, z: l.z, r: this.clearRadius(l) * k })))
-      .concat([...this.players.values()].filter(p => !p.dead && this.has(p, 'firefly_jar')).map(p => ({ x: p.x, z: p.z, r: 3.5 })));
+      .concat([...this.players.values()].filter(p => !p.dead && this.has(p, 'firefly_jar')).map(p => ({ x: p.x, z: p.z, r: 3.5 })))
+      .concat(this.torchLights ? this.torchLights() : []);   // torches, in hand and planted (torches.js)
   },
 
   // ================= Stone lanterns =================
