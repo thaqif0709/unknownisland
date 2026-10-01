@@ -155,7 +155,7 @@ const methods = {
 
   onRespawn(p) {
     if (!p.dead) return;
-    // You keep your tools; what you were carrying is lost.
+    // What you were carrying was left in a sack where you fell (takeCarried, at death).
     this.clearItems(p);
     const at = this.respawnPoint(p);
     p.under = null;
@@ -204,7 +204,12 @@ const methods = {
       else if (p.hunger > RULES.REGEN_MIN && p.thirst > RULES.REGEN_MIN) p.health = Math.min(100, p.health + RULES.REGEN * dt);
       if (p.health <= 0) {
         p.health = 0; p.dead = true; p.moving = false;
+        // what you carried stays where you fell, in a sack anyone can pick up (it never goes away);
+        // in a cave, at its mouth (W9)
+        const items = this.takeCarried(p), cave = p.under && this.caveById ? this.caveById(p.under) : null;
+        if (Object.keys(items).length) this.sackAt(cave ? cave.out.x : p.x, cave ? cave.out.z : p.z, items);
         this.send(p, { t: 'died', cause: p.cause, day: this.day });
+        this.sendMe(p);
       }
     }
   },

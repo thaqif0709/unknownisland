@@ -199,6 +199,25 @@ const methods = {
     return items;
   },
   // Everything carried is lost (tools and buckets are kept).
+  // Everything in your slots, taken out on dying, as a sack's items: { key: n, tools: [{ k, d }],
+  // buckets: [...] } (tools and weapons keep their wear). It's left where you fell (players.js).
+  // (Without the slot inventory, tools aren't items: they stay with you, as before.)
+  takeCarried(p) {
+    const out = {};
+    if (p.slots) {
+      for (const s of p.slots) {
+        if (!s) continue;
+        if (isBucket(s)) { const b = (p.buckets || []).find(b => b.id === s.b); if (b) (out.buckets = out.buckets || []).push(b); }
+        else if (usesOf(s.k)) for (let i = 0; i < s.n; i++) (out.tools = out.tools || []).push({ k: s.k, d: s.d });
+        else out[s.k] = (out[s.k] || 0) + s.n;
+      }
+      p.slots = p.slots.map(() => null);
+      p.buckets = [];
+      p.sel = -1;
+      recount(p);
+    } else for (const k of Object.keys(p.inv)) if (p.inv[k] > 0) { out[k] = p.inv[k]; p.inv[k] = 0; }
+    return out;
+  },
   clearItems(p) {
     if (p.slots) { p.slots = p.slots.map(s => (isBucket(s) || (s && usesOf(s.k)) ? s : null)); recount(p); }
     else for (const k of Object.keys(p.inv)) p.inv[k] = 0;
