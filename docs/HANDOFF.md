@@ -514,7 +514,8 @@ same sensitivity and invert settings as dragging. A frame hook frees the pointer
 tries to lock again; browsers refuse that without a click (always right after Esc), so a
 "Click to continue" pill (`#lockPill`) shows instead. Esc while locked never reaches the page:
 `pointerlockchange` sees an unlock we didn't ask for (`freeingByUs`) and opens settings, and
-`lookFreedAt` keeps a late Esc keydown from closing it again. The ink crosshair (`#xhair`) is
+`lookFreedAt` keeps a late Esc keydown from closing it again, and `escClosedAt` (240-input.js)
+keeps an Esc that closed a panel from also opening settings when the browser frees the mouse on it. The ink crosshair (`#xhair`) is
 projected each frame onto `target` (what E would use), or 2.2 m in front of you, but stays
 hidden (players found it in the way) unless a `UI.crosshair.hittable` function says something
 you can hit is aimed at (P6). `html.inkcursor` swaps every cursor for an inked one. The wheel

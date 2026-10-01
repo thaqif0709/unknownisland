@@ -97,6 +97,28 @@ test('the (hidden) crosshair still follows what E would use', async () => {
   await page.waitForFunction(() => document.getElementById('xhair').classList.contains('use'), null, { timeout: 5000 });
 });
 
+test('Esc with a panel open only closes it (even when the mouse is let go at the same time)', async () => {
+  if (await locked()) { await page.keyboard.press('KeyB'); await page.waitForFunction(() => !document.pointerLockElement, null, { timeout: 5000 }); }
+  else await page.keyboard.press('KeyB');
+  await page.waitForFunction(() => window.UI.panels.isOpen('book'), null, { timeout: 5000 });
+  // Esc, and the browser letting the mouse go on the same key press (an unlock we didn't ask for)
+  await page.evaluate(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' }));
+    Object.defineProperty(document, 'pointerLockElement', { get: () => null, configurable: true });
+    document.dispatchEvent(new Event('pointerlockchange'));
+  });
+  await page.waitForTimeout(500);
+  await page.evaluate(() => { delete document.pointerLockElement; });   // the browser's own again
+  assert.ok(!(await page.evaluate(() => window.UI.panels.isOpen())), 'no panel open: the book closed, settings did not open');
+  // with nothing open, Esc opens settings
+  await page.waitForTimeout(500);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => window.UI.panels.isOpen('settings'), null, { timeout: 5000 });
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !window.UI.panels.isOpen(), null, { timeout: 5000 });
+  if (!(await locked())) await page.mouse.click(640, 300);
+});
+
 test('the wheel steps through the hotbar; Ctrl+wheel zooms', async () => {
   const dist = () => page.evaluate(() => { const c = window.__dbg.camera.position, p = window.__dbg.pos(); return Math.hypot(c.x - p.x, c.z - p.z); });
   // Headless rendering is slow, so each action is retried a few times until it shows.

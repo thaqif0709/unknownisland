@@ -29,9 +29,12 @@
   document.addEventListener('pointerlockchange', () => {
     if (pointerLocked()) { lockWanted = true; releaseKeys(); return; }
     if (freeingByUs) { freeingByUs = false; return; }
-    // The player pressed Esc (or switched window): open settings, as Esc does without the mouse locked.
+    // The player pressed Esc (or switched window): open settings, as Esc does without the mouse
+    // locked. Not when that Esc closed a panel (a dialog open, Esc closes it, and that's all),
+    // and not while one is open.
+    if (panelOpen() || performance.now() - escClosedAt < 400) return;   // (the Esc key itself closes the panel)
     lookFreedAt = performance.now();
-    setTimeout(() => { if (state === 'play' && !panelOpen()) togglePanel('settings'); }, 0);
+    setTimeout(() => { if (state === 'play' && !panelOpen() && performance.now() - escClosedAt >= 400) togglePanel('settings'); }, 0);
   });
   document.addEventListener('pointerlockerror', () => { freeingByUs = false; });
   lockPill.addEventListener('click', e => { e.stopPropagation(); lockPointer(); });
