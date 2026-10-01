@@ -338,7 +338,9 @@
     const g0 = groundAt(ox, oz);
     const toWorld = (u, w) => [ox + u * cy + w * sy, oz - u * sy + w * cy];   // (u along the lying body, w across it)
     const parts = [];
-    av.body.traverse(m => { if (m.isMesh && (!isIn(m, av.head) || m.material === throatM)) parts.push(m); });   // the body, and the throat (tucked in up to the chin)
+    const headParts = [];
+    const shown = m => { for (let o = m; o && o !== av.root; o = o.parent) if (!o.visible) return false; return true; };
+    av.body.traverse(m => { if (m.isMesh && shown(m)) (isIn(m, av.head) ? headParts : parts).push(m); });   // the body below the neck; the head (not covered)
     av.head.getWorldPosition(hp);
     const headU = (hp.x - ox) * cy - (hp.z - oz) * sy;   // how far along the body the head is
     // how far the body reaches each way (along it, u; across it, w), from every vertex of the
@@ -355,9 +357,20 @@
       }
     }
     const U0 = uMin - .16, U1 = headU - .14, W0 = wMin - .16, W1 = wMax + .16, NU = 32, NW = 22;
-    // the top edge reaches further up on the front (+w: where the chest and arms are), tucked
-    // under the chin, and stays lower at the back of the neck
-    const topU = j => { const w = W0 + (W1 - W0) * j / NW; const mid = (wMin + wMax) / 2; return U1 + .42 * Math.min(1, Math.max(0, (w - mid + .05) / .35)); };
+    // the top edge, per strip across the frog: right up to where the head begins (seen from
+    // above), so the neck and chest are covered and the head never is
+    const topAt = [];
+    for (let j = 0; j <= NW; j++) {
+      const w = W0 + (W1 - W0) * j / NW;
+      let top = headU + .35;   // nothing of the head over this strip: up past it
+      for (let u = headU - .6; u < headU + .35; u += .02) {
+        const [x, z] = toWorld(u, w);
+        rayFrom.set(x, g0 + 4, z); drapeRay.set(rayFrom, rayDown);
+        if (drapeRay.intersectObjects(headParts, false).length) { top = u - .05; break; }
+      }
+      topAt.push(Math.max(U0 + .3, top));
+    }
+    const topU = j => topAt[j];
     const uAt = (i, j) => U0 + (topU(j) - U0) * i / NU;
     // the body's height under each point of a grid
     const H = [];
