@@ -5,6 +5,7 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 const { startServer, INVITE } = require('../helpers/server');
+const { WG, landNear } = require('../helpers/world');
 
 let server, browser, page, bot;
 const errors = [];
@@ -53,8 +54,14 @@ test('R swings the sword in your hand at the dummy you aim at', async () => {
 });
 
 test('a double-tap of Shift rolls you a few metres', async () => {
+  // inland, on solid ground all round (from the beach, a roll back could be into deep water, which it won't go)
+  const spot = landNear({ x: WG.SPAWN.x + 30, z: WG.SPAWN.z - 30 });
+  await test_('place', spot);
+  await page.waitForFunction(s => { const q = window.__dbg.pos(); return Math.hypot(q.x - s.x, q.z - s.z) < .5; }, spot, { timeout: 10000 });
+  await page.waitForTimeout(300);
   const p0 = await page.evaluate(() => window.__dbg.pos());
-  await page.keyboard.press('ShiftLeft'); await page.waitForTimeout(60); await page.keyboard.press('ShiftLeft');
+  // both taps from inside the page: a slow headless page can take longer than the double-tap window between two key presses
+  await page.evaluate(() => { for (const type of ['keydown', 'keyup', 'keydown', 'keyup']) window.dispatchEvent(new KeyboardEvent(type, { code: 'ShiftLeft', key: 'Shift' })); });
   await page.waitForFunction(p => { const q = window.__dbg.pos(); return Math.hypot(q.x - p.x, q.z - p.z) > 1.5; }, p0, { timeout: 5000 });
 });
 

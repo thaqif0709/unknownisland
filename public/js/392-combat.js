@@ -52,7 +52,7 @@
     if (e.code === prefs.binds.attack) attackStart();
     if (e.code === prefs.binds.sprint && state === 'play' && !blocksInput()) {   // double-tap: roll
       const now = performance.now();
-      if (now - lastSprintTap < 280) { dodge(); lastSprintTap = 0; } else lastSprintTap = now;
+      if (now - lastSprintTap < 320) { dodge(); lastSprintTap = 0; } else lastSprintTap = now;
     }
   });
   window.addEventListener('keyup', e => { if (e.code === prefs.binds.attack) attackRelease(); });
