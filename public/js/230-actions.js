@@ -10,6 +10,7 @@
     nearbyObjects(px, pz, check); fires.forEach(check); drops.forEach(check); lanterns.forEach(check); washups.forEach(check);
     if (board) check(board);
     carvings.forEach(check);
+    if (UI.torches) UI.torches.planted().forEach(check);   // planted torches (138-torches.js)
     bugs.forEach(b => { const d = Math.hypot((b.cx ?? b.x) - px, (b.cz ?? b.z) - pz); if (d < 1.9 && d < bd) { bd = d; bestO = b; } });
     if (bestO) return bestO;
     const sn = WG.nearestSpring(px, pz);
@@ -38,6 +39,7 @@
       case 'carving': return o.offer && o.tally ? `Read the ${o.key} stone (it wants ${WG.ITEMS[o.offer].toLowerCase()})` : `Read the ${o.key} stone`;
       case 'board': return notes.length ? `Read the driftwood board (${notes.length} note${notes.length > 1 ? 's' : ''})` : 'The driftwood board (pin a note)';
       case 'wash': return o.kind === 'strange' ? (o.key === 'door_in_sand' ? 'Try the door' : o.key === 'ringing_bell' ? 'Touch the bell' : o.key === 'footprints' ? 'Look at the footprints' : 'Pick it up') : `${o.kind === 'food' ? 'Eat' : 'Pick up'}: ${o.label.replace(/^A /, 'a ')}`;   // tide food is eaten on the spot
+      case 'torch': return `Take the torch (burns ${Math.max(1, Math.round(o.left / 60))} more min)`;
       case 'bug': { const e = journal.entries.find(e => e.key === o.key); return `Catch the ${(e ? e.name : 'bug').toLowerCase()}`; }
       case 'lantern': {
         const oil = (stats.inv.oil || 0) > 0;
@@ -78,7 +80,7 @@
     : (o.type === 'rock' || o.type === 'ore') ? 'mine' : UI.things[o.type] ? UI.things[o.type].swing || null : null;
   function targetKey(o) {
     if (o.type === 'spring' || o.type === 'sea') return o.type;
-    return ({ fire: 'f', drop: 'd', lantern: 'l', wash: 'w', bug: 'b' }[o.type] || 'o') + o.id;
+    return ({ fire: 'f', drop: 'd', lantern: 'l', wash: 'w', bug: 'b', torch: 't' }[o.type] || 'o') + o.id;
   }
   // What E does with the bucket in your hand here, or null to act normally.
   function bucketAction() {

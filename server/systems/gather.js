@@ -27,9 +27,10 @@ const methods = {
       return say('Salty. That only made it worse.');
     }
 
-    const m = /^([ofdlwbc])(\d+)$/.exec(target);
+    const m = /^([ofdlwbct])(\d+)$/.exec(target);
     if (!m) return;
     if (m[1] === 'c') return this.sleeperOffer(p, +m[2]);
+    if (m[1] === 't') return this.pickTorch && this.pickTorch(p, +m[2]);   // a planted torch (torches.js)
     if (m[1] === 'w') return this.takeWashup(p, +m[2]);
     if (m[1] === 'b') return this.catchBug(p, +m[2]);
     if (m[1] === 'd') return this.pickUp(p, +m[2]);

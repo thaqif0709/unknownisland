@@ -171,6 +171,7 @@ flag; it needs `streaming,bigworld` (and `caves` for the mine). Switching it on 
 the land without moving anything already there.
 
 Travelling between lit lanterns (paying lamp oil by distance) is the `fasttravel` flag.
+Torches working above ground (light, fog, warmth, burning down; G plants one) are the `torchlight` flag.
 
 Hearth checkpoints are the `checkpoints` flag: hold V by a lit clay hearth to sleep there, and wake there after a
 knockdown or collapsing.

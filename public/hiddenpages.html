@@ -101,7 +101,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <b>Start</b><a href="#start">Getting started</a><a href="#controls">Controls</a><a href="#hud">The screen</a>
     <b>Surviving</b><a href="#survival">Food, water, health</a><a href="#water">Clean water &amp; buckets</a><a href="#moving">Moving, jumping, sitting</a><a href="#time">Day, night, moon, weather</a>
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
-    <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#fighting" data-feature="combat">Fighting</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
+    <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#fighting" data-feature="combat">Fighting</a><a href="#torches" data-feature="torchlight">Torches</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
     <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a><a href="#minigames" data-feature="fishing">Landing a fish</a>
     <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#stairs" data-feature="region-stair">The Stairs</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
     <b>History</b><a href="#changelog">Changelog</a>
@@ -129,7 +129,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <tr><td><kbd>E</kbd></td><td>Use / pick up / talk to what's in front of you (the prompt at the bottom says what)</td></tr>
         <tr><td><kbd>1</kbd>&ndash;<kbd>8</kbd></td><td>Hold the item in that slot (press again to put it away; an empty slot is empty hands)</td></tr>
         <tr><td><kbd>Q</kbd> / <kbd>Shift</kbd>+<kbd>Q</kbd></td><td>Next / previous slot, empty ones too</td></tr>
-        <tr><td><kbd>G</kbd> / <kbd>Shift</kbd>+<kbd>G</kbd></td><td>Drop one / all of the held item</td></tr>
+        <tr><td><kbd>G</kbd> / <kbd>Shift</kbd>+<kbd>G</kbd></td><td>Drop one / all of the held item<span data-feature="torchlight">. With a torch in hand, <kbd>G</kbd> plants it in the ground</span></td></tr>
         <tr data-feature="slots"><td><kbd>I</kbd></td><td>Open the bag (drag stacks between the bag and the hotbar; phones: the <b>Bag</b> button)</td></tr>
         <tr data-feature="fasttravel"><td><kbd>E</kbd> at a lit lantern</td><td>Travel to another lit lantern you remember (or add oil)</td></tr>
         <tr data-feature="tools"><td><kbd>E</kbd> at a lit hearth, worn tool in hand</td><td>Mend the tool</td></tr>
@@ -352,6 +352,17 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       </table></div>
     </section>
 
+    <section id="torches" data-feature="torchlight"><h2>Torches</h2>
+      <p>Make torches from wood and seeds (the recipe book has them). Hold one (keys <kbd>1</kbd>&ndash;<kbd>8</kbd>) and it's lit, wherever you are:</p>
+      <ul>
+        <li>It <b>lights the ground</b> round you (at night it's the brightest thing about), and friends see it too.</li>
+        <li>It <b>pushes the fog back</b> about <span data-r="TORCH.LIGHT"></span> steps round you, and <b>keeps you warm</b> at night (only close by: a campfire warms a wider circle).</li>
+        <li>It <b>burns down</b> while you hold it: about <span data-r="TORCH.BURN"></span> seconds, then the next one in your stack lights.</li>
+        <li><b>Plant it:</b> with a torch in hand, <kbd>G</kbd> plants it upright in the ground in front of you. It lights, warms and holds back the fog there for anyone, for about <span data-r="TORCH.PLANT_BURN"></span> seconds, then burns out. Not in water or underground. (<kbd>Shift</kbd>+<kbd>G</kbd> still drops the whole stack in a sack.)</li>
+        <li><b>Take it back:</b> walk up to a planted torch and press <kbd>E</kbd>, with what's left of it.</li>
+      </ul>
+    </section>
+
     <section id="lanterns"><h2>Stone lanterns</h2>
       <p>Old stone lanterns stand all over the island. Light one and it pushes the fog back in a wide circle, warms you, and makes a safe camp.</p>
       <ul>
@@ -457,7 +468,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <p>Some of the island is hollow. Walk into a cave's mouth and you're under the ground, no loading, and your friends see you go in. Inside there's no fog, no cold wind and none of the Stilled, but it gets <b>dark</b> quickly.</p>
       <ul>
         <li><b>The Dark:</b> deep in a cave with no light, your dread climbs, faster than a night out in the open. A light of your own (or a friend's close by) keeps it away.</li>
-        <li><b>Torches:</b> made from wood and seeds (the recipe book has them). Hold one (keys 1 to 8) and it lights the way for you and everyone near you. A torch burns for about <span data-r="TORCH.BURN"></span> seconds in your hand underground, then the next one lights.</li>
+        <li><b>Torches:</b> made from wood and seeds (the recipe book has them). Hold one (keys 1 to 8) and it lights the way for you and everyone near you. A torch burns for about <span data-r="TORCH.BURN"></span> seconds in your hand <span data-feature-off="torchlight">underground</span><span data-feature="torchlight">(anywhere)</span>, then the next one lights.</li>
         <li>You can't light a fire underground, and nothing up on the ground is in reach from down there.</li>
         <li>If you leave the island while underground, you come back just outside the cave's mouth.</li>
         <li>Anything you say in chat from underground reaches the people up above muffled, with words lost. Whoever is down there with you hears it clearly.</li>
@@ -530,6 +541,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="torchlight"><b>Torches above ground:</b> a torch in hand lights the way, pushes the fog back and keeps you warm, anywhere, and burns down. <kbd>G</kbd> plants it in the ground as a small light for everyone; <kbd>E</kbd> takes it back.</li>
         <li><b>The sun and moon glow:</b> a warm halo and slow-turning beams round the sun, a silvery halo round the moon (brighter the fuller it is). Both dim in rain and storms.</li>
         <li><b>Fixed:</b> walking off a cliff now falls instead of jumping you straight to the bottom, and the camera follows you down a long fall instead of showing the ground; the sleeping blanket's edge by your head falls onto the ground.</li>
         <li data-feature="combat"><b>Fighting:</b> swords, a spear, a club and a sling; heavy swings, rolling out of the way, and being picked up by a friend when you're down. The Stilled can be broken into fog, for a while.</li>

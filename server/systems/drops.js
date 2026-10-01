@@ -16,10 +16,15 @@ const methods = {
 
   // Drop some of what you carry at your feet, in a sack anyone can pick up
   // (that's how you give things to a friend). Drops next to a sack go into it.
-  async onDropItem(p, { key, count, bucket, slot }) {
+  async onDropItem(p, { key, count, bucket, slot, stack }) {
     const now = Date.now();
     if (p.dead || p.knockedUntil > now) return;
     if (now - (p.lastDropAt || 0) < 150) return;
+    // G with a torch in hand (one, not Shift+G for the stack) plants it (torches.js, flag torchlight)
+    if (WG.feature('torchlight') && !stack && (count == null || count === 1)) {
+      const s = slot != null && p.slots ? p.slots[slot] : null;
+      if (s ? s.k === 'torch' : (slot == null && key === 'torch')) { p.lastDropAt = now; return this.plantTorch(p, s ? slot : null); }
+    }
     let items, n = 0;
     if (slot != null && p.slots) {   // from one slot (the slot inventory, P2)
       const got = this.takeFromSlot(p, slot, count);

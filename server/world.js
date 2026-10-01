@@ -16,7 +16,7 @@ const { Minigames } = require('./minigames');
 // optional hooks onTick(dt), onDawn(sunrises) and onJoin(p) (extra welcome fields) run
 // alongside the core loop. See docs/roadmap/CONTRACTS.md section 2.
 const SYSTEMS = ['journal', 'tides', 'bugs', 'weather', 'time', 'chat', 'board', 'patches', 'players',
-  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves', 'checkpoints', 'lanterntravel', 'stair', 'minigames', 'combat'];
+  'inventory', 'objects', 'gather', 'crafting', 'fires', 'stilled', 'lanterns', 'buckets', 'drops', 'sleeper', 'regions', 'streaming', 'charting', 'caves', 'checkpoints', 'lanterntravel', 'torches', 'stair', 'minigames', 'combat'];
 
 class Island {
   constructor(store, data) {

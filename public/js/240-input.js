@@ -128,6 +128,7 @@
     const k = heldKey(), hb = heldBucket();
     if (hb) toast(`${bucketName(hb)} in hand. ${hb.water === 'none' ? 'Wade into the sea and press E to fill it.' : hb.water === 'sea' ? 'Seawater: press E at a fire to boil it.' : `Clean water: hold ${keyLabel(prefs.binds.act)} to drink.`}`);
     else if (k && slotsOn() && WG.itemInfo(k).kind === 'food') toast(`${WG.ITEMS[k]} in hand. Hold ${keyLabel(prefs.binds.act)} to eat.`);
+    else if (k === 'torch' && WG.feature('torchlight')) toast(`Torch in hand: it lights the way and keeps you warm. ${keyLabel(prefs.binds.drop)} plants it in the ground.`);
     else if (k) toast(`${WG.ITEMS[k]} in hand. ${keyLabel(prefs.binds.drop)} drops one, Shift+${keyLabel(prefs.binds.drop)} drops them all.`);
   }
   // Q (and the wheel): the next slot, empty ones too (wrapping round); Shift+Q goes back.
@@ -141,9 +142,9 @@
     if (state !== 'play' || !net) return;
     if (!k) { toast('Pick something to hold first (keys 1-8).'); return; }
     const hb = bucketOf(k);
-    if (slotsOn()) net.send({ t: 'dropitem', slot: selSlot, count: all ? slotCountAt(selSlot) : 1 });
+    if (slotsOn()) net.send({ t: 'dropitem', slot: selSlot, count: all ? slotCountAt(selSlot) : 1, stack: !!all });   // (stack: Shift+G, never plants a torch)
     else if (hb) net.send({ t: 'dropitem', bucket: hb.id });
-    else net.send({ t: 'dropitem', key: k, count: all ? stats.inv[k] : 1 });
+    else net.send({ t: 'dropitem', key: k, count: all ? stats.inv[k] : 1, stack: !!all });
     startSwing(hero, null, .25);
   }
   $('invList').addEventListener('click', e => { const sl = e.target.closest('[data-slot]'); if (sl) selectSlot(+sl.dataset.slot); });

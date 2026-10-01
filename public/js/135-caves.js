@@ -249,7 +249,8 @@
       mist.visible = caveDk < .5; clouds.forEach(c => { c.visible = caveDk < .5; });
     } else if (!Cut.on) { mist.visible = true; clouds.forEach(c => { c.visible = true; }); }
     if (myCave) inkMat.uniforms.seeFar.value = 0;
-    // torches: yours, then the nearest others
+    // torches: yours, then the nearest others (with the torchlight flag, 138-torches.js lights them everywhere)
+    if (WG.feature('torchlight')) { torchLights.forEach(l => { l.intensity = 0; }); return; }
     const lit = [];
     const mine = torchOf(hero); if (mine) lit.push(mine);
     remotes.forEach(r => { const f = torchOf(r.av); if (f) lit.push(f); });

@@ -171,7 +171,8 @@ const methods = {
       if (p.dead || this.watching(p)) continue;   // nothing happens to you while the intro plays
       const warmMul = this.env.lightMul * (this.has(p, 'silverfin_scale') ? 1.3 : 1);
       p.warm = this.fires.some(f => f.fuel > 0 && Math.hypot(f.x - p.x, f.z - p.z) < FIRES[f.kind].warm * warmMul)
-        || this.lanterns.some(l => l.lit && Math.hypot(l.x - p.x, l.z - p.z) < this.lanternRadius(l) * .6 * warmMul);
+        || this.lanterns.some(l => l.lit && Math.hypot(l.x - p.x, l.z - p.z) < this.lanternRadius(l) * .6 * warmMul)
+        || (this.torchWarm ? this.torchWarm(p) : false);   // a torch (torches.js, flag torchlight)
       if (this.env.rain) p.thirst = Math.min(100, p.thirst + RULES.WEATHER.RAIN_WATER * dt);
       // Dread: fog, darkness and being alone push it up; light, day and friends bring it down.
       p.fog = p.under ? 0 : WG.fogAt(p.x, p.z, heightAt(p.x, p.z), this.time, lights, this.env);   // no fog underground

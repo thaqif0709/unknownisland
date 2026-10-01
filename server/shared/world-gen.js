@@ -67,7 +67,12 @@
       FRIEND_RADIUS: 12,
       CAVE_DARK: 2.2,    // the Dark: deep in a cave with no light (yours or a friend's)
     },
-    TORCH: { BURN: 300 },  // seconds a torch burns in your hand underground
+    TORCH: {
+      BURN: 300,       // seconds a torch burns in your hand (underground; everywhere with the torchlight flag)
+      LIGHT: 4,        // with torchlight: the fog pulls back this far round a lit torch (in hand or planted)
+      WARM: 2.6,       // and you're warm this close to one (a campfire is 5.5)
+      PLANT_BURN: 300, // a torch planted in the ground burns this long (seconds)
+    },
     CALL: { GAP: 8, HEAR: 160, SHOW: 60 },  // calling out (P11): seconds between calls, metres it carries, seconds on the map
     KNOCK: { HEALTH: 20, DREAD: 25, DROP: .5, DOWN_MS: 3000 },
     // Old stone lanterns. Oil keeps them lit; lit, they clear the fog around them.
@@ -113,6 +118,7 @@
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
       slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
       combat: false,     // P6: weapons, attacking (left click, hold for heavy), dodging (double-tap Shift), downed and revived
+      torchlight: false, // torches burn above ground too: light, fog pushed back, warmth; G plants one (E takes it back)
       fasttravel: false, // W10: travel between lit lanterns you've stood by, paying lamp oil
       tools: false,      // P3: tools are items in the bag, used from your hand, that wear out (needs slots)
       'region-stair': false,   // C3: the Stairs' own things (flint, herbs, flax, ruins, standing stones, tin), bugs, the Leaning, the old mine, its request chain
