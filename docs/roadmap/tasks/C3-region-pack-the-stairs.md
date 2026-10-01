@@ -3,7 +3,7 @@ id: C3
 title: Region pack: The Stairs
 lane: content
 owner: thaqif
-status: todo
+status: doing
 depends: [W5, W8, W9, P3]
 flag: region-stair
 size: 2 sessions
@@ -39,3 +39,4 @@ Build the boss last; everything else only needs the listed dependencies.
 ## Log
 
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->
+2026-10-01 thaqif: first part merged behind `region-stair` (off): flint, herbs, flax, old walls, standing stones, tin; three bugs and journal entries; the Leaning; the old mine; the five-request chain; the browser side (108-the-stairs.js, mobs/leaning.js). Still to do: the Keeper of Steps (needs C0) and the bronze tier (needs P3).

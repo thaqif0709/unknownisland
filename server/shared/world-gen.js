@@ -113,6 +113,7 @@
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
       slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
       tools: false,      // P3: tools are items in the bag, used from your hand, that wear out (needs slots)
+      'region-stair': false,   // C3: the Stairs' own things (flint, herbs, flax, ruins, standing stones, tin), bugs, the Leaning, the old mine, its request chain
     },
     // Creative mode, for testing only: admins (the ADMINS env var) type /creative in chat,
     // then double-tap Space to fly. Speeds in m/s; walking is WALK_SPEED.
@@ -168,7 +169,8 @@
   // Things you can carry (inventory keys and their names).
   const ITEMS = { wood: 'Wood', stone: 'Stone', clay: 'Clay', copper: 'Copper ore', iron: 'Iron ore', seeds: 'Seeds', oil: 'Lamp oil', torch: 'Torch',
     berries: 'Berries', coconut: 'Coconut',
-    shovel: 'Shovel', pickaxe: 'Stone pickaxe', axe: 'Copper axe', ironpick: 'Iron pickaxe' };   // (tools: items with the tools flag, P3)
+    shovel: 'Shovel', pickaxe: 'Stone pickaxe', axe: 'Copper axe', ironpick: 'Iron pickaxe',   // (tools: items with the tools flag, P3)
+    flint: 'Flint', herbs: 'Healing herbs', flax: 'Flax', bricks: 'Old bricks', tin: 'Tin ore' };   // (the last five: the Stairs, C3)
   // More about an item than its name (all optional): kind 'food' is eaten from a slot (food,
   // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise).
   const ITEM_INFO = {
@@ -185,6 +187,18 @@
     const i = ITEM_INFO[key] || {};
     if (i.kind === 'tool') return { ...i, stack: 1, uses: RULES.TOOLS.USES[key] };
     return { ...i, stack: i.stack || (i.kind === 'food' ? RULES.SLOTS.FOOD_STACK : RULES.SLOTS.STACK) };
+  };
+
+  // Things that stand in a region's land besides trees, bushes, rocks and ore (C3 and the other
+  // region packs): what they start as, how many days until they grow back once used up
+  // (0: never), and how big they are. What E does to them is in server/systems/<region>.js,
+  // how they look in public/js/<region part> (UI.things).
+  const THINGS = {
+    flint: { state: { left: 2 }, regrow: 3, r: .4 },        // flint nodules in the turf (the Stairs)
+    herb: { state: { picked: false }, regrow: 1, r: .3 },    // healing herbs
+    flax: { state: { picked: false }, regrow: 2, r: .35 },   // blue-flowered flax
+    ruin: { state: { left: 3 }, regrow: 6, r: 1.2 },         // a tumbledown wall of old bricks
+    standing: { state: {}, regrow: 0, r: .6 },              // a standing stone (shelter from the wind)
   };
 
   // Things you can build. Add new entries here; the recipe book lists them all.
@@ -635,6 +649,7 @@
       case 'ore': return { left: RULES.ORE_HITS };
       case 'dig': return { dug: false };
     }
+    if (THINGS[type]) return { ...THINGS[type].state };
     return {};
   }
   function isDefaultState(type, s) {
@@ -745,7 +760,8 @@
           if ((rule.minH != null && h < rule.minH) || (rule.maxH != null && h > rule.maxH)) continue;
           if (!clear(x, z, rule.pad ?? .8)) continue;
           const o = { id: chunkObjectId(cx, cz, out.length), type: rule.type, x: +x.toFixed(2), z: +z.toFixed(2), r: .5 };
-          if (o.type === 'palm') o.r = .35;
+          if (THINGS[o.type]) o.r = THINGS[o.type].r;
+          else if (o.type === 'palm') o.r = .35;
           else if (o.type === 'bush') o.r = .6;
           else if (o.type === 'rock') { o.s = +(.8 + rng() * .9).toFixed(3); o.r = +(.55 * o.s).toFixed(3); }
           else if (o.type === 'ore') { o.s = +(1 + rng() * .5).toFixed(3); o.r = +(.6 * o.s).toFixed(3); }
@@ -766,7 +782,7 @@
     generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
     feature, features, setFeatures, resolveFeatures,
     REGIONS, regionAt, climbAt, slopeAt, landingHeightAt, WORLD, RIVERS,
-    CHUNK, CHUNK_ID_BASE, chunkOf, chunkKey, chunkObjectId, chunkOfId, generateChunk,
+    THINGS, CHUNK, CHUNK_ID_BASE, chunkOf, chunkKey, chunkObjectId, chunkOfId, generateChunk,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = WorldGen;
   else root.WorldGen = WorldGen;

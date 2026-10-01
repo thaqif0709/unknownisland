@@ -243,10 +243,11 @@
     else if (o.type === 'bush') { const b = makeBush(rng, o.species); o.mesh = b.g; o.berryMesh = b.berries; }
     else if (o.type === 'ore') o.mesh = makeOre(rng, o.s || 1, o.ore);
     else if (o.type === 'dig') { const d = makeDig(rng); o.mesh = d.g; o.mound = d.mound; o.hole = d.hole; }
+    else if (UI.things[o.type]) { const t = UI.things[o.type].make(rng, o); o.mesh = t.g; o.parts = t.parts || {}; }   // a region's own (C3 ...)
     else o.mesh = makeRock(rng, o.s || 1, o.species);
     if (o.berryMesh) bake(o.berryMesh);
     if (o.mound) bake(o.mound);
-    bake(o.mesh, [...(o.nuts || []), o.berryMesh, o.mound, o.hole]);
+    bake(o.mesh, [...(o.nuts || []), o.berryMesh, o.mound, o.hole, ...Object.values(o.parts || {})]);
     o.mesh.position.set(o.x, groundAt(o.x, o.z), o.z);
     shadows(o.mesh);
     scene.add(o.mesh);
@@ -256,7 +257,7 @@
   function removeMesh(o) {
     if (!o.mesh) return;
     scene.remove(o.mesh); disposeTree(o.mesh);
-    o.mesh = o.nuts = o.berryMesh = o.mound = o.hole = null;
+    o.mesh = o.nuts = o.berryMesh = o.mound = o.hole = o.parts = null;
   }
   function buildProps(c) { for (const o of buckets.get(c.key) || []) if (!o.mesh) buildMesh(o); c.props = true; }
   function dropProps(c) { for (const o of buckets.get(c.key) || []) removeMesh(o); c.props = false; }
@@ -267,6 +268,7 @@
     if (o.type === 'palm') o.nuts.forEach((n, i) => { n.visible = i < s.coconuts; });
     if (o.type === 'bush') o.berryMesh.visible = !!s.berries;
     if (o.type === 'dig') { o.mound.visible = !s.dug; o.hole.visible = !!s.dug; }
+    const th = UI.things[o.type]; if (th && th.state) th.state(o, s);
     resize1(o);
   }
   // Plants grow toward their own full-grown size (see RULES.FLORA).

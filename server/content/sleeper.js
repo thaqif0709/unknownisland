@@ -9,6 +9,7 @@
 //   fog_walk     stand in thick fog, come back   { seconds }
 //   bugs         bugs caught while it's carved   { count }
 //   find         someone finds a journal entry   { key }
+//   in_cave      frogs in a cave at once         { cave, count }
 // reward / penalty: a list of { type } from calm, gift, relic, note, light / press, dread, douse
 // pool: false = only asked as a step of a region's chain (the order is in server/regions/<id>.js),
 // never picked at random.
@@ -57,6 +58,23 @@ const SLEEPER = [
   { key: 'landing_call', pool: false, text: 'Light three lanterns, so it can find its way to you. Then it will come.', stone: 'ridge', days: 5,
     conditions: { type: 'lanterns_lit', count: 3, minHeight: 0 }, reward: [{ type: 'note' }], penalty: [{ type: 'press', days: 2 }],
     doneText: 'It is coming. At the lowest tide, on the east sand.', failText: 'It lost its way. Light them again.' },
+
+  // ---- The Stairs' chain (C3). Something old keeps the steps: the Keeper of Steps. ----
+  { key: 'stair_flint', pool: false, text: 'Up the steps, the ground is full of sharp stones. Bring me six, so I know you went.', stone: 'ridge', days: 3,
+    conditions: { type: 'offer', item: 'flint', count: 6 }, reward: [{ type: 'gift' }], penalty: [{ type: 'dread', amount: 10 }],
+    doneText: 'Sharp. The steps are sharp. Someone cut them, once.', failText: 'You stayed below.' },
+  { key: 'stair_mend', pool: false, text: 'The houses on the steps are falling. Bring their bricks back to me.', stone: 'spring', days: 4,
+    conditions: { type: 'offer', item: 'bricks', count: 8 }, reward: [{ type: 'calm', nights: 1 }, { type: 'note' }], penalty: [{ type: 'press', days: 1 }],
+    doneText: 'Someone lived there. Someone swept the steps every morning.', failText: 'They fell. Nobody caught them.' },
+  { key: 'stair_mine', pool: false, text: 'They dug into the steps, and did not come out. Go in, two of you, and come out again.', stone: 'ridge', days: 4,
+    conditions: { type: 'in_cave', cave: 'oldmine', count: 2 }, reward: [{ type: 'light' }, { type: 'gift' }], penalty: [{ type: 'dread', amount: 15 }],
+    doneText: 'You came out. Good. They did not.', failText: 'Nobody went in. Nobody came out.' },
+  { key: 'stair_herbs', pool: false, text: 'Something on the steps sleeps badly. Bring me the green that heals.', stone: 'spring', days: 3,
+    conditions: { type: 'offer', item: 'herbs', count: 6 }, reward: [{ type: 'calm', nights: 1 }], penalty: [{ type: 'press', days: 1 }],
+    doneText: 'Quieter now. It turns over, but it does not wake.', failText: 'It is awake. It is counting the steps.' },
+  { key: 'stair_climb', pool: false, text: 'Catch the moth that rides the wind at the top of the steps. Then it will come to you.', stone: 'ridge', days: 5,
+    conditions: { type: 'find', key: 'wind_moth' }, reward: [{ type: 'note' }], penalty: [{ type: 'press', days: 2 }],
+    doneText: 'It heard you climb. At dusk, in the village on the steps. Know its marks.', failText: 'It did not hear you. The steps are very long.' },
 ];
 
 // What the stones say when they aren't asking for anything.

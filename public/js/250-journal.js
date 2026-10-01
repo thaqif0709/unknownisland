@@ -1,6 +1,6 @@
   // ================= Journal (a tattoo flash sheet) =================
   let journal = { entries: [], firsts: {}, mine: {} };
-  const JCATS = [['bugs', 'Bugs'], ['moon', 'Under the full moon'], ['shells', 'Shells'], ['glass', 'Sea glass'], ['tide', 'From the tide'], ['strange', 'Strange tides'], ['relics', 'Left by the stones']];
+  const JCATS = [['bugs', 'Bugs'], ['moon', 'Under the full moon'], ['shells', 'Shells'], ['glass', 'Sea glass'], ['tide', 'From the tide'], ['strange', 'Strange tides'], ['relics', 'Left by the stones'], ['stilled', 'Things in the fog']];
   const iconCache = new Map();
   // Each entry gets a small inked design, drawn once.
   function flashIcon(key, known) {

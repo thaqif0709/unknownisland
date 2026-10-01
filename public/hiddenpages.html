@@ -90,7 +90,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
     <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
     <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a><a href="#minigames" data-feature="fishing">Landing a fish</a>
-    <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
+    <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#stairs" data-feature="region-stair">The Stairs</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
     <b>History</b><a href="#changelog">Changelog</a>
   </div></nav>
 
@@ -440,7 +440,32 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li><b>The Hollow</b>, a crater further north, and <b>the Teeth</b> beyond it: mountains to about 600 m with snow on top.</li>
         <li><b>The Ashen Shore</b>, on the north-west coast, around an old volcano.</li>
       </ul>
-      <p class="muted">Each land is still bare and waiting for its own plants, creatures and story.</p></details>
+      <p class="muted">Each land is still bare and waiting for its own plants, creatures and story<span data-feature="region-stair"> (the Stairs have theirs: below)</span>.</p></details>
+    </section>
+
+    <section id="stairs" data-feature="region-stair"><h2>The Stairs</h2>
+      <p>Grassy terraces climbing north from the Landing, windy and open, with pines on the high steps and the tumbledown walls of somebody's old village. Things you'll only find here:</p>
+      <ul>
+        <li><b>Flint</b> nodules in the turf: dark lumps with a chalky crust. Prise them out with <kbd>E</kbd> (a pickaxe gets two). Back in <span data-r="THINGS.flint.regrow"></span> days.</li>
+        <li><b>Healing herbs</b>: low rosettes with tiny white flowers. New leaves in <span data-r="THINGS.herb.regrow"></span> day.</li>
+        <li><b>Flax</b>: thin stems with sky-blue flowers, on the lower steps. Grows again in <span data-r="THINGS.flax.regrow"></span> days.</li>
+        <li><b>Old walls</b> of brick: work bricks loose with <kbd>E</kbd> (a pickaxe gets two). A wall gives three loads, then crumbles away, and the rubble turns up again in <span data-r="THINGS.ruin.regrow"></span> days.</li>
+        <li><b>Tin ore</b> high on the steps: pale blue-grey flecks in the rock, mined like copper.</li>
+        <li><b>Standing stones</b>, taller than three frogs, with worn marks near the top.</li>
+        <li>Their own bugs: the <b>stone beetle</b>, the <b>terrace grasshopper</b> and (rarely) something that only flies at night, high up.</li>
+      </ul>
+      <p class="muted">What flint, herbs, flax and tin are for comes with tools that wear out and the bronze tier.</p>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The Leaning <span class="muted">(click to show)</span></summary>
+      <p>The Stairs have their own Stilled. <b>The Leaning</b> are tall, pale and thin, and they stand leaning back into the wind, quite still. They only move when it <b>gusts</b>: then the wind carries them, and they can steer a little towards you, but never against it. One that reaches you in a gust throws you down and <b>shoves you downwind</b>, down the steps.</p>
+      <ul>
+        <li>They come out at night, upwind of whoever is on the Stairs (more of them for someone alone), and are gone by morning.</li>
+        <li>Being near one frightens you.</li>
+        <li><b>Shelter</b> is the answer: with a standing stone or an old wall right beside you, on the side the wind comes from, they can't touch you, and go on past.</li>
+      </ul></details>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The old mine <span class="muted">(click to show)</span></summary>
+      <p>Somebody dug into one of the terrace walls on the east side of the Stairs: a narrow shaft that slopes gently down into a wider chamber, with a side gallery. It's dark (bring a torch), and dry.</p></details>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The Stairs' carvings <span class="muted">(click to show)</span></summary>
+      <p>Once the Stairs are open, the carving stones ask for things from up there, in order: six flint, then eight bricks to mend the houses on the steps, then two of you down the old mine and out again, then six healing herbs, and last, catching the wind moth that flies high on the steps at night. What waits after that is still to come.</p></details>
     </section>
     <section id="death"><h2>Getting hurt and dying</h2>
       <ul>
@@ -457,6 +482,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <p class="muted">Newest first.</p>
       <ul class="log">
         <li data-feature="tools"><b>Tools wear out:</b> tools are carried in your bag and used from your hand. They wear down with every use, break into one of their material, and can be mended at a lit hearth.</li>
+        <li data-feature="region-stair"><b>The Stairs come alive:</b> flint, healing herbs, flax, old brick walls, standing stones and tin; three bugs of their own; something that comes out on windy nights; an old mine; and the Stairs' own run of carvings.</li>
         <li data-feature="checkpoints"><b>Sleeping looks like sleeping:</b> you curl up by a hearth in half a second, under a thick blanket in your cloak's colour that drapes over you and spills onto the ground, eyes closed, with z's floating up out of your head.</li>
         <li><b>Eating and drinking, the same everywhere:</b> hold <kbd>E</kbd> with food or a bucket of clean water in hand; when the ring fills, it's gone and your meter goes up right then (a bucket takes the same short hold now; a tap won't drink). Empty hotbar slots can be picked and stepped through again.</li>
         <li><b>Fixed:</b> adding wood to a fire no longer makes the boiling bucket on it vanish (it was only hidden; it had been there all along). Hotbar slots, empty ones too, light up under the mouse.</li>
@@ -508,7 +534,8 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
 <script>
 (() => {
   const W = window.WorldGen, R = W.RULES;
-  const get = path => path.split('.').reduce((o, k) => (o == null ? o : o[k]), R);
+  const dig = (root, path) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), root);
+  const get = path => dig(R, path) ?? dig(W, path);   // RULES first, then the rest of world-gen (THINGS ...)
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const mins = sec => { sec = Math.round(sec); const m = Math.floor(sec / 60), s = sec % 60; return m ? (s ? `${m} min ${s} s` : `${m} min`) : `${s} s`; };
   document.querySelectorAll('[data-r]').forEach(el => { const v = get(el.dataset.r); if (v != null) el.textContent = v; });

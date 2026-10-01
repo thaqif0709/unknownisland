@@ -17,7 +17,7 @@
   }
   function topOf(o) {
     // measured from the model when it's built (cached until it grows or changes)
-    if (o.mesh && (o.type === 'rock' || o.type === 'ore' || o.type === 'bush' || o.type === 'tree' || o.type === 'palm')) {
+    if (o.mesh && (o.type === 'rock' || o.type === 'ore' || o.type === 'bush' || o.type === 'tree' || o.type === 'palm' || UI.things[o.type])) {
       const key = o.mesh.uuid + ':' + o.mesh.scale.y.toFixed(3);
       if (o._topKey !== key) {
         o.mesh.updateMatrixWorld(true); _box.setFromObject(o.mesh);

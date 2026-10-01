@@ -109,6 +109,13 @@ const COMMANDS = {
   mobs() { return { mobs: this.mobs.list.map(m => ({ id: m.id, kind: m.kind, x: m.x, z: m.z, state: m.state, hp: m.hp })) }; },
   // Set the time of day (0-1), e.g. for the tide in a sea cave.
   time(p, { at }) { this.time = at % 1; return { time: this.time }; },
+  // Open a region right away (the Veil lifts now, not at the next dawn).
+  open(p, { region }) {
+    if (!this.regionState) this.regionState = new Map();
+    this.regionState.set(region, { region, openedDay: this.day - 1, liftedDay: this.day });
+    this.broadcast({ t: 'regions', open: this.openRegions(), lifted: [region] });
+    return { open: this.openRegions() };
+  },
   // Knock the player down, as the Stilled do.
   async knock(p) { await this.knock(p); return { until: p.knockedUntil }; },
   // Change a fire: { fire: id, fuel } sets its fuel; { fire: id, remove: true } takes it away

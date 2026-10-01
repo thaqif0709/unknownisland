@@ -48,6 +48,7 @@
   //     length (metres), floor: [[s, y], ...] (floor height along the way; s = 0 is the mouth),
   //     width: [[s, w], ...], height: [[s, h], ...], wander (metres the tunnel drifts sideways),
   //     branch?: { at (s), dir (+1 right, -1 left), length, floor: [[s, y]], width, height } }
+  // `flag`: a feature flag it waits for (a region pack's), besides `caves`.
   // `lair`: the kinds of creature that live in it (e.g. ['crawler']; see server/mobs/).
   // Returns { id, region, sea, lair, nodes, segs, out, bbox }. `out` is a safe spot just outside
   // the mouth (where the tide leaves you).
@@ -81,7 +82,7 @@
     const out = { x: +(n0.x - (n1.x - n0.x) / d * 2.5).toFixed(2), z: +(n0.z - (n1.z - n0.z) / d * 2.5).toFixed(2) };
     let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
     for (const q of nodes) { x0 = Math.min(x0, q.x - q.w - 1); z0 = Math.min(z0, q.z - q.w - 1); x1 = Math.max(x1, q.x + q.w + 1); z1 = Math.max(z1, q.z + q.w + 1); }
-    return { id: spec.id, region: spec.region || 'landing', sea: !!spec.sea, lair: spec.lair || [], nodes, segs, out, bbox: [x0, z0, x1, z1] };
+    return { id: spec.id, region: spec.region || 'landing', sea: !!spec.sea, lair: spec.lair || [], flag: spec.flag || null, nodes, segs, out, bbox: [x0, z0, x1, z1] };
   }
 
   // The roof above a spot `d` metres from the middle of a tunnel that is `w` wide (half) and `h` high.
