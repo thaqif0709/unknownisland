@@ -124,6 +124,7 @@ const methods = {
       + (now - (p.lastJumpAt || 0) < 1600 ? 4.5 : 0);   // a charged leap carries you forward faster than walking
     if (p.pose === 'glide' && !p.exhausted) speed = Math.max(speed, RULES.TRAVEL.GLIDE_SPEED);
     if (flying) speed = Math.max(speed, RULES.CREATIVE.FLY_SPEED);
+    if (now < (p.dodgeUntil || 0) + 300) speed = Math.max(speed, RULES.COMBAT.DODGE.DIST / RULES.COMBAT.DODGE.TIME);   // a dodge roll (P6)
     const maxStep = speed * 1.4 * Math.min(dt, 1) + 0.6;
     const d = Math.hypot(x - p.x, z - p.z);
     const wasUnder = p.under || null;

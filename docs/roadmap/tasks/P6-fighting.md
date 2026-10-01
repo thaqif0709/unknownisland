@@ -3,7 +3,7 @@ id: P6
 title: Fighting
 lane: player
 owner: edvin
-status: todo
+status: doing
 depends: [P1, P3, P5]
 flag: combat
 size: 2 sessions
@@ -38,3 +38,4 @@ Contract §9
 ## Log
 
 <!-- Add a dated line per PR: 2026-10-02 edvin: first half merged (#12). -->
+2026-10-01 edvin: first part behind `combat` (off): weapons as items with recipes, attacking (light, heavy, the sword's combo, the sling), rolling, damagePlayer and the down state with friends picking you up, the Stilled breaking into fog and re-forming. Still to do: a thrown torch's burst of fire, light making fog creatures slower, the game tried by two players against the Landing's Stilled, and the flag going on.

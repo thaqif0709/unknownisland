@@ -8,10 +8,10 @@ const { RULES, heightAt } = WG;
 
 module.exports = {
   kind: 'stilled',
-  hp: 1,
+  get hp() { return WG.feature('combat') ? RULES.COMBAT.STILLED_HP : 1; },   // with fighting (P6) they take a few blows
   radius: .3,
   start: 'stalk',
-  weak: {},
+  weak: { light: 2, silver: 2 },   // (P6) blows carrying light, and silver, hit twice as hard
 
   // Once a tick for all of them: fade the ones whose fog has gone, and spawn new ones.
   tick(island, dt, { lights, players }) {
@@ -25,6 +25,14 @@ module.exports = {
         else { if (WG.nightFactor(island.time) > .6) s.lingering = false; keep = true; }
       } else keep = island.fogHere(s.x, s.z, lights) > .2 && players.some(p => Math.hypot(p.x - s.x, p.z - s.z) < 90);
       if (!keep) mobs.remove(s);
+    }
+    // broken into fog by a fight (P6): they form again where they broke, if it's still a foggy night
+    if (st.reform && st.reform.length) {
+      const now = Date.now();
+      for (const r of st.reform.filter(r => now >= r.at)) {
+        st.reform.splice(st.reform.indexOf(r), 1);
+        if (WG.nightFactor(island.time) >= .6 && island.fogHere(r.x, r.z, lights) > .2) mobs.spawn('stilled', r.x, r.z, { face: r.face });
+      }
     }
     // spawn, a few times a second at most
     if ((st.timer = (st.timer || 0) - dt) <= 0) {
@@ -72,6 +80,15 @@ module.exports = {
         if (island.fogHere(nx, nz, lights) >= S.FOG_MIN && heightAt(nx, nz) > .2) { s.x = nx; s.z = nz; s.face = base; break; }
       }
     },
+  },
+
+  // Broken by blows (P6): it scatters into fog, and forms again later that night (RULES.COMBAT.REFORM).
+  onDeath(island, s, hit) {
+    if (!WG.feature('combat')) return;
+    const st = island.mobs.stateOf('stilled');
+    (st.reform = st.reform || []).push({ x: s.x, z: s.z, face: s.face, at: Date.now() + RULES.COMBAT.REFORM * 1000 });
+    island.broadcast({ t: 'fogburst', x: s.x, z: s.z });
+    if (hit && hit.from) island.send(hit.from, { t: 'toast', msg: 'It breaks apart into fog. It won’t stay gone.' });
   },
 
   // Reaching you knocks you down (once per cooldown), and it is gone. Called by stalk, only

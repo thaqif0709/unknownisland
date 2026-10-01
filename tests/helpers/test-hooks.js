@@ -40,6 +40,12 @@ const COMMANDS = {
     this.sendMe(p);
     return { inv: p.inv, tools: p.tools };
   },
+  // Down (P6) for ms instead of the usual time, to see what happens when nobody comes
+  down(p, { ms }) {
+    this.goDown(p);
+    p.downedUntil = p.knockedUntil = Date.now() + ms;
+    return { until: p.downedUntil };
+  },
   // A tool's uses left (P3): { slot, d }
   wear(p, { slot, d }) {
     const s = p.slots && p.slots[slot];
@@ -79,7 +85,9 @@ const COMMANDS = {
   },
   // Set the clock (0 = midnight, .5 = noon; night is before .22 and from .8), the weather,
   // and/or the player's hunger.
-  set(p, { time, weather, hunger, thirst }) {
+  set(p, { time, weather, hunger, thirst, health, energy }) {
+    if (typeof health === 'number') { p.health = health; this.sendMe(p); }
+    if (typeof energy === 'number') { p.energy = energy; this.sendMe(p); }
     if (typeof hunger === 'number') { p.hunger = hunger; this.sendMe(p); }
     if (typeof thirst === 'number') { p.thirst = thirst; this.sendMe(p); }
     if (typeof time === 'number') this.time = time;
