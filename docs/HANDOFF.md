@@ -201,7 +201,7 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
-- **Fishing (P7, flag `fishing`, off).** `server/systems/fishing.js`: `cast` (a rod in hand;
+- **Fishing (P7, flag `fishing`, on).** `server/systems/fishing.js`: `cast` (a rod in hand;
   the bobber lands `CAST.MIN`-`MAX` m out by how long E was held, in the sea or a spring's pool),
   a bite after `BITE.MIN`-`MAX` s (sooner at night, in rain, on a rising tide, at full moon,
   with bait, which the bite takes), `hook` within `HOOK` s, then P8's minigames by rarity

@@ -114,7 +114,7 @@
       caves: false,      // W9: caves you walk into (the Landing's sea cave), torches and the Dark
       checkpoints: false, // P4: sleep by a lit hearth to wake there after a knockdown or dying
       travel: true,      // P9 climbing (palm trunks, cliffs) and gliding with the cloak
-      fishing: false,    // P7 fishing, with P8's minigames (only admins' /minigame until fishing lands)
+      fishing: true,     // P7 fishing: rods, casting, bites, P8's minigames to land them, cooking
       mouselook: true,   // P1: the mouse turns the camera (pointer lock), crosshair, ink cursor, wheel cycles slots
       slots: true,       // P2: 8 hotbar slots and a 30-slot bag (I), stacks, dragging; berries and coconuts are carried, to eat later
       combat: true,      // P6: weapons, attacking (left click, hold for heavy), dodging (double-tap Shift), downed and revived
