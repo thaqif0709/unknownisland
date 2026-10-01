@@ -92,6 +92,23 @@ const SLEEPER = [
   { key: 'wood_mantis', pool: false, text: 'Something in the Wood is patient. Find it before it finds you.', stone: 'ridge', days: 5,
     conditions: { type: 'find', key: 'bark_mantis' }, reward: [{ type: 'note' }], penalty: [{ type: 'press', days: 2 }],
     doneText: 'It saw you looking. At night, under the tallest trees. Look up.', failText: 'It was more patient than you.' },
+
+  // ---- The Teeth's chain (C6). Something walks the high snow with the blizzard: the White Ram. ----
+  { key: 'teeth_fur', pool: false, text: 'It is cold where the mountains bite the sky. Bring me something soft from up there.', stone: 'spring', days: 4,
+    conditions: { type: 'offer', item: 'hare_fur', count: 6 }, reward: [{ type: 'gift' }], penalty: [{ type: 'dread', amount: 10 }],
+    doneText: 'Soft. The hares do not mind the cold. You will.', failText: 'Your feet stayed warm, and down here.' },
+  { key: 'teeth_ice', pool: false, text: 'Bring me ice that has never melted.', stone: 'ridge', days: 4,
+    conditions: { type: 'offer', item: 'ice', count: 8 }, reward: [{ type: 'calm', nights: 1 }, { type: 'note' }], penalty: [{ type: 'press', days: 1 }],
+    doneText: 'Old. Older than me. It remembers the first snow.', failText: 'It melted on the way. Or you never went.' },
+  { key: 'teeth_cave', pool: false, text: 'There is a door into the mountain, and the walls are glass. Go in, two of you.', stone: 'ridge', days: 4,
+    conditions: { type: 'in_cave', cave: 'icecave', count: 2 }, reward: [{ type: 'light' }, { type: 'gift' }], penalty: [{ type: 'dread', amount: 15 }],
+    doneText: 'You saw yourselves in the ice. Good. Now it has seen you too.', failText: 'The door stayed shut.' },
+  { key: 'teeth_moth', pool: false, text: 'Catch the white thing that flies over the snow at night.', stone: 'spring', days: 4,
+    conditions: { type: 'find', key: 'snow_moth' }, reward: [{ type: 'calm', nights: 1 }], penalty: [{ type: 'press', days: 1 }],
+    doneText: 'It flies into the wind. Something else up there does too.', failText: 'White on white. You lost it.' },
+  { key: 'teeth_char', pool: false, text: 'Under the ice there is a fish with a red belly. Bring it up into the air.', stone: 'ridge', days: 5,
+    conditions: { type: 'find', key: 'ice_char' }, reward: [{ type: 'note' }], penalty: [{ type: 'press', days: 2 }],
+    doneText: 'It heard the ice break. At nightfall, on the high snowfield ringed with rock. It brings the blizzard.', failText: 'The ice held.' },
 ];
 
 // What the stones say when they aren't asking for anything.

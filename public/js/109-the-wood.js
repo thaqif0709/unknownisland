@@ -119,6 +119,7 @@
     amber(g, fill) { fill('#E8A03A', () => { g.moveTo(14, 40); g.lineTo(24, 16); g.lineTo(44, 14); g.lineTo(52, 34); g.lineTo(38, 52); g.closePath(); }); g.fillStyle = '#7A4A20'; g.beginPath(); g.arc(34, 32, 3, 0, 7); g.fill(); },
     bow(g) { g.lineWidth = 5; g.strokeStyle = '#5E4A3C'; g.beginPath(); g.arc(40, 32, 26, 2.2, 4.1); g.stroke(); g.lineWidth = 1.5; g.strokeStyle = '#D9C9A6'; g.beginPath(); g.moveTo(26, 11); g.lineTo(26, 53); g.stroke(); },
     arrow(g, fill) { g.lineWidth = 3; g.beginPath(); g.moveTo(12, 52); g.lineTo(50, 14); g.stroke(); fill('#8E8A84', () => { g.moveTo(54, 10); g.lineTo(42, 16); g.lineTo(48, 22); g.closePath(); }); fill('#E8E2D4', () => { g.moveTo(12, 52); g.lineTo(10, 42); g.lineTo(20, 46); g.closePath(); }); },
+    catfish: fishIcon('#7A6A52', 1.05), glass_carp: fishIcon('#D8E8EC', .85),
     leaf_glider(g, fill) { fill('#6FA055', () => { g.moveTo(6, 40); g.quadraticCurveTo(32, 6, 58, 40); g.quadraticCurveTo(32, 30, 6, 40); g.closePath(); }); g.beginPath(); g.moveTo(32, 22); g.lineTo(32, 54); g.stroke(); },
   });
   UI.heldModels.bow = (g, add) => {

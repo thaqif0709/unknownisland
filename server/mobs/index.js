@@ -26,7 +26,7 @@
 const { r2 } = require('../systems/util');
 
 const KINDS = {};
-for (const name of ['stilled', 'dummy', 'crawler', 'leaning', 'hung']) {
+for (const name of ['stilled', 'dummy', 'crawler', 'leaning', 'hung', 'frozen']) {
   const def = require(`./${name}`);
   if (!def.kind || !def.states || !def.states[def.start || 'idle']) throw new Error(`mobs/${name}.js: needs kind, states and a start state`);
   KINDS[def.kind] = def;

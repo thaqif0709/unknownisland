@@ -204,7 +204,7 @@
   }
 
   function showDeath() {
-    const how = { hunger: 'You starved', thirst: 'You ran out of water', cold: 'The night was too cold' }[deathInfo && deathInfo.cause] || 'You didn’t make it';
+    const how = { hunger: 'You starved', thirst: 'You ran out of water', cold: 'The night was too cold', freeze: 'The cold of the Teeth got into your bones' }[deathInfo && deathInfo.cause] || 'You didn’t make it';
     showHud(false);
     showMsg(`Day ${deathInfo ? deathInfo.day : day}`,
       `${how}. You lost what you were carrying. Tip: coconuts and berries grow back every morning, and a fire keeps you warm through the night.`,

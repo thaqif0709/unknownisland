@@ -123,6 +123,7 @@
       torchlight: false, // torches burn above ground too: light, fog pushed back, warmth; G plants one (E takes it back)
       fasttravel: false, // W10: travel between lit lanterns you've stood by, paying lamp oil
       tools: true,       // P3: tools are items in the bag, used from your hand, that wear out (needs slots)
+      'region-teeth': false,   // C6: the Teeth's snow and warmth, their own things (ice, crystal, pine resin, hare fur, silver, ice holes), bugs, the ice char, the Frozen, the ice cave, its chain, the White Ram
       'region-wood': false,    // C4: the Weeping Wood's own things (giant trees, resin, vines, strange fruit, giant leaves, amber), bugs, fish, the Hung, the root hollow, its chain, the Hanging Mother
       'region-stair': false,   // C3: the Stairs' own things (flint, herbs, flax, ruins, standing stones, tin), bugs, the Leaning, the old mine, its request chain
     },
@@ -173,6 +174,26 @@
       HARDWOOD: 3,              // an axe takes this much hardwood from one giant a day (2 a swing)
       GLIDER_FALL: .5,          // carrying a leaf glider, a glide sinks this much as fast
       HUNG: { MAX: 6, PER_PLAYER: 2, REACH: 2.8, DROP_MS: 1400, DMG: 28, CLIMB: 3, NEAR_DREAD: 1.5 },   // the Hung (server/mobs/hung.js)
+    },
+    // The Teeth (C6, flag region-teeth). Warmth: a stat of its own, only drained in the Teeth
+    // (server/systems/warmth.js); per second.
+    TEETH: {
+      SNOW_LINE: 260,           // snow lies above this height (m)
+      WARMTH: {
+        DRAIN: .3,              // lost in the Teeth by day, below the snow
+        SNOW: 1.6,              // times this above the snow line
+        NIGHT: 1.5,             // at night
+        BLIZZARD: 2.5,          // in a blizzard
+        HOOD_DOWN: 1.3,         // with your hood down
+        CLOAK: .45,             // carrying a fur cloak
+        FIRE: 8,                // won back by a fire, a lantern or a torch
+        OUT: 3,                 // won back anywhere out of the Teeth's cold (or underground)
+        LOW: 30,                // below this you're shivering (a warning, and dread creeps up)
+        FREEZE: 2,              // health lost at no warmth at all (more than you heal)
+      },
+      ICEHOLE_REACH: 4,         // casting a rod this close to an ice hole drops the line through it
+      // the Frozen (server/mobs/frozen.js): only in blizzards, above the snow line
+      FROZEN: { MAX: 5, PER_PLAYER: 2, HP: 24, SPEED: 1.5, NOTICE: 30, REACH: 1.1, DRAIN: 30, COOLDOWN: 4, SPAWN: [16, 28], ROCK: 2.2, MELT: 8 },
     },
     // Bosses (C0, flag bosses). Each boss is a file in server/bosses/.
     BOSSES: {
@@ -275,6 +296,7 @@
     raft: 'Raft', zipline: 'Zip line kit',   // (P10)
     hardwood: 'Hardwood', resin: 'Resin', vine_rope: 'Vine rope', strange_fruit: 'Strange fruit', giant_leaf: 'Giant leaf', amber: 'Amber',
     bow: 'Bow', arrow: 'Arrow', leaf_glider: 'Leaf glider', catfish: 'River catfish', glass_carp: 'Glass carp',   // (the Weeping Wood, C4)
+    ice: 'Ice', crystal: 'Crystal', pine_resin: 'Pine resin', hare_fur: 'Hare fur', silver: 'Silver ore', fur_cloak: 'Fur cloak', ice_char: 'Ice char',   // (the Teeth, C6)
     rod: 'Fishing rod', bait: 'Bait', silverfin: 'Silverfin', pool_minnow: 'Pool minnow', lantern_fish: 'Lantern fish', cooked_fish: 'Cooked fish' };   // (fishing, P7)
   // More about an item than its name (all optional): kind 'food' is eaten from a slot (food,
   // water: how much it gives), stack is how many fit in one slot (RULES.SLOTS.STACK otherwise).
@@ -289,12 +311,14 @@
     axe: { kind: 'tool', tool: 'axe', returns: 'copper' },
     // weapons (P6, flag combat): one to a slot, wearing out like tools; stats in RULES.COMBAT.WEAPONS
     sword_wood: { kind: 'weapon', returns: 'wood' }, sword_bronze: { kind: 'weapon', returns: 'copper' },
-    sword_iron: { kind: 'weapon', returns: 'iron' }, sword_silver: { kind: 'weapon' }, sword_obsidian: { kind: 'weapon' },
+    sword_iron: { kind: 'weapon', returns: 'iron' }, sword_silver: { kind: 'weapon', returns: 'silver' }, sword_obsidian: { kind: 'weapon' },
     spear: { kind: 'weapon', returns: 'stone' }, club: { kind: 'weapon', returns: 'wood' }, sling: { kind: 'weapon' },
     raft: { stack: 1 }, zipline: { stack: 4 },   // (P10, flag rafts)
     // the Weeping Wood (C4, flag region-wood)
     strange_fruit: { kind: 'food', food: 14, water: 10 }, bow: { kind: 'weapon', returns: 'hardwood' }, arrow: { stack: 30 }, leaf_glider: { stack: 1 },
     catfish: { kind: 'food', food: 10, cooks: 'cooked_fish' }, glass_carp: { kind: 'food', food: 7, cooks: 'cooked_fish' },
+    // the Teeth (C6, flag region-teeth): ice can be sucked for water; the fur cloak is carried
+    ice: { kind: 'food', food: 0, water: 12 }, fur_cloak: { stack: 1 }, ice_char: { kind: 'food', food: 9, cooks: 'cooked_fish' },
     // fishing (P7, flag fishing): the rod wears like a tool; raw fish can be eaten, but cook them at a fire
     rod: { kind: 'tool', tool: 'rod', returns: 'wood' },
     silverfin: { kind: 'food', food: 8, cooks: 'cooked_fish' }, pool_minnow: { kind: 'food', food: 5, cooks: 'cooked_fish' },
@@ -324,6 +348,12 @@
     fruit: { state: { picked: false }, regrow: 2, r: .5 },  // a strange-fruit bush
     bigleaf: { state: { picked: false }, regrow: 1, r: .8 }, // a plant with leaves bigger than you
     amber: { state: { left: 2 }, regrow: 5, r: .6 },        // old roots with amber in them (a pickaxe gets more)
+    // the Teeth (C6)
+    ice: { state: { left: 3 }, regrow: 3, r: .7 },          // a slab of blue ice in the snow (a pickaxe gets more)
+    crystal: { state: { left: 2 }, regrow: 5, r: .6 },      // a cluster of crystal in the rock (a pickaxe only)
+    pinesap: { state: { left: 2 }, regrow: 2, r: .5 },      // a split pine stump weeping resin
+    hare: { state: { picked: false }, regrow: 1, r: .5 },   // a snow hare's form, with shed fur in it
+    icehole: { state: {}, regrow: 0, r: .9 },               // a hole in a frozen pool (fish the ice char through it)
   };
 
   // Things you can build. Add new entries here; the recipe book lists them all.
@@ -371,6 +401,13 @@
       desc: 'Sticks dipped in resin: three torches for one, and they burn just as long.' },
     { id: 'leaf_glider', kind: 'item', name: 'Leaf glider', cost: { giant_leaf: 3, vine_rope: 2 }, gives: { leaf_glider: 1 }, flag: 'region-wood',
       desc: 'Giant leaves laced to your cloak. Carry it and your glides sink half as fast, so they carry you much further.' },
+    // the Teeth (C6)
+    { id: 'fur_cloak', kind: 'item', name: 'Fur cloak', cost: { hare_fur: 6, pine_resin: 1 }, gives: { fur_cloak: 1 }, flag: 'region-teeth',
+      desc: 'Shed hare fur, felted and stuck to a lining with pine resin. Carry it and the cold takes your warmth half as fast.' },
+    { id: 'sword_silver', kind: 'item', name: 'Silver sword', cost: { wood: 1, silver: 4, crystal: 1 }, gives: { sword_silver: 1 }, flag: 'region-teeth',
+      desc: 'Silver from the Teeth with a crystal set in the hilt. It cuts the Stilled of every land twice as deep.' },
+    { id: 'pine_torch', kind: 'item', name: 'Pine torches', cost: { wood: 1, pine_resin: 1 }, gives: { torch: 3 }, flag: 'region-teeth',
+      desc: 'Sticks dipped in pine resin: three torches for one. Up in the snow, fire is everything.' },
     // rafts and zip lines (P10)
     { id: 'raft', kind: 'item', name: 'Raft', cost: { wood: 10 }, gives: { raft: 1 }, flag: 'rafts',
       desc: 'Logs lashed side by side. Hold it, face the water and press E to set it afloat; E beside it to climb aboard (two of you fit).' },
@@ -391,6 +428,7 @@
     { key: 'silverfin_scale', name: 'Silverfin scale', needs: 'silverfin', perk: 'Fires warm you from further away.', cost: 'The Stilled notice you more easily.' },
     { key: 'conch_charm', name: 'Conch charm', needs: 'conch', perk: 'Friends calm you twice as much.', cost: 'You get hungry faster.' },
     { key: 'silk_patch', name: 'Mother’s silk', needs: 'mother_silk', perk: 'You climb half again as fast.', cost: 'The Hung can reach you from further off.' },   // (C4)
+    { key: 'fleece_patch', name: 'Ram’s fleece', needs: 'ram_fleece', perk: 'The cold takes your warmth half as fast.', cost: 'The Frozen notice you from further off.' },   // (C6)
     { key: 'tide_shell', name: 'Tidewife shell', needs: 'tidewife_shell', perk: 'You wade as fast as you walk.', cost: 'The Stilled notice you more easily.' },   // (C1: kept by those who beat her)
   ];
   const MOON_NAMES = ['Drowning Moon', 'thin crescent', 'half moon', 'swelling moon', 'full moon', 'waning moon', 'half moon', 'old crescent'];

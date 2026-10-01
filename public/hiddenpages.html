@@ -103,7 +103,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <b>Making things</b><a href="#gather">Gathering</a><a href="#craft">Crafting</a><a href="#fires">Fires</a><a href="#items">Inventory &amp; giving</a>
     <b>The dark</b><a href="#fog">Fog &amp; dread</a><a href="#stilled">The Stilled</a><a href="#fighting" data-feature="combat">Fighting</a><a href="#bosses" data-feature="bosses">Bosses</a><a href="#torches" data-feature="torchlight">Torches</a><a href="#lanterns">Stone lanterns</a><a href="#sleeper">Carving stones</a>
     <b>Collecting</b><a href="#tides">Tides</a><a href="#journal">Journal &amp; rarity</a><a href="#cloak">Cloak patches</a><a href="#fishing" data-feature="fishing">Fishing</a><a href="#minigames" data-feature="fishing">Landing a fish</a>
-    <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#stairs" data-feature="region-stair">The Stairs</a><a href="#wood" data-feature="region-wood">The Weeping Wood</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
+    <b>Together</b><a href="#friends">Friends &amp; chat</a><a href="#map">The map</a><a href="#world" data-feature="bigworld">Beyond the Landing</a><a href="#caves" data-feature="caves">Caves</a><a href="#stairs" data-feature="region-stair">The Stairs</a><a href="#wood" data-feature="region-wood">The Weeping Wood</a><a href="#teeth" data-feature="region-teeth">The Teeth</a><a href="#death">Getting hurt &amp; dying</a><a href="#settings">Settings</a>
     <b>History</b><a href="#changelog">Changelog</a>
   </div></nav>
 
@@ -419,6 +419,18 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
         <li>Below half her health she drops quicker and stays down less long.</li>
         <li>Beaten, she leaves her <b>eye</b> (a relic) and a <b>skein of her silk</b>, which makes the Mother's silk patch: you climb half again as fast, but the Hung reach for you from further off. The way to the Mire opens at the next dawn.</li>
       </ul></div>
+      <div data-feature="region-teeth">
+      <h3>The White Ram (the Teeth)</h3>
+      <p>A ram the size of a hut, white as the snow, with horns that curl twice. When the Teeth's carving requests are all answered, the ridge stone says: <i>At nightfall, on the high snowfield ringed with rock. It brings the blizzard.</i></p>
+      <ul>
+        <li>It comes at nightfall and <b>goes back up into the peaks at daybreak</b>, whole again. While it's out there is always a blizzard: your warmth goes fast, so bring fire, and a fur cloak.</li>
+        <li><b>Its fleece</b> takes most of every blow.</li>
+        <li>It <b>paws the snow</b> (a line appears on the ground) and then <b>charges</b> straight along it, trampling whoever is in the way. Step out of the line.</li>
+        <li><b>Bait its charges into rock</b>: stand with a cliff or a boulder behind you, and step aside. If it runs into rock it staggers, dazed, and then every blow lands on its skull, twice over.</li>
+        <li><b>Fire keeps it back</b>: it won't charge a frog by a fire, a lantern or with a torch in hand.</li>
+        <li>Below half its health it bellows, the blizzard thickens, and it paws for less long.</li>
+        <li>Beaten, it leaves a <b>horn</b> (a relic) and a <b>hank of its fleece</b>, which makes the Ram's fleece patch: the cold takes your warmth half as fast, but the Frozen notice you from further off. The way to the Ashen Shore opens at the next dawn.</li>
+      </ul></div>
       <p class="muted">(Admins can also try the boss system on a practice boss, the Straw Giant: <code>/boss practice</code>. Fire hurts it twice over.)</p></details>
     </section>
 
@@ -635,6 +647,43 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
       <p>Once the Wood is open, the carving stones ask, in order: six resin, then six vine rope, then two of you down the root hollow and out again, then catching a lantern beetle, and last a bark mantis. Then the ridge stone says where to look for what comes next.</p></details>
     </section>
 
+    <section id="teeth" data-feature="region-teeth"><h2>The Teeth</h2>
+      <p>Far to the north, mountains to about 600 m: steep rock you'll be climbing more than walking, with <b>snow</b> above about <span data-r="TEETH.SNOW_LINE"></span> m. Things you'll only find here:</p>
+      <ul>
+        <li><b>Ice</b>: blue slabs standing up out of the snow. Break some off with <kbd>E</kbd> (a pickaxe gets two). Hold it and press <kbd>E</kbd> to suck it for water. Back in <span data-r="THINGS.ice.regrow"></span> days.</li>
+        <li><b>Crystal</b>, growing out of grey rocks: you need a pickaxe to prise it out.</li>
+        <li><b>Pine resin</b>, weeping from frost-split pine stumps lower down. Back in <span data-r="THINGS.pinesap.regrow"></span> days.</li>
+        <li><b>Hare fur</b>: hollows in the snow where the hares slept, with tufts of shed fur in them. More by the next day.</li>
+        <li><b>Silver ore</b>, high up: bright white flecks in the rock, mined like iron.</li>
+        <li><b>Ice holes</b> in frozen pools: stand by one with a rod and cast, and the line drops straight down the hole, for the <b>ice char</b>.</li>
+        <li>Their own bugs: the <b>ice louse</b> (by day) and the <b>snow moth</b> (only at night), both up in the snow.</li>
+      </ul>
+      <h3>What they make</h3>
+      <ul>
+        <li><b>A fur cloak</b> (hare fur and pine resin): carry it and the cold takes your warmth half as fast.</li>
+        <li><b>A silver sword</b> (wood, silver and a crystal): as keen as iron, and it cuts the Stilled of every land twice as deep.</li>
+        <li><b>Pine torches</b>: wood and pine resin make three torches at once.</li>
+      </ul>
+      <h3>Warmth</h3>
+      <p>Up in the Teeth a <b>Warmth</b> bar appears under the others. The cold takes it: faster in the snow, faster at night, much faster in a <b>blizzard</b> (up here a storm is a blizzard, and so is rain at night), and faster with your hood down (<kbd>T</kbd>). A fur cloak in your bag halves that.</p>
+      <ul>
+        <li>A fire, a lantern or a torch gives warmth back quickly. Anywhere out of the Teeth's cold (or underground), it comes back by itself.</li>
+        <li>Below <span data-r="TEETH.WARMTH.LOW"></span> you shiver: frost creeps in at the edges of your sight and dread rises.</li>
+        <li>With no warmth left, the cold hurts you, <span data-r="TEETH.WARMTH.FREEZE"></span> health a second, faster than you heal.</li>
+      </ul>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The Frozen <span class="muted">(click to show)</span></summary>
+      <p>The Teeth have their own Stilled. <b>The Frozen</b> are figures white with frost that only come with a <b>blizzard</b>, up in the snow, and walk slowly after whoever is out in it. Their touch takes the warmth out of you, <span data-r="TEETH.FROZEN.DRAIN"></span> of it at once.</p>
+      <ul>
+        <li><b>Fire</b> keeps them off: they won't go after a frog by a fire or a lantern or with a torch in hand, and near a flame they melt. Fire hurts them three times over.</li>
+        <li><b>Bare rock</b> is safe: stand right beside a boulder, or on rock too steep for snow, and they lose interest.</li>
+        <li>When the blizzard ends, they're gone.</li>
+      </ul></details>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The ice cave <span class="muted">(click to show)</span></summary>
+      <p>On the south side of the Teeth a door opens into the mountain: a narrow way down between walls of glassy ice, opening into a wide blue chamber, deep under the rock. It's dark (bring a torch), and out of the wind.</p></details>
+      <details class="spoiler"><summary><span class="warn">Spoiler</span> The Teeth's carvings <span class="muted">(click to show)</span></summary>
+      <p>Once the Teeth are open, the carving stones ask, in order: six hare fur, then eight ice, then two of you into the ice cave and out again, then catching a snow moth, and last, an ice char from under the ice. Then the ridge stone says where to look for what comes next.</p></details>
+    </section>
+
     <section id="death"><h2>Getting hurt and dying</h2>
       <ul>
         <li>Hunger, thirst, the cold and the Stilled all hurt you. The screen edges glow red below half health.</li>
@@ -650,6 +699,8 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="region-teeth"><b>The Teeth:</b> snow on the mountains, and warmth to keep up there (fire, your hood, a fur cloak); ice, crystal, pine resin, hare fur and silver; the fur cloak, the silver sword and pine torches; ice fishing, two new bugs, blizzards and what walks in them, an ice cave, five carvings and what comes after them.</li>
+        <li data-feature="region-wood"><b>Fixed:</b> the Weeping Wood's river fish have their own icons.</li>
         <li data-feature="region-wood"><b>The Weeping Wood:</b> giant trees to climb and hew hardwood from, resin, vine rope, strange fruit, giant leaves and amber; a bow and arrows, resin torches and a leaf glider; river fish, three new bugs, something in the branches, a root hollow, five carvings and what comes after them.</li>
         <li data-feature="bosses"><b>The Tidewife:</b> the Landing has a boss. When its carving requests are all answered, something stirs on the east sand at the lowest tide.</li>
         <li data-feature="bosses"><b>Bosses:</b> when a region's carving requests are all answered, its boss comes. Fight it together (it grows tougher with each frog), watch its bar, and if you missed it, touch its echo for the trophy.</li>

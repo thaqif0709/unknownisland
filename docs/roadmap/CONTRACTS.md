@@ -233,6 +233,11 @@ state); their start state, regrow days and size in `WG.THINGS`; what E does in
 bug, fish or journal entry can carry `flag` (and bugs `region`, `minH`) to stay hidden until then.
 River water (`fishing.js` `waterAt` → `'river'`, near `WG.RIVERS`, `RULES.FISHING.RIVER_R`)
 exists only in the big world; a fish's `region` beyond the Landing is `WG.worldRegionAt`.
+Ice holes (C6): `island.iceHoleNear(p)` (server/systems/teeth.js) is checked first when a rod is
+cast; the line goes down the hole and the water is `'ice'`.
+Warmth (C6, `server/systems/warmth.js`): `p.warmth` 0-100, only drained in the Teeth; other
+systems may call `island.chill(p, amount)` and `island.warmthDrain(p)`. A later region (or
+a cold night anywhere) can reuse it by extending `warmthDrain`.
 
 ## 7. Panels and the cursor (P1)
 

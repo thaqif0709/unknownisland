@@ -18,6 +18,8 @@ const FISH = [
     hint: 'in the Weeping Wood’s river, day or night' },
   { key: 'glass_carp', water: ['river'], region: 'wood', when: 'day', weight: 5, bait: 2, rarity: 'uncommon', flag: 'region-wood',
     hint: 'in the Weeping Wood’s river by day; it likes bait' },
+  { key: 'ice_char', water: ['ice'], region: 'teeth', when: 'any', weight: 10, bait: 1.5, rarity: 'uncommon', flag: 'region-teeth',
+    hint: 'through the ice holes high in the Teeth' },
 ];
 
 module.exports = { FISH };

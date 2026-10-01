@@ -27,8 +27,11 @@ async function inWood(c, x, z) {
   c.send({ t: 'pos', x, z, face: 0, moving: false, sprint: false, cam: 0 });
   await until(() => streamed(c).length > 30, 8000, 'the chunks around');
 }
-const nearest = (c, type, x, z) => streamed(c).filter(o => o.type === type && !(o.state && (o.state.gone || o.state.picked)))
+const nearestNow = (c, type, x, z) => streamed(c).filter(o => o.type === type && !(o.state && (o.state.gone || o.state.picked)))
   .sort((p, q) => Math.hypot(p.x - x, p.z - z) - Math.hypot(q.x - x, q.z - z))[0];
+
+// (the chunks keep arriving for a moment: wait for one)
+const nearest = (c, type, x, z) => until(() => nearestNow(c, type, x, z), 8000, `a ${type} nearby`);
 
 test('the Wood grows its own things (after, and without moving, what was there)', () => {
   WG.setFeatures(WG.resolveFeatures(FEATURES));
@@ -46,7 +49,7 @@ test('gathering: resin, vine rope, strange fruit, a giant leaf and amber', async
   const a = await server.join('wd');
   await inWood(a, 1450, -1450);
   for (const [type, item] of [['resin', 'resin'], ['vine', 'vine_rope'], ['fruit', 'strange_fruit'], ['bigleaf', 'giant_leaf'], ['amber', 'amber']]) {
-    const o = nearest(a, type, 1450, -1450);
+    const o = await nearest(a, type, 1450, -1450);
     assert.ok(o, `a ${type} nearby`);
     await a.test('place', { x: o.x + o.r + .5, z: o.z });
     const before = (a.me.inv || {})[item] || 0;
@@ -61,7 +64,7 @@ test('gathering: resin, vine rope, strange fruit, a giant leaf and amber', async
 test('a giant: no hardwood without an axe; with one, a little a day', async () => {
   const a = await server.join('hew');
   await inWood(a, 1500, -1400);
-  const g = nearest(a, 'giant', 1500, -1400);
+  const g = await nearest(a, 'giant', 1500, -1400);
   assert.ok(g, 'a giant nearby');
   await a.test('place', { x: g.x + g.r + .8, z: g.z });
   assert.match((await a.act('o' + g.id)).msg, /need an axe/);

@@ -18,7 +18,7 @@
 // The boss system (server/systems/bosses.js) spawns its mob with the scaled health and sets
 // mob.bossId and mob.phase; the mob's states read mob.phase to fight harder.
 const BOSSES = {};
-for (const name of ['practice', 'tidewife', 'mother']) {
+for (const name of ['practice', 'tidewife', 'mother', 'ram']) {
   const b = require(`./${name}`);
   if (!b.id || !b.kind || !b.states) throw new Error(`bosses/${name}.js: needs id, kind and states`);
   BOSSES[b.id] = b;

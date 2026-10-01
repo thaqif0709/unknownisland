@@ -4,7 +4,7 @@
   const CH = 32, VIEW = 4, PROP_VIEW = 3, DECOR_VIEW = 2;
   const C = h => new THREE.Color(h);
   const cSand = C(0xE9D7AE), cWet = C(0xD4BE92), cDeep = C(0x7E9EAE), cGrassA = C(0xA3B27E), cGrassB = C(0x7F9A64),
-    cForest = C(0x6F8A5A), cHigh = C(0x9AA283), cRock = C(0xA9A193), cMoss = C(0x7C9A6B);
+    cForest = C(0x6F8A5A), cHigh = C(0x9AA283), cRock = C(0xA9A193), cMoss = C(0x7C9A6B), cSnow = C(0xF1F4F6);
   const tmp = new THREE.Color();
   function smoothT(a, b, x) { const k = clamp((x - a) / (b - a), 0, 1); return k * k * (3 - 2 * k); }
   function colorAt(x, z, h) {
@@ -15,6 +15,9 @@
     tmp.lerp(cHigh, smoothT(8, 11, h));
     tmp.lerp(cRock, smoothT(14, 18, h) * .9);
     const sp = WG.nearestSpring(x, z); if (Math.hypot(x - sp.x, z - sp.z) < 6) tmp.lerp(cMoss, .4);
+    // snow on the Teeth (C6, flag region-teeth), above RULES.TEETH.SNOW_LINE
+    const SL = RULES.TEETH.SNOW_LINE;
+    if (h > SL - 30 && WG.feature('region-teeth') && WG.regionAt(x, z) === 'teeth') tmp.lerp(cSnow, smoothT(SL - 30, SL + 10, h) * .92);
     return tmp;
   }
   // Ground height on the drawn triangles (same split as PlaneGeometry), so feet

@@ -46,6 +46,7 @@
         const x = cx * CH + r() * CH, z = cz * CH + r() * CH, h = heightAt(x, z);
         const sn = WG.nearestSpring(x, z);
         if (Math.hypot(x - sn.x, z - sn.z) < 2.9 || (caveList.length && Caves.groundCut(caveList, x, z, h))) continue;
+        if (h > RULES.TEETH.SNOW_LINE - 20 && WG.feature('region-teeth') && WG.regionAt(x, z) === 'teeth') continue;   // nothing flowers in the Teeth's snow (C6)
         if (sp.biomes.includes(WG.biomeAt(x, z, h))) spots.push([x, groundAt(x, z), z, .75 + r() * .5, r() * 6.28, r()]);
       }
       if (!spots.length) return;

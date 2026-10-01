@@ -186,6 +186,11 @@ the leaf glider, the Hung at night, the root hollow, its carvings and the Hangin
 the `region-wood` flag; it needs `streaming,bigworld` (and `caves` for the hollow, `bosses` for
 the Mother).
 
+The Teeth's own things (snow, and warmth to keep up there; ice, crystal, pine resin, hare fur,
+silver and ice holes; the fur cloak, the silver sword and pine torches; ice fishing, two bugs,
+blizzards and the Frozen, the ice cave, its carvings and the White Ram) are the `region-teeth`
+flag; it needs `streaming,bigworld` (and `caves` for the ice cave, `bosses` for the Ram).
+
 Torches working above ground (light, fog, warmth, burning down; G plants one) are the `torchlight` flag.
 
 Hearth checkpoints are the `checkpoints` flag: hold V by a lit clay hearth to sleep there, and wake there after a

@@ -20,5 +20,8 @@ const BUGS = [
   { key: 'lantern_beetle', when: 'night', biomes: ['forest'], weight: 4, region: 'wood', flag: 'region-wood' },
   { key: 'glasswing', when: 'day', biomes: ['forest'], weight: 4, region: 'wood', flag: 'region-wood' },
   { key: 'bark_mantis', when: 'any', biomes: ['forest'], weight: 1.2, region: 'wood', flag: 'region-wood', minH: 15 },
+  // only in the Teeth (C6, flag region-teeth): up in the snow
+  { key: 'snow_moth', when: 'night', biomes: ['highland', 'peak'], weight: 3, region: 'teeth', flag: 'region-teeth', minH: 260 },
+  { key: 'ice_louse', when: 'day', biomes: ['highland', 'peak'], weight: 4, region: 'teeth', flag: 'region-teeth', minH: 200 },
 ];
 module.exports = { BUGS };
