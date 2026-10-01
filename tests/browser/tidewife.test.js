@@ -1,17 +1,17 @@
-// Bosses in the browser (C0, flag bosses): the practice boss called nearby shows its health
-// bar and its model, its slam shakes the ground, and once it's beaten its echo stays, with a
-// prompt to touch it. Needs Chromium like smoke.test.js.
+// The Tidewife in the browser (C1): at the lowest tide she comes up on the east sand with her
+// health bar and her model, kelp and all; fire burns the kelp off her. Needs Chromium like
+// smoke.test.js.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 const { startServer, INVITE } = require('../helpers/server');
-const { WG, landNear } = require('../helpers/world');
+const TW = require('../../server/bosses').BOSSES.tidewife;
 
 let server, browser, page;
 const errors = [];
-const NAME = 'boss' + Date.now().toString(36).slice(-6);
+const NAME = 'tide' + Date.now().toString(36).slice(-6);
 const send = m => page.evaluate(m => window.__dbg.send(m), m);
-let tid = 9900;
+let tid = 9950;
 const test_ = (what, args = {}) => send({ t: 'test', do: what, id: tid++, ...args });
 
 before(async () => {
@@ -49,24 +49,16 @@ async function goTo(at) {
   assert.fail(`could not get to ${at.x.toFixed(1)}, ${at.z.toFixed(1)}`);
 }
 
-test('a boss nearby: its bar, its model, its slam; beaten, its echo', async () => {
-  const at = landNear({ x: WG.SPAWN.x + 40, z: WG.SPAWN.z - 40 });
+test('the Tidewife on the east sand: her bar, her model, her kelp until it burns', async () => {
+  const at = { x: TW.appear.x - 7, z: TW.appear.z - 3 };
   await goTo(at);
-  await test_('set', { health: 100, hunger: 100, thirst: 100 });
-  await test_('boss', { boss: 'practice', x: at.x + 7, z: at.z });
-  await page.waitForFunction(() => window.__dbg.bosses().bar, null, { timeout: 8000 });
-  await page.waitForFunction(() => [...window.UI.mobs.all().values()].some(m => m.kind === 'boss_practice'), null, { timeout: 5000 });
-  await page.waitForFunction(() => window.__dbg.bosses().shaking, null, { timeout: 10000 });
-  // beat it
-  const mob = await page.evaluate(() => [...window.UI.mobs.all().values()].find(m => m.kind === 'boss_practice').id);
-  await test_('mobHit', { mob, amount: 10000 });
-  await page.waitForFunction(() => window.__dbg.bosses().list.some(b => b.state === 'beaten'), null, { timeout: 5000 });
-  await page.waitForFunction(() => !window.__dbg.bosses().bar, null, { timeout: 3000 });
-  // its echo, where it was called: a prompt, and E answers (I fought it, so it has nothing more for me)
-  await goTo({ x: at.x + 7.5, z: at.z });
-  await page.waitForFunction(() => /echo of the Straw Giant/.test([...document.querySelectorAll('.revivetag:not(.hidden)')].map(e => e.textContent).join()), null, { timeout: 5000 });
-  await page.waitForTimeout(300);
-  await page.keyboard.press('KeyE');
-  await page.waitForFunction(() => /echo is quiet/.test(document.getElementById('toast').textContent), null, { timeout: 5000 });
+  await test_('set', { time: .6, weather: 'clear', health: 100, hunger: 100, thirst: 100 });   // the afternoon's lowest tide
+  await test_('boss', { boss: 'tidewife' });
+  await page.waitForFunction(() => window.__dbg.bosses().bar && /Tidewife/.test(document.querySelector('.bossbar .name').textContent), null, { timeout: 8000 });
+  const mob = await page.evaluate(() => { const m = [...window.UI.mobs.all().values()].find(x => x.kind === 'boss_tidewife'); return m && m.id; });
+  assert.ok(mob, 'her model');
+  await page.waitForFunction(id => window.UI.mobs.all().get(id).mesh.userData.kelp.visible, mob, { timeout: 3000 });
+  await test_('mobHit', { mob, amount: TW.tune.KELP, source: ['fire'] });
+  await page.waitForFunction(id => !window.UI.mobs.all().get(id).mesh.userData.kelp.visible, mob, { timeout: 3000 });
   assert.deepEqual(errors, []);
 });

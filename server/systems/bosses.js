@@ -46,6 +46,7 @@ const methods = {
   bossTell(b) { this.broadcast({ t: 'boss', ...this.bossView(b) }); },
   // For a boss's states: its record, the frog to go for, and a step that stays in its arena.
   bossOf(mob) { return mob.bossId && this.bossState ? this.bossState.get(mob.bossId) : null; },
+  bossArena() { return B().ARENA; },
   bossTarget(b, players) {
     let best = null, bd = B().ARENA;
     for (const p of players) {
@@ -95,14 +96,14 @@ const methods = {
     this.bossSave(b);
     this.broadcast({ t: 'toast', msg: `${def.name} has come.` });
   },
-  // Nobody left standing: it leaves, whole again, until its next time.
-  bossWipe(b) {
+  // Nobody left standing (or its time is over: def.leaves): it leaves, whole again, until its next time.
+  bossWipe(b, say) {
     const def = BOSSES[b.id];
     if (b.mob && !b.mob.gone) this.mobs.remove(b.mob);
     Object.assign(b, { state: 'waiting', mob: null, hp: def.hp, maxHp: def.hp, phase: 0, frogs: 1, returnAt: Date.now() + (def.appear.cooldown || 0) * 1000 });
     this.bossTell(b);
     this.bossSave(b);
-    this.broadcast({ t: 'toast', msg: `${def.name} draws back. It will come again.` });
+    this.broadcast({ t: 'toast', msg: say || `${def.name} draws back. It will come again.` });
   },
   // Its mob died (the boss file's onDeath calls this).
   bossBeaten(mob) {
@@ -110,6 +111,7 @@ const methods = {
     if (!b || b.state !== 'fighting') return;
     const def = BOSSES[b.id];
     Object.assign(b, { state: 'beaten', defeatedAt: Date.now(), hp: 0, mob: null });
+    for (const p of this.players.values()) if (!p.dead && !p.under && Math.hypot(p.x - b.x, p.z - b.z) < B().ARENA) b.present.add(p.id);   // (and whoever is there as it falls)
     for (const id of b.present) { const p = this.players.get(id); if (p) this.bossTrophy(p, b); }
     if (def.region && this.chains) { this.chains[def.region] = this.chains[def.region] || {}; this.chains[def.region].bossDay = this.day; }
     if (def.next) this.openRegion(def.next);
@@ -150,6 +152,7 @@ function onTick() {
       continue;
     }
     if (b.state !== 'fighting' || !b.mob || b.mob.gone) continue;
+    if (def.leaves && def.leaves(this, b)) { this.bossWipe(b, def.leaveSay); continue; }   // its time is over (the tide turns...)
     const mob = b.mob, inArena = [...this.players.values()].filter(p => !p.dead && !p.under && Math.hypot(p.x - b.x, p.z - b.z) < A);
     for (const p of inArena) b.present.add(p.id);
     // more frogs: more of it

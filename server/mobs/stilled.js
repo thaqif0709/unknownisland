@@ -66,7 +66,7 @@ module.exports = {
       for (const p of players) {
         const d = Math.hypot(p.x - s.x, p.z - s.z);
         const notice = S.NOTICE + p.dread * S.NOTICE_PER_DREAD + (island.isAlone(p) ? S.NOTICE_ALONE : 0)
-          + (island.has(p, 'firefly_jar') ? 10 : 0) + (island.has(p, 'silverfin_scale') ? 8 : 0);
+          + (island.has(p, 'firefly_jar') ? 10 : 0) + (island.has(p, 'silverfin_scale') ? 8 : 0) + (island.has(p, 'tide_shell') ? 6 : 0);
         if (d > notice) continue;
         const score = p.dread / 100 + (island.isAlone(p) ? .5 : 0) - d / 60;
         if (score > bestScore) { bestScore = score; best = p; }

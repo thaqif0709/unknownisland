@@ -201,6 +201,17 @@ planned separately by Thaqif):
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
   instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
+- **The Tidewife (C1, flag `bosses`, on; the Landing's boss).** `server/bosses/tidewife.js`:
+  called by the Landing's chain (`region: 'landing'`, `next: 'stair'`), she appears on the east
+  sand (140, -40) when `Caves.tideLevel` is below -2.5 and leaves whole once it's rising past
+  -1.5 (`leaves`). `adjust`: kelp (until 40 fire damage burns it) lets 35% through, her shell
+  60%, her eyes while she's in `rear` 250%. States stalk, claw (cone), throw (circle, plus
+  `bossfx 'wreck'` for the flying beam), rear (crash around her, `bossfx 'slam'`), recover;
+  phase 2 below half: quicker, throws at anyone, rears more. Trophies `tidewife_eye` and
+  `tidewife_shell` (journal, flag bosses); the `tide_shell` patch (wade at walking speed; the
+  Stilled notice you from 6 m further). Look: `public/js/mobs/tidewife.js`. The boss system
+  now also counts everyone in the arena when a boss falls. Tests:
+  `tests/server/tidewife.test.js` (6), `tests/browser/tidewife.test.js`.
 - **Bosses (C0, flag `bosses`, on).** `server/systems/bosses.js` and `server/bosses/` (one
   file per boss: a mob definition plus region, next, hp, appear, phases, trophy). A finished
   chain's `summonBoss(region)` calls its boss; it appears when `appear.when` holds, at x, z.

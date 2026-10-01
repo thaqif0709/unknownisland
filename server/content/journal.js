@@ -38,5 +38,8 @@ const JOURNAL = [
   { key: 'carved_mask', category: 'relics', name: 'Carved mask', rarity: 'rare', description: 'A frog face cut from old wood. The eyes are closed. They were open when you picked it up.' },
   { key: 'eye_stone', category: 'relics', name: 'Eye stone', rarity: 'rare', description: 'A round pebble with one dark ring in it. It is warm on the side facing the hill.' },
   { key: 'old_tooth', category: 'relics', name: 'A very old tooth', rarity: 'rare', description: 'Longer than your arm, smooth as a shell. It came up out of the ground.' },
+  // kept by those who beat a boss (C1). `flag`: hidden until bosses are on.
+  { key: 'tidewife_eye', flag: 'bosses', category: 'relics', name: 'The Tidewife’s eye', rarity: 'rare', description: 'A barnacle the size of a fist, with something wet and dark inside that still turns to follow the sea.' },
+  { key: 'tidewife_shell', flag: 'bosses', category: 'relics', name: 'A piece of the Tidewife’s shell', rarity: 'rare', description: 'A curl of old hull, planks grown together like bone. It smells of the deep and is never quite dry.' },
 ];
 module.exports = { JOURNAL };

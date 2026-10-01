@@ -6,7 +6,7 @@ module.exports = {
   // (see WG.generateChunk). The Landing keeps its own objects and stays empty here.
   spawn: [],
   stilled: null,   // this region's kind of Stilled (a mob kind, P5)
-  boss: null,      // this region's boss (a server/bosses file, C0)
+  boss: 'tidewife',   // this region's boss (server/bosses/tidewife.js, C1)
   // Its Sleeper request chain, in order (keys in server/content/sleeper.js). Finishing it
   // calls the region's boss (W8).
   requests: ['landing_watch', 'landing_weight', 'landing_together', 'landing_east', 'landing_call'],

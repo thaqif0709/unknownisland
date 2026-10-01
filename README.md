@@ -70,7 +70,8 @@ Environment*). Existing players aren't affected.
   You can fight (the `combat` flag, on): click (or R) to swing what you're holding, hold it for a
   heavy swing, double-tap Shift to roll, and hold E beside a friend who's down to pick them up.
   A heavy swing with a torch throws it to burst into fire.
-  Bosses (the `bosses` flag, on): a region's finished carving requests call its boss; fight it
+  Bosses (the `bosses` flag, on): a region's finished carving requests call its boss (the
+  Landing's is the Tidewife, at the lowest tide on the east sand); fight it
   together, and touch its echo afterwards if you missed it (admins: `/boss practice`).
   Rafts and zip lines (the `rafts` flag, on): make a raft, set it on the water with E, climb
   aboard with E (two fit; the first paddles with the walking keys); string a zip line with a kit

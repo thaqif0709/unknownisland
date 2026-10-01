@@ -377,7 +377,12 @@ wipe has passed). Its states use `island.bossOf(mob)`, `island.bossTarget(b, pla
 `island.bossBeaten(mob)`. Messages: `{ t: 'boss', id, name, state, x, z, r, hp, max, phase,
 phases, mob }`, `{ t: 'bossfx', id, k, x, z }` (a heavy blow: the camera shakes), and from
 the client `{ t: 'boss-echo', id }`. The welcome has `bosses`. Client: `public/js/396-bosses.js`
-(bar, map mark, shake, echo; `UI.bosses`), each boss's look in `public/js/mobs/boss-<id>.js`.
+(bar, map mark, shake, echo; `UI.bosses`), each boss's look in `public/js/mobs/boss-<id>.js`
+(or `<id>.js`). Since C1: a boss file may have `leaves(island, boss)` (and `leaveSay`): when it
+holds the boss leaves whole, as after a wipe (the Tidewife: the tide turning); and any mob kind
+may have `adjust(island, mob, dmg, tags, from)` to change a blow before it lands (her kelp,
+shell and eyes). Bosses whose `region` is set are called by that region's chain; a region file's
+`boss` names it.
 
 Where and when a boss appears is in its region file, which W8 already reads:
 `bossHint: { stone: 'shore', text: 'At the lowest tide. The east sand.' }` (what the stone
