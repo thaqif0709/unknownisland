@@ -214,9 +214,16 @@ planned separately by Thaqif):
   phase 2 below half: quicker, throws at anyone, rears more. Trophies `tidewife_eye` and
   `tidewife_shell` (journal, flag bosses); the `tide_shell` patch (wade at walking speed; the
   Stilled notice you from 6 m further). Look: `public/js/mobs/tidewife.js`. The boss system
-  now also counts everyone in the arena when a boss falls. Her detailed model (V15: wreck
-  carapace, mossy claws, lantern eyestalks, torn sail; one point light for both lanterns) is
-  baked into a mesh per material except the parts that move (claws, eyestalks, kelp, sail).
+  now also counts everyone in the arena when a boss falls. Her model is the "Hero Boss Lab" V15
+  study's `tide()`, part for part (wreck carapace and hull planking, flaring ribs, a bow face,
+  four leg pairs with iron bands, claws of hull and wreck beams that turn about their shoulders,
+  lantern eyestalks that stretch when she rears, the whole ruined deck, moss, rot, fungus,
+  barnacles, the torn sail with its lashings, and her drips, salt mist and shore flies); one point
+  light for both lanterns. It's baked into a mesh per material except the parts that move
+  (claws, eyestalks and lanterns, kelp, sail, effects). The studies' helpers (`def`, `limb`,
+  `taperTube`, `plank`, `jointChain`, their palette as toon materials) and their living effects
+  (motes that drift, fall or rise and wrap between 0 and 10.5 m, fireflies; kept out of the ink
+  pass and dropped when their boss leaves the scene) are `BK` in `public/js/mobs/boss-kit.js`.
   Tests:
   `tests/server/tidewife.test.js` (6), `tests/browser/tidewife.test.js`.
 - **Bosses (C0, flag `bosses`, on).** `server/systems/bosses.js` and `server/bosses/` (one
@@ -558,8 +565,10 @@ her three vines are mob kinds of her own (`kinds: [mother_vine]`, grown in `onAp
 vines grow back. Trophies `mother_eye`, `mother_silk` (the `silk_patch`: climb 1.5x as fast,
 `385-climbing.js`; the Hung reach 1.5 m further). Browser: `109-the-wood.js` (models, labels,
 icons, the bow in hand through `UI.heldModels`, bug looks), `public/js/mobs/hung.js`,
-`public/js/mobs/mother.js` (the detailed V15 model: an upside-down spider with legs up into the
-canopy, baked like the Tidewife's; the body group sits at 15.5 m up, 2.4 on a snatch).
+`public/js/mobs/mother.js` (the V15 study's `mother()`, part for part with the `BK` kit: an
+upside-down spider with knuckled legs up into the canopy, cocoons hanging beside her, drifting
+silk, spores and fireflies; baked like the Tidewife's; the body group sits at 15.5 m up, 2.4 on
+a snatch).
 `RULES.TRAVEL.MAX_HEIGHT` is 95 so the giants can be climbed.
 Tests: `tests/server/wood.test.js` (8), `tests/browser/wood.test.js` (3).
 The Teeth's pack (C6, flag `region-teeth`, off), the same way: `server/regions/teeth.js`
