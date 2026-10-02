@@ -238,8 +238,9 @@
 
   function buildMesh(o) {
     const rng = mulberry32(o.id * 7919 + 13);
-    if (o.type === 'palm') { const p = makePalm(rng); o.mesh = p.g; o.nuts = p.nuts; }
-    else if (o.type === 'tree') o.mesh = makeTree(rng, o.species);
+    const grown = UI.trees && WG.feature('trees2');   // the new tree models (101-tree-models.js)
+    if (o.type === 'palm') { const p = grown ? UI.trees.palm(rng, o) : makePalm(rng); o.mesh = p.g; o.nuts = p.nuts; }
+    else if (o.type === 'tree') o.mesh = grown ? UI.trees.tree(rng, o) : makeTree(rng, o.species);
     else if (o.type === 'bush') { const b = makeBush(rng, o.species); o.mesh = b.g; o.berryMesh = b.berries; }
     else if (o.type === 'ore') o.mesh = makeOre(rng, o.s || 1, o.ore);
     else if (o.type === 'dig') { const d = makeDig(rng); o.mesh = d.g; o.mound = d.mound; o.hole = d.hole; }

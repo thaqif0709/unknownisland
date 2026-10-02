@@ -191,6 +191,10 @@ silver and ice holes; the fur cloak, the silver sword and pine torches; ice fish
 blizzards and the Frozen, the ice cave, its carvings and the White Ram) are the `region-teeth`
 flag; it needs `streaming,bigworld` (and `caves` for the ice cave, `bosses` for the Ram).
 
+The new tree models (branching oaks and blossoms, wind-bent pines, ringed palms with fronds, the
+Mire's cypress, the Weeping Wood's new giants) are the `trees2` flag, on; `FEATURES=-trees2` brings
+the old round ones back.
+
 Torches working above ground (light, fog, warmth, burning down; G plants one) are the `torchlight` flag.
 
 Hearth checkpoints are the `checkpoints` flag: hold V by a lit clay hearth to sleep there, and wake there after a
