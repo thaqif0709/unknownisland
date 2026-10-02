@@ -165,7 +165,9 @@ The Veil lifts at the next dawn. Admins can also type `/spawn dummy` to put the 
 For getting around quickly while testing, admins have a creative mode like Minecraft's (only
 the flying): `/creative` (or `/gamemode creative`), then double-tap **Space** to fly, again to
 stop. The walking keys fly you fast where the camera looks, **Space** rises, **Shift** sinks, and
-you can cross the sea and the Veil. `/normal` turns it off (it's off after a rejoin anyway).
+you can cross the sea and the Veil. Your health, hunger and thirst stay full and nothing can
+hurt you, and `/tp name` (or `/tp #number`) takes you straight to another player. `/normal`
+turns it off (it's off after a rejoin anyway).
 
 The big world is behind three flags that go together: `FEATURES=streaming,bigworld,farview`
 (chunks load around each player, the 5 km world, and the view out to 2 km).

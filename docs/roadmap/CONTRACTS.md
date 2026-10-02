@@ -334,7 +334,8 @@ island.combat.onDowned(p) / onRevived(p)
 
 As built (P6, flag `combat`): the methods are on the island itself (`server/systems/combat.js`):
 
-- `island.damagePlayer(p, amount, { knock })` -> 'dodged' | 'downed' | 'knocked' | 'hurt'. A blow
+- `island.damagePlayer(p, amount, { knock })` -> 'dodged' | 'downed' | 'knocked' | 'hurt' | 'immune'
+  ('immune': creative mode, which `combatGuard` lets nothing through, combat flag or not). A blow
   while rolling misses; one that would take the last of your health leaves you down instead of
   dead; `knock: true` knocks you down as `island.knock(p)` does. Anything that hurts players
   (bosses, C0) should call this, or `island.knock(p)`, which now asks `island.combatGuard(p,

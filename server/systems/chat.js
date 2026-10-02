@@ -10,6 +10,7 @@ const methods = {
   //   /r <message>                    reply to whoever last whispered you
   //   /who                            who's on the island, with their numbers
   //   /help                           the list of commands
+  //   /tp <name or number>            go straight to someone (in creative mode, so admins only)
   // The last few global messages are kept in memory so people who join see them.
   onChat(p, { text }) {
     const clean = String(text || '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 240);
@@ -71,6 +72,18 @@ const methods = {
         if (!on && !off) return sys(`You're in ${p.creative ? 'creative' : 'normal'} mode. /gamemode creative or /gamemode normal`);
         this.setCreative(p, on);
         return sys(on ? 'Creative mode: double-tap Space to fly (Space up, Shift down), and again to stop. /normal to go back.' : 'Normal mode.');
+      }
+      // ...and, in creative mode, go straight to another frog: /tp name (or number)
+      if (cmd === 'tp' || cmd === 'teleport') {
+        if (!p.creative) return sys('/tp works in creative mode.');
+        const who = rest.join(' ').trim();
+        if (!who) return sys('To go to someone: /tp name');
+        const q = this.findPlayer(who);
+        if (!q) return sys(`${who} isn't on the island right now. Type /who to see who is.`);
+        if (q === p) return sys("You're already here.");
+        if (p.dead) return sys("You can't, right now.");
+        this.teleportTo(p, q);
+        return sys(`You go to ${q.name}.`);
       }
       if (cmd === 'help' || cmd === '?') return sys('Commands: /w name message (whisper), /r message (reply to a whisper), /who (who is here). Anything else goes to everyone.');
       return sys(`There's no /${cmd0} command. Type /help for the list.`);
