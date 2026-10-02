@@ -595,6 +595,24 @@ from `buildMesh` in `100-plants-and-rocks.js` and baked like the old ones. Leave
 strands) uses a non-leafy material. About 15% more triangles than the old shapes; phones
 (`coarse`) get fewer segments. The Weeping Wood's giant (`109-the-wood.js`) uses the same
 helpers. The viewer study they came from: the "Unknown Island Trees" artifact.
+Tree studies (flag `trees3`, on, ahead of `trees2`): `public/js/102-tree-studies.js` is the
+"Unknown Island Trees" artifact's own code (its seeded rng and seed slots, bark and leaf canvases,
+`tube`/`blob`/`leaf`/`grow`/`frond` and the oak, pine, giant, cypress and palm builders), minus its
+ground dressing and lights, drawn with the game's toon materials (`soft`). Each kind (oak, blossom,
+pine, snowy pine above the Teeth's snow line - 45, giant, cypress in the Mire, palm) is grown as 4
+variants (variant 0 is the study's tree), each at 3 levels from the same seed (`LODS`: tube
+radial/segment counts, blob detail, every Nth leaf card and frond leaflet; the far level keeps only
+the main forms and skips twigs), merged into one mesh per material and shared by every tree of that
+variant (`geometry.userData.shared`, so `disposeTree` leaves it). Beyond the third level a tree is a
+picture of itself (rendered once per variant into a 256px target) on a card that turns to the camera.
+`UI.onFrame` picks the level by distance (`lodDist()`: 10/24/40 m, or 0/8/22 m at Low graphics,
+`lowGfx`, which never shows the full level). Leaf cards are alpha-tested, so they're in `noInk` and
+carry a `customDepthMaterial`; only a shadow-only copy of the far level casts shadows. The canopy's
+bottom for `leafCeiling` is the 15th percentile of the leafy vertices (`userData.leafBottom`, at least
+2.1 m), read by `topOf` in `380-jumping.js`, since a few cards droop lower. Palms keep 6 coconuts
+(two shown per coconut the server counts). The Wood's giant (`109-the-wood.js`) is the study giant
+scaled to its height. Roughly twice the old trees' cost in a dense forest when drawn in software;
+at Low graphics the browser tests' forest walks run as before.
 (The start screen's "What's new" box and its Hidden Pages link were taken out on 1 Oct; the
 Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), holding V (sit) by a lit clay hearth sleeps there (`UI.sitHold` in
 `145-hearth-checkpoints.js`; a tap only sits), and 3 s asleep saves it as where you

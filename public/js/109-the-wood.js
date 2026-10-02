@@ -19,6 +19,11 @@
       make(rng) {
         // (with `trees2`, 101-tree-models.js: buttress roots, inked bark, arching limbs, weeping strands)
         const g = new THREE.Group(), h = rr(rng, 60, 90), r0 = rr(rng, 2.2, 2.6), T2 = UI.trees && WG.feature('trees2');
+        if (UI.treeStudies && WG.feature('trees3')) {   // the giant as in the studies (102-tree-studies.js), at its full height
+          const t = UI.treeStudies.make({ type: 'giant' }, rng);
+          t.g.children[0].scale.multiplyScalar(h / 15.5);
+          return { g: t.g };
+        }
         if (!T2) {
           const trunk = new THREE.Mesh(new THREE.CylinderGeometry(r0 * .55, r0, h, 12), woodM.bark); trunk.position.y = h / 2; g.add(trunk);
           for (let i = 0; i < 5; i++) {   // roots

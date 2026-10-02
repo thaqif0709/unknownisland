@@ -27,6 +27,7 @@
           const lb = new THREE.Box3(); let any = false;
           o.mesh.traverse(m => { if (m.isMesh && m.material && m.material.userData.leafy) { lb.union(new THREE.Box3().setFromObject(m)); any = true; } });
           o._leafBottom = any ? lb.min.y - o.mesh.position.y : o._top;
+          if (o.mesh.userData.leafBottom != null) o._leafBottom = o.mesh.userData.leafBottom * o.mesh.scale.y;   // (the tree studies say where their canopy starts: 102-tree-studies.js)
           o._leafR = any ? Math.min(lb.max.x - lb.min.x, lb.max.z - lb.min.z) * .42 : .5;
         }
         o._topKey = key;

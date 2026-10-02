@@ -238,9 +238,10 @@
 
   function buildMesh(o) {
     const rng = mulberry32(o.id * 7919 + 13);
-    const grown = UI.trees && WG.feature('trees2');   // the new tree models (101-tree-models.js)
-    if (o.type === 'palm') { const p = grown ? UI.trees.palm(rng, o) : makePalm(rng); o.mesh = p.g; o.nuts = p.nuts; }
-    else if (o.type === 'tree') o.mesh = grown ? UI.trees.tree(rng, o) : makeTree(rng, o.species);
+    const studies = UI.treeStudies && WG.feature('trees3');   // the trees as in the studies (102-tree-studies.js)
+    const grown = UI.trees && WG.feature('trees2');   // the lighter new models (101-tree-models.js)
+    if (o.type === 'palm') { const p = studies ? UI.treeStudies.make(o, rng) : grown ? UI.trees.palm(rng, o) : makePalm(rng); o.mesh = p.g; o.nuts = p.nuts; }
+    else if (o.type === 'tree') o.mesh = studies ? UI.treeStudies.make(o, rng).g : grown ? UI.trees.tree(rng, o) : makeTree(rng, o.species);
     else if (o.type === 'bush') { const b = makeBush(rng, o.species); o.mesh = b.g; o.berryMesh = b.berries; }
     else if (o.type === 'ore') o.mesh = makeOre(rng, o.s || 1, o.ore);
     else if (o.type === 'dig') { const d = makeDig(rng); o.mesh = d.g; o.mound = d.mound; o.hole = d.hole; }
@@ -248,13 +249,13 @@
     else o.mesh = makeRock(rng, o.s || 1, o.species);
     if (o.berryMesh) bake(o.berryMesh);
     if (o.mound) bake(o.mound);
-    bake(o.mesh, [...(o.nuts || []), o.berryMesh, o.mound, o.hole, ...Object.values(o.parts || {})]);
+    if (!o.mesh.userData.prebaked) bake(o.mesh, [...(o.nuts || []), o.berryMesh, o.mound, o.hole, ...Object.values(o.parts || {})]);   // (the tree studies come merged, in levels of detail)
     o.mesh.position.set(o.x, groundAt(o.x, o.z), o.z);
     shadows(o.mesh);
     scene.add(o.mesh);
     applyState(o);
   }
-  const disposeTree = obj => obj.traverse(m => { if (m.geometry && m.geometry !== crestGeo) m.geometry.dispose(); });
+  const disposeTree = obj => obj.traverse(m => { if (m.geometry && m.geometry !== crestGeo && !m.geometry.userData.shared) m.geometry.dispose(); });   // (shared: one tree study's geometry serves many trees)
   function removeMesh(o) {
     if (!o.mesh) return;
     scene.remove(o.mesh); disposeTree(o.mesh);
@@ -266,7 +267,7 @@
     if (!o.mesh) return;
     const s = o.state;
     o.mesh.visible = !s.gone;
-    if (o.type === 'palm') o.nuts.forEach((n, i) => { n.visible = i < s.coconuts; });
+    if (o.type === 'palm') { const per = o.nuts.length > 3 ? 2 : 1; o.nuts.forEach((n, i) => { n.visible = i < s.coconuts * per; }); }   // (the studies' palm hangs two for each)
     if (o.type === 'bush') o.berryMesh.visible = !!s.berries;
     if (o.type === 'dig') { o.mound.visible = !s.dug; o.hole.visible = !!s.dug; }
     const th = UI.things[o.type]; if (th && th.state) th.state(o, s);
