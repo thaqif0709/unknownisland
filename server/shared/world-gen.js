@@ -43,6 +43,13 @@
       bush: { min: 0.7, max: 1.3, growDays: 2 },
     },
     SAPLING: 0.2,            // a new sapling starts at this fraction of its full size
+    // Trees of many heights (flag treeheights). Every tree's full-grown height in metres: most
+    // are SMALL, TALL_SHARE of them TALL. A tree NO_CHOP times a frog's height (FROG_HEIGHT) or
+    // more is too big to cut down; smaller ones (and young ones still growing) can be. However
+    // short, a full-grown tree's trunk stands at least CLEAR m before its leaves start, taller
+    // than a frog. A tree's size (sizeOf) is its height over BASE.
+    FROG_HEIGHT: 1.86,
+    TREES: { BASE: 4, SMALL: [3.7, 4.5], TALL: [4.8, 10], TALL_SHARE: .35, NO_CHOP: 2.5, CLEAR: 2.05 },
     FRUIT_AT: 0.6,           // bushes fruit once this grown; palms only when fully grown
     // Sprinting uses energy (0-100) and makes you hungry faster. Run out and
     // you're exhausted: slower, and no sprinting until energy is back to EXHAUST_RECOVER.
@@ -122,6 +129,7 @@
       combat: true,      // P6: weapons, attacking (left click, hold for heavy), dodging (double-tap Shift), downed and revived
       torchlight: false, // torches burn above ground too: light, fog pushed back, warmth; G plants one (E takes it back)
       fasttravel: false, // W10: travel between lit lanterns you've stood by, paying lamp oil
+      treeheights: true, // trees of many heights: the small ones (trunk still taller than a frog) can be cut, ones 2.5 frogs tall or more can't (RULES.TREES)
       trees3: true,      // the trees as in the "Unknown Island Trees" studies, shape for shape, in the game's inked style (102-tree-studies.js); off: trees2's lighter ones
       trees2: true,      // the new tree models: branching oaks and blossoms, wind-bent (and snowy) pines, ringed palms with fronds, the Mire's cypress (FEATURES=-trees2 brings the old ones back)
       tools: true,       // P3: tools are items in the bag, used from your hand, that wear out (needs slots)
@@ -794,6 +802,10 @@
   function maxScaleFor(seed, o) {
     const f = RULES.FLORA[o.type];
     const r = hashOf(seed, o.id, 0x5bd1e995);
+    if (o.type === 'tree' && feature('treeheights')) {   // a height in metres, as a size against TREES.BASE
+      const T = RULES.TREES, [lo, hi] = hashOf(seed, o.id, 0x68e31da5) < T.TALL_SHARE ? T.TALL : T.SMALL;
+      return +((lo + (hi - lo) * r) / T.BASE).toFixed(3);
+    }
     return +(f.min + (f.max - f.min) * r).toFixed(3);
   }
 
@@ -806,6 +818,9 @@
     return clamp(RULES.SAPLING + (1 - RULES.SAPLING) * age / f.growDays, RULES.SAPLING, 1);
   }
   const sizeOf = (o, state, day, time) => (o.maxScale || 1) * growth(o.type, state, day, time);
+  // A tree's height now (flag treeheights), and whether it's too big to cut down: NO_CHOP frogs tall or more.
+  const treeHeight = (o, state, day, time) => RULES.TREES.BASE * sizeOf(o, state, day, time);
+  const tooBigToChop = (o, state, day, time) => o.type === 'tree' && feature('treeheights') && treeHeight(o, state, day, time) >= RULES.TREES.NO_CHOP * RULES.FROG_HEIGHT;
   // Bigger trees take more chops (and give more wood): 3 at the original size.
   const chopsFor = (o, state, day, time) => Math.max(1, Math.round(RULES.CHOPS * sizeOf(o, state, day, time)));
 
@@ -978,7 +993,7 @@
   const WorldGen = {
     RULES, ITEMS, ITEM_INFO, itemInfo, RECIPES, FIRES, PATCHES, MOON_NAMES, moonPhase, ISL, SPRING, SPRINGS, HILLS, SPAWN, recipeById, nearestSpring, biomeAt, forestMask,
     isNight, phaseName, nightFactor, fogFront, fogAt, hash2, vnoise, fbm, clamp, smooth, heightAt, mulberry32,
-    generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
+    generateObjects, generateLanterns, generateCarvings, defaultState, isDefaultState, growth, sizeOf, treeHeight, tooBigToChop, chopsFor, stepEnergy, spendJump, advanceT, secondsUntil, speedMult,
     feature, features, setFeatures, resolveFeatures,
     REGIONS, regionAt, worldRegionAt, climbAt, slopeAt, landingHeightAt, WORLD, RIVERS,
     THINGS, CHUNK, CHUNK_ID_BASE, chunkOf, chunkKey, chunkObjectId, chunkOfId, generateChunk,

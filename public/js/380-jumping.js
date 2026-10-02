@@ -29,6 +29,7 @@
           o._leafBottom = any ? lb.min.y - o.mesh.position.y : o._top;
           if (o.mesh.userData.leafBottom != null) o._leafBottom = o.mesh.userData.leafBottom * o.mesh.scale.y;   // (the tree studies say where their canopy starts: 102-tree-studies.js)
           o._leafR = any ? Math.min(lb.max.x - lb.min.x, lb.max.z - lb.min.z) * .42 : .5;
+          if (o.mesh.userData.leafR != null) o._leafR = o.mesh.userData.leafR * o.mesh.scale.x;
         }
         o._topKey = key;
       }

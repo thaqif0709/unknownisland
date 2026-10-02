@@ -24,7 +24,7 @@
       case 'spring': return 'Drink from the spring';
       case 'sea': return 'Drink seawater';
       case 'palm': return o.state.coconuts > 0 ? 'Pick a coconut' : o.state.planted != null ? 'Chop the young palm' : 'Chop the palm';
-      case 'tree': return o.state.planted != null ? 'Chop the young tree' : 'Chop the tree';
+      case 'tree': return WG.tooBigToChop(o, o.state, day, t) ? 'Too big to cut down' : o.state.planted != null ? 'Chop the young tree' : 'Chop the tree';
       case 'bush': return !o.state.berries ? 'Bush (picked clean)' : WG.feature('slots') ? `Pick ${o.species === 'blueberry' ? 'blueberries' : 'berries'}` : 'Eat berries';   // with the bag (P2) they go into it
       case 'rock': return o.species === 'pebble' ? 'Pick up stones' : 'Gather stone';
       case 'ore': { const n = (WG.ITEMS[o.ore] || 'Ore').replace(/ ore$/i, '');
@@ -76,7 +76,7 @@
   // Which swing a hit gets: chopping (axe, swept sideways) for trees and palms with
   // no coconuts left, mining (pickaxe, brought down) for rocks and ore.
   const swingKindFor = o => !o ? null
-    : (o.type === 'tree' || (o.type === 'palm' && !(o.state && o.state.coconuts > 0))) ? 'chop'
+    : ((o.type === 'tree' && !WG.tooBigToChop(o, o.state, day, t)) || (o.type === 'palm' && !(o.state && o.state.coconuts > 0))) ? 'chop'
     : (o.type === 'rock' || o.type === 'ore') ? 'mine' : UI.things[o.type] ? UI.things[o.type].swing || null : null;
   function targetKey(o) {
     if (o.type === 'spring' || o.type === 'sea') return o.type;
