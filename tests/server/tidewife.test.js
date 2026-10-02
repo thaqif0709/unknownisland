@@ -90,6 +90,18 @@ test('when the tide turns she goes back down, whole', async () => {
   await said;
 });
 
+test('called by an admin (/boss), she comes at once, at high tide, and the tide doesn’t send her back', async () => {
+  const [a] = await frogs('adm', 1);
+  await a.test('set', { time: HIGH, weather: 'clear' });
+  const came = twMsg(a, m => m.state === 'fighting');
+  const at = { x: TW.appear.x - 6 + 8, z: TW.appear.z - 4 };   // (8 m from the frog)
+  await a.test('boss', { boss: 'tidewife', x: at.x, z: at.z, now: true });
+  const m = await came;
+  assert.ok(Math.hypot(m.x - at.x, m.z - at.z) < .5, 'where she was called');
+  await sleep(1500);
+  assert.equal((await a.test('mobs')).mobs.filter(x => x.kind === 'boss_tidewife').length, 1, 'still here, though the tide is high');
+});
+
 test('beaten: her eye and shell for everyone who fought, a patch to stitch, and the Stairs open', async () => {
   const [a, b] = await frogs('win', 2);
   const m = await bring(a);

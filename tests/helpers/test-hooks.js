@@ -127,8 +127,8 @@ const COMMANDS = {
   // A region's chain done: its boss is called, as when the last request is answered (C1).
   summonBoss(p, { region }) { this.summonBoss(region); return { bosses: this.bossState ? [...this.bossState.values()].map(b => this.bossView(b)) : [] }; },
   // Call a boss to (x, z) now (C0): { boss: its id, x, z }; the reply has its state.
-  boss(p, { boss, x, z }) {
-    const b = this.bossCall(boss, { x, z, again: true });
+  boss(p, { boss, x, z, now }) {   // (`now`: it comes at once, whatever its time, as an admin's /boss)
+    const b = this.bossCall(boss, { x, z, again: true, now: !!now });
     return b ? { boss: this.bossView(b) } : { error: `no boss ${boss}` };
   },
   // Fishing (P7): the fish bites now ({ fish: its key, game: the minigame to land it with }).
