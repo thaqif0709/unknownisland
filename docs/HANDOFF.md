@@ -199,7 +199,14 @@ planned separately by Thaqif):
   to `RULES.CREATIVE.FLY_SPEED`, over deep sea and the Veil, shown to others as pose 3 (drawn
   like a glide) up to `CREATIVE.MAX_HEIGHT`, and no energy cost. `public/js/387-creative.js`:
   double-tap Space (or the Jump button) toggles `flying`; `flyStep` moves you from the loop
-  instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you.
+  instead of walking, keeping an absolute height (`flyAbs`); sinking onto land lands you. The
+  camera follows that height straight while flying (`camLift = hop.y` in `390-loop.js`; smoothing
+  it against the ground racing by below made the view bob over every bump). In creative mode
+  `updatePlayers` keeps health, hunger and thirst at 100 (no drain, no starving, cold or freezing),
+  and `combatGuard` answers 'immune' to every blow (combat flag or not), so `damagePlayer` and
+  `knock` leave you alone. `/tp name` (or `#number`, creative only) calls `teleportTo(p, q)`: a
+  step behind them (or on them, when that step is sea or the Veil, or they're in a cave, which
+  you join), off any raft, with a `correct` carrying `under`.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
 - **The White Ram (C6, flag `region-teeth`, off; the Teeth's boss).** See the Teeth's pack below.
 - **The Hanging Mother (C4, flag `region-wood`, off; the Wood's boss).** See the Wood's pack

@@ -83,15 +83,27 @@ const methods = {
   },
 
   // Creative mode on or off (admins only, for testing; not saved: it's off again after a rejoin).
-  // Turning it off over the sea or behind the Veil puts you back on the beach.
+  // In it your health, hunger and thirst stay full and nothing can hurt you. Turning it off over the sea or behind the Veil puts you back on the beach.
   setCreative(p, on) {
     p.creative = !!on;
+    if (p.creative) { p.health = 100; p.hunger = 100; p.thirst = 100; this.sendMe(p); }   // (and nothing wears you down: updatePlayers, combatGuard)
     if (!p.creative) {
       if (p.pose === 'fly') p.pose = null;
       const at = this.safeSpot(p.x, p.z);
       if (at.x !== p.x || at.z !== p.z) { p.x = at.x; p.z = at.z; this.send(p, { t: 'correct', x: p.x, z: p.z }); }
     }
     this.send(p, { t: 'mode', creative: p.creative });
+  },
+
+  // Straight to another frog (creative mode's /tp): a step behind them, or right where they are
+  // when that step is sea or the Veil; into their cave with them if they're underground.
+  teleportTo(p, q) {
+    if (p.ride && this.dismount) this.dismount(p);   // (off a raft or a zip line first, P10)
+    let x = q.x - Math.sin(q.face || 0) * 1.5, z = q.z - Math.cos(q.face || 0) * 1.5;
+    if (q.under || heightAt(x, z) <= -1 || this.veilAt(x, z)) { x = q.x; z = q.z; }
+    p.x = x; p.z = z; p.face = q.face || 0; p.under = q.under || null;
+    p.lastPosAt = Date.now(); p.moving = false; p.sitting = false;
+    this.send(p, { t: 'correct', x, z, under: p.under || 0 });
   },
 
   selfView(p) {
@@ -170,6 +182,7 @@ const methods = {
     const D = RULES.DREAD;
     for (const p of this.players.values()) {
       if (p.dead || this.watching(p)) continue;   // nothing happens to you while the intro plays
+      if (p.creative) { p.health = 100; p.hunger = 100; p.thirst = 100; }   // creative mode (admins, for testing): nothing wears you down
       const warmMul = this.env.lightMul * (this.has(p, 'silverfin_scale') ? 1.3 : 1);
       p.warm = this.fires.some(f => f.fuel > 0 && Math.hypot(f.x - p.x, f.z - p.z) < FIRES[f.kind].warm * warmMul)
         || this.lanterns.some(l => l.lit && Math.hypot(l.x - p.x, l.z - p.z) < this.lanternRadius(l) * .6 * warmMul)
@@ -192,7 +205,7 @@ const methods = {
       const T = RULES.TRAVEL, drain = p.pose === 'glide' ? T.GLIDE_ENERGY : p.pose === 'climb' ? (p.moving ? T.CLIMB_ENERGY : T.HANG_ENERGY) : 0;
       p.running = WG.stepEnergy(p, dt, p.wantSprint && p.moving, drain);
       // Hunger and thirst only go down while you're moving; standing still costs nothing.
-      if (p.moving) {
+      if (p.moving && !p.creative) {
         p.hunger = Math.max(0, p.hunger - (RULES.HUNGER_DRAIN * (this.has(p, 'conch_charm') ? 1.2 : 1) + (p.running ? RULES.SPRINT_HUNGER : 0)) * dt);
         p.thirst = Math.max(0, p.thirst - RULES.THIRST_DRAIN * dt);
       }
@@ -200,6 +213,7 @@ const methods = {
       if (p.hunger <= 0) { hurt += RULES.STARVE_DMG; p.cause = 'hunger'; }
       if (p.thirst <= 0) { hurt += RULES.STARVE_DMG; p.cause = 'thirst'; }
       if (night && !p.warm && !p.under) { hurt += RULES.COLD_DMG; if (p.hunger > 0 && p.thirst > 0) p.cause = 'cold'; }
+      if (p.creative) hurt = 0;
       if (hurt > 0) p.health -= hurt * dt;
       else if (p.hunger > RULES.REGEN_MIN && p.thirst > RULES.REGEN_MIN) p.health = Math.min(100, p.health + RULES.REGEN * dt);
       if (p.health <= 0) {

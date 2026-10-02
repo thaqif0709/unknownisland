@@ -322,7 +322,11 @@
       // above the ground than any jump goes), so the view stays on you instead of the ground below
       const liftTo = (climb || glide || flying || UI.ride) ? hop.y : hop.air ? Math.max(hop.floor || 0, hop.y - JUMP_TOP) : (hop.floor || 0);
       camLift += (liftTo - camLift) * Math.min(1, dt * (hop.air && hop.y > JUMP_TOP ? 12 : 6));
-      const py = (myCave ? myFloor() : Math.max(heightAt(px, pz), -.75)) + camLift, LOW = .18;   // in a cave: its floor (W9)
+      const base = myCave ? myFloor() : Math.max(heightAt(px, pz), -.75), LOW = .18;   // in a cave: its floor (W9)
+      // flying (creative mode) keeps your height against the sea, not the ground racing by below,
+      // so the view follows that straight (smoothing it against the ground made it bob over every bump)
+      if (flying) camLift = hop.y;
+      const py = base + camLift;
       const up = Math.max(0, LOW - pitch), orbit = Math.max(pitch, LOW - up * .12);
       const dist = camDist * (1 - Math.min(up, 1) * .45);
       const cx = px + Math.sin(yaw) * Math.cos(orbit) * dist;

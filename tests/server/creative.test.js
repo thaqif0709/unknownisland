@@ -1,13 +1,14 @@
 // Creative mode (admins, for testing): /creative lets an admin fly fast, over the sea too;
-// nobody else can turn it on, and /normal puts you back on land.
+// nobody else can turn it on, and /normal puts you back on land. In it your health, hunger
+// and thirst stay full, nothing hurts you, and /tp takes you to another frog.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { startServer } = require('../helpers/server');
 const { WG, landNear } = require('../helpers/world');
 
-const ADMIN = 'fly' + Date.now().toString(36).slice(-6);
+const ADMIN = 'fly' + Date.now().toString(36).slice(-6), ADMIN2 = 'god' + Date.now().toString(36).slice(-6), ADMIN3 = 'tp' + Date.now().toString(36).slice(-6);
 let server;
-before(async () => { server = await startServer({ env: { ADMINS: ADMIN } }); });
+before(async () => { server = await startServer({ env: { ADMINS: `${ADMIN},${ADMIN2},${ADMIN3}` } }); });
 after(async () => { if (server) await server.stop(); });
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -61,4 +62,41 @@ test('an admin in creative mode flies fast, over the sea too, and friends see it
   const land = landNear(WG.SPAWN);
   await a.test('place', land); await sleep(300);
   assert.equal((await travel(a, land, 0, 20, 'fly')).corrected, true, 'too fast once creative is off');
+});
+
+test('in creative mode your health, hunger and thirst stay full, and nothing hurts you', async () => {
+  const a = await server.join('god', { username: ADMIN2 });
+  const at = landNear({ x: WG.SPAWN.x + 30, z: WG.SPAWN.z - 30 });
+  await a.test('place', at); await sleep(300);
+  assert.match((await say(a, '/creative')).text, /Creative mode/);
+  await a.test('set', { health: 40, hunger: 5, thirst: 5 });
+  const me = await a.next(m => m.t === 'me' && m.health === 100 && m.hunger === 100 && m.thirst === 100, { what: 'full again' });
+  assert.ok(me);
+  // a straw dummy slams the ground where you stand: nothing
+  const seen = a.messages.length;
+  await a.test('spawn', { kind: 'dummy', x: at.x, z: at.z + 1.5 });
+  await a.next(m => m.t === 'telegraph', { what: 'the dummy winds up' });
+  await sleep(2500);
+  const after = a.messages.slice(seen);
+  assert.ok(!after.some(m => m.t === 'me' && m.health < 100), 'no health lost');
+  assert.ok(!after.some(m => m.t === 'downed' || m.t === 'knocked' || (m.t === 'toast' && /slams/.test(m.msg))), 'not hurt, not down');
+  assert.match((await say(a, '/normal')).text, /Normal mode/);
+});
+
+test('/tp takes you to another frog, in creative mode only', async () => {
+  const a = await server.join('tp', { username: ADMIN3 }), b = await server.join('far'), c = await server.join('plain');
+  const there = landNear({ x: WG.SPAWN.x - 40, z: WG.SPAWN.z - 20 });
+  await b.test('place', there); await sleep(300);
+  assert.match((await say(c, `/tp ${b.name}`)).text, /creative mode/, 'not out of creative mode');
+  assert.match((await say(a, `/tp ${b.name}`)).text, /creative mode/, 'not even an admin out of it');
+  assert.match((await say(a, '/creative')).text, /Creative mode/);
+  assert.match((await say(a, '/tp nobody_here')).text, /isn't on the island/);
+  const moved = a.next(m => m.t === 'correct', { what: 'the jump' });
+  assert.match((await say(a, `/tp ${b.name}`)).text, new RegExp(`You go to ${b.name}`));
+  const fix = await moved;
+  assert.ok(Math.hypot(fix.x - there.x, fix.z - there.z) < 2, `next to them: ${fix.x.toFixed(1)}, ${fix.z.toFixed(1)}`);
+  // and the server agrees: walking on from there isn't pulled back
+  await sleep(300);
+  assert.equal((await travel(a, fix, 0, 3, undefined, 2)).corrected, false);
+  assert.match((await say(a, `/tp #${c.id}`)).text, /You go to/, 'by number too');
 });

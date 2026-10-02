@@ -42,7 +42,7 @@ function onTick(dt) {
     if (drain > 0) p.warmth = Math.max(0, p.warmth - drain * dt);
     else p.warmth = Math.min(100, p.warmth + (p.warm ? W().FIRE : W().OUT) * dt);
     if (p.warmth < W().LOW && drain > 0) p.dread = Math.min(100, p.dread + .5 * dt);
-    if (p.warmth <= 0 && drain > 0) {
+    if (p.warmth <= 0 && drain > 0 && !p.creative) {
       p.health -= W().FREEZE * dt;
       if (p.hunger > 0 && p.thirst > 0) p.cause = 'freeze';
     }

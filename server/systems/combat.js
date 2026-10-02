@@ -142,13 +142,14 @@ const methods = {
   // dodges it ('dodged'), and one that would kill you leaves you down instead ('downed').
   // Returns null when the blow should land as usual. Contract section 9.
   combatGuard(p, amount) {
+    if (p.creative && !p.dead) return 'immune';   // creative mode (admins, for testing): nothing hurts you
     if (!on() || p.dead) return null;
     if (this.dodging(p)) { this.send(p, { t: 'toast', msg: 'You roll clear.' }); return 'dodged'; }
     if (this.downed(p)) return 'downed';
     if (p.health - amount <= 0) { this.goDown(p); return 'downed'; }
     return null;
   },
-  // Damage from a creature: { from, knock }. Returns 'dodged', 'downed', 'knocked' or 'hurt'.
+  // Damage from a creature: { from, knock }. Returns 'dodged', 'downed', 'knocked', 'hurt' or 'immune' (creative mode).
   damagePlayer(p, amount, { knock = false } = {}) {
     const g = this.combatGuard(p, amount);
     if (g) return g;
