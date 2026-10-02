@@ -404,11 +404,15 @@
     ];
 
     // ---------- one variant, grown and merged: { parts: [{ geo, mat }], nuts: [{ geo, mat, pos }] } per level ----------
+    // `lift` (flag treeheights): the trunk drawn that much longer (in the variant's own units),
+    // so a short tree still stands taller than a frog before its leaves start. Everything above
+    // the cut (`natural().cut`, low on the trunk under the first leaves) moves up by it: the trunk
+    // (and ivy up it) stretches, each branch, leaf card and lump moves as one piece.
     const cache = new Map();
-    function variant(kind, v, lod) {
-      const key = kind + ':' + v + ':' + lod;
+    function variant(kind, v, lod, lift = 0) {
+      const key = kind + ':' + v + ':' + lod + ':' + lift;
       if (cache.has(key)) return cache.get(key);
-      const K = KINDS[kind];
+      const K = KINDS[kind], cut = lift ? natural(kind, v).cut : 0;   // (measured first: growing one uses the shared state below)
       G = new THREE.Group(); leafSets = {}; Q = LODS[lod];
       seed = (K.slot + 1) * 7919 + v * 104729;   // variant 0: the study's own tree
       K.build({ blossom: K.blossom, snowy: K.snowy });
@@ -419,6 +423,7 @@
         if (!m.visible) { m.geometry.dispose(); return; }   // (snow and ice where there's no snow)
         let g = m.geometry.clone().applyMatrix4(m.matrixWorld); m.geometry.dispose();
         if (g.index) g = g.toNonIndexed();
+        if (lift) liftUp(g, m.material, cut, lift);
         if (m.userData.nut) { g.userData.shared = true; nuts.push({ geo: g, mat: m.material }); return; }
         if (!byMat.has(m.material)) byMat.set(m.material, []);
         byMat.get(m.material).push(g);
@@ -431,12 +436,47 @@
       }
       G = null;
       // where the canopy starts, for bumping into it (380-jumping.js): low in the crown, not its lowest drooping clump
-      const ys = [];
-      for (const p of parts) if (p.mat.userData.leafy) { const a = p.geo.attributes.position.array; for (let i = 1; i < a.length; i += 9) ys.push(a[i]); }
+      const ys = [], lx = [1e9, -1e9], lz = [1e9, -1e9];
+      for (const p of parts) if (p.mat.userData.leafy) {
+        const a = p.geo.attributes.position.array;
+        for (let i = 1; i < a.length; i += 9) { ys.push(a[i]); lx[0] = Math.min(lx[0], a[i - 1]); lx[1] = Math.max(lx[1], a[i - 1]); lz[0] = Math.min(lz[0], a[i + 1]); lz[1] = Math.max(lz[1], a[i + 1]); }
+      }
       ys.sort((a, b) => a - b);
-      const out = { parts, nuts, leafBottom: ys.length ? ys[Math.floor(ys.length * .15)] : null };
+      const out = { parts, nuts, leafBottom: ys.length ? ys[Math.floor(ys.length * .15)] : null, leafR: ys.length ? Math.min(lx[1] - lx[0], lz[1] - lz[0]) * .42 : null };
       cache.set(key, out);
       return out;
+    }
+    // A variant's own height, where its leaves start (low in the crown: the 5th percentile), and
+    // where its trunk is cut to lengthen it: measured once on its lighter level.
+    const naturals = new Map();
+    function natural(kind, v) {
+      const key = kind + ':' + v;
+      if (naturals.has(key)) return naturals.get(key);
+      const vv = variant(kind, v, 1), box = new THREE.Box3(), ys = [];
+      for (const p of vv.parts) {
+        p.geo.computeBoundingBox(); box.union(p.geo.boundingBox);
+        if (p.mat.userData.leafy) { const a = p.geo.attributes.position.array; for (let i = 1; i < a.length; i += 9) ys.push(a[i]); }
+      }
+      ys.sort((a, b) => a - b);
+      const low = ys.length ? ys[Math.floor(ys.length * .05)] : box.max.y * .5;
+      const out = { H: box.max.y, low, cut: Math.max(.25, low * .45) };
+      naturals.set(key, out);
+      return out;
+    }
+    const STRETCH = new Set([...Object.values(MAT.bark), MAT.ivyStem, MAT.vine]);
+    function liftUp(g, mat, cut, d) {
+      const a = g.attributes.position, uv = g.attributes.uv, n = a.count;
+      let lo = 1e9, hi = -1e9;
+      for (let i = 0; i < n; i++) { const y = a.getY(i); if (y < lo) lo = y; if (y > hi) hi = y; }
+      if (hi <= cut) return;
+      const shift = (from, to) => { for (let i = from; i < to; i++) a.setY(i, a.getY(i) + d); };
+      if (lo >= cut) shift(0, n);
+      else if (STRETCH.has(mat) && lo < cut * .5 && hi > cut * 2.5) {   // the trunk (and ivy up it) from the ground across the cut: stretched, the bark texture carried on up with it
+        for (let i = 0; i < n; i++) if (a.getY(i) > cut) { a.setY(i, a.getY(i) + d); if (uv) uv.setY(i, uv.getY(i) + d * .45); }
+      } else if (mat.userData.cards) {   // leaf cards: each (six corners) moves up whole if it's above the cut
+        for (let i = 0; i < n; i += 6) { let y = 0; for (let k = 0; k < 6; k++) y += a.getY(i + k); if (y / 6 > cut) shift(i, i + 6); }
+      } else if ((lo + hi) / 2 > cut) shift(0, n);   // a branch, a lump, a fungus, the hollow: whole, by where its middle is
+      a.needsUpdate = true; if (uv) uv.needsUpdate = true;
     }
     function merge(geos, mat) {
       let n = 0; geos.forEach(g => { n += g.attributes.position.count; });
@@ -462,21 +502,21 @@
     // Drawn once per variant from its lighter level, lit flat (its own colours); the card is shaded
     // by the island's light like the ground, so it darkens at night with the rest.
     const pictures = new Map();
-    function picture(kind, v) {
-      const key = kind + ':' + v;
+    function picture(kind, v, lift = 0) {
+      const key = kind + ':' + v + ':' + lift;
       if (pictures.has(key)) return pictures.get(key);
-      const vv = variant(kind, v, 1), grp = new THREE.Group(), sc = new THREE.Scene();
+      const vv = variant(kind, v, 1, lift), grp = new THREE.Group(), sc = new THREE.Scene();
       for (const p of vv.parts) grp.add(new THREE.Mesh(p.geo, p.mat));
       const box = new THREE.Box3().setFromObject(grp), size = box.getSize(V()), c = box.getCenter(V());
       const w = Math.max(size.x, size.z), h = size.y, side = Math.max(w, h), S = 256;
       sc.add(grp, new THREE.AmbientLight(0xffffff, 1));
-      const cam = new THREE.OrthographicCamera(-side / 2, side / 2, side / 2, -side / 2, .1, side * 4);
+      const cam = new THREE.OrthographicCamera(-w / 2, w / 2, h / 2, -h / 2, .1, side * 4);   // (the card is the tree's own size: no taller, so it doesn't count as tree)
       cam.position.set(c.x, c.y, c.z + side * 2); cam.lookAt(c);
       const rt = new THREE.WebGLRenderTarget(S, S), oldTarget = renderer.getRenderTarget(), oldColor = renderer.getClearColor(new THREE.Color()), oldAlpha = renderer.getClearAlpha();
       renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(sc, cam);
       renderer.setRenderTarget(oldTarget); renderer.setClearColor(oldColor, oldAlpha);
       grp.children.slice().forEach(m => grp.remove(m));   // (the geometry is the variant's, kept)
-      const geo = new THREE.PlaneGeometry(side, side); geo.translate(c.x, c.y, 0);
+      const geo = new THREE.PlaneGeometry(w, h); geo.translate(c.x, c.y, 0);
       const nrm = geo.attributes.normal; for (let i = 0; i < nrm.count; i++) nrm.setXYZ(i, 0, 1, 0);   // (lit like the ground beneath it)
       geo.userData.shared = true;
       const out = { geo, mat: soft(0xffffff, { map: rt.texture, alphaTest: .5, side: THREE.DoubleSide }) };
@@ -486,34 +526,52 @@
 
     // ---------- a tree in the world: four levels, the one for its distance shown ----------
     const live = new Set();
-    function make(kind, rngObj) {
-      const K = KINDS[kind], v = Math.floor(rngObj() * VARIANTS), root = new THREE.Group(), body = new THREE.Group(), levels = [];
-      body.scale.setScalar(K.scale * (.92 + rngObj() * .16)); body.rotation.y = rngObj() * Math.PI * 2;
-      root.add(body);
-      let nuts = [];
-      for (let l = 0; l < 3; l++) {
-        const lv = new THREE.Group(), vv = variant(kind, v, l);
-        for (const p of vv.parts) {
-          const m = new THREE.Mesh(p.geo, p.mat);
-          m.castShadow = false; m.receiveShadow = true;   // (the shadow comes from the bare form: below)
-          if (p.mat.userData.cards) { m.customDepthMaterial = cardDepthMat(p.mat.map === T.leaf.oak ? 'oak' : p.mat.map === T.leaf.needle ? 'needle' : p.mat.map === T.leaf.willow ? 'willow' : 'moss'); noInk.add(m); }   // (cards: their alpha shape is their outline)
-          lv.add(m);
-        }
-        lv.visible = l === 2;
-        body.add(lv); levels.push(lv);
-        if (l === 0) nuts = vv.nuts.map(n => { const m = new THREE.Mesh(n.geo, n.mat); m.castShadow = true; body.add(m); return m; });
+    // Its level's meshes, put in when it's first shown (most trees only ever show their picture
+    // and bare form, so the fuller levels are only grown for the trees you come near).
+    function fill(root, l) {
+      const lv = root.userData.levels[l], { kind, v, lift } = root.userData.spec;
+      if (lv.userData.filled) return;
+      lv.userData.filled = true;
+      for (const p of variant(kind, v, l, lift).parts) {
+        const m = new THREE.Mesh(p.geo, p.mat);
+        m.castShadow = false; m.receiveShadow = true;   // (the shadow comes from the bare form: below)
+        if (p.mat.userData.cards) { m.customDepthMaterial = cardDepthMat(p.mat.map === T.leaf.oak ? 'oak' : p.mat.map === T.leaf.needle ? 'needle' : p.mat.map === T.leaf.willow ? 'willow' : 'moss'); noInk.add(m); }   // (cards: their alpha shape is their outline)
+        lv.add(m);
       }
+    }
+    // How much longer a tree's trunk is drawn (flag treeheights), in its variant's units: enough that,
+    // full grown at `height` m, its leaves start TREES.CLEAR m up (taller than a frog). In steps of
+    // a tenth of the tree, so trees share their geometry.
+    function liftFor(kind, v, height) {
+      const n = natural(kind, v), C = RULES.TREES.CLEAR;
+      if (height <= C) return 0;
+      const d = (C * n.H - height * n.low) / (height - C);   // (low + d) / (H + d) = C / height
+      if (d <= 0) return 0;
+      const step = n.H * .1;
+      return +(Math.ceil(d / step) * step).toFixed(3);
+    }
+    function make(kind, rngObj, o = {}) {
+      const K = KINDS[kind], v = Math.floor(rngObj() * VARIANTS), root = new THREE.Group(), body = new THREE.Group(), levels = [];
+      const look = .92 + rngObj() * .16;
+      // its height (flag treeheights, trees): what the island says, full grown; the mesh is scaled by its size (resize1)
+      const heights = o.type === 'tree' && WG.feature('treeheights') && o.maxScale;
+      const lift = heights ? liftFor(kind, v, RULES.TREES.BASE * o.maxScale) : 0;
+      body.scale.setScalar(heights ? RULES.TREES.BASE / (natural(kind, v).H + lift) : K.scale * look); body.rotation.y = rngObj() * Math.PI * 2;
+      root.add(body);
+      for (let l = 0; l < 3; l++) { const lv = new THREE.Group(); lv.visible = false; body.add(lv); levels.push(lv); }
+      const nuts = (kind === 'palm' ? variant(kind, v, 0).nuts : []).map(n => { const m = new THREE.Mesh(n.geo, n.mat); m.castShadow = true; body.add(m); return m; });   // (palms)
       // the shadow, cast by the bare form whatever level is shown (only drawn into the shadow map)
       const shadowHold = new THREE.Group();
-      for (const p of variant(kind, v, 2).parts) { const m = new THREE.Mesh(p.geo, SHADOW_ONLY); m.castShadow = true; shadowHold.add(m); noInk.add(m); }
+      for (const p of variant(kind, v, 2, lift).parts) { const m = new THREE.Mesh(p.geo, SHADOW_ONLY); m.castShadow = true; shadowHold.add(m); noInk.add(m); }
       body.add(shadowHold); root.userData.shadow = shadowHold;
-      const pic = picture(kind, v), card = new THREE.Mesh(pic.geo, pic.mat), cardHold = new THREE.Group();
+      const pic = picture(kind, v, lift), card = new THREE.Mesh(pic.geo, pic.mat), cardHold = new THREE.Group();
       cardHold.scale.copy(body.scale); cardHold.add(card); root.add(cardHold); noInk.add(card);
-      cardHold.visible = false; levels.push(cardHold);
-      levels[2].visible = false; levels[3].visible = true;
+      levels.push(cardHold);
       root.userData.prebaked = true; root.userData.levels = levels; root.userData.level = 3; root.userData.card = cardHold;
-      const lb = variant(kind, v, 0).leafBottom;
+      root.userData.spec = { kind, v, lift };
+      const { leafBottom: lb, leafR } = variant(kind, v, 1, lift);
       if (lb != null) root.userData.leafBottom = Math.max(2.1, lb * body.scale.y);   // (always room to walk underneath)
+      if (leafR != null) root.userData.leafR = leafR * body.scale.x;   // (how far the leaves spread, before its fuller levels are grown)
       live.add(root);
       return { g: root, nuts };
     }
@@ -526,7 +584,7 @@
         const d = Math.hypot(root.position.x - cx, root.position.z - cz), cur = root.userData.level;
         let want = d < D[0] ? 0 : d < D[1] ? 1 : d < D[2] ? 2 : 3;
         if (want > cur && d < D[want - 1] + 3) want = cur;   // (hysteresis)
-        if (want !== cur) { root.userData.levels[cur].visible = false; root.userData.levels[want].visible = true; root.userData.level = want; }
+        if (want !== cur) { if (want < 3) fill(root, want); root.userData.levels[cur].visible = false; root.userData.levels[want].visible = true; root.userData.level = want; }
         if (want === 3) root.userData.card.rotation.y = Math.atan2(cx - root.position.x, cz - root.position.z);   // (the picture faces you)
         root.userData.shadow.visible = root.userData.level < 3;
       }
@@ -538,9 +596,9 @@
         if (o.type === 'palm') return make('palm', rngObj);
         if (o.type === 'giant') return make('giant', rngObj);
         const teeth = WG.feature('region-teeth') && WG.feature('bigworld') && WG.regionAt(o.x, o.z) === 'teeth';
-        if (WG.feature('bigworld') && WG.regionAt(o.x, o.z) === 'mire') return make('cypress', rngObj);
-        if (o.species === 'pine') return make(teeth && heightAt(o.x, o.z) > RULES.TEETH.SNOW_LINE - 45 ? 'pineSnow' : 'pine', rngObj);
-        return make(o.species === 'blossom' ? 'blossom' : 'oak', rngObj);
+        if (WG.feature('bigworld') && WG.regionAt(o.x, o.z) === 'mire') return make('cypress', rngObj, o);
+        if (o.species === 'pine') return make(teeth && heightAt(o.x, o.z) > RULES.TEETH.SNOW_LINE - 45 ? 'pineSnow' : 'pine', rngObj, o);
+        return make(o.species === 'blossom' ? 'blossom' : 'oak', rngObj, o);
       },
       variant, live, lodDist,
     };

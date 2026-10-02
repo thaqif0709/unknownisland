@@ -266,7 +266,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="gather"><h2>Gathering</h2>
       <table>
         <tr><th>What</th><th>How</th><th>Comes back after</th></tr>
-        <tr><td>Wood</td><td>Chop trees and palms (<kbd>E</kbd>); bigger trees take more chops. A copper axe gives 2 per chop.</td><td><span data-r="TREE_REGROW_DAYS"></span> days, as a sapling that grows back to full size</td></tr>
+        <tr><td>Wood</td><td>Chop trees and palms (<kbd>E</kbd>); bigger trees take more chops. A copper axe gives 2 per chop.<span data-feature="treeheights"> Trees come in all heights; one <span data-r="TREES.NO_CHOP"></span> times as tall as a frog or more is too big to cut down.</span></td><td><span data-r="TREE_REGROW_DAYS"></span> days, as a sapling that grows back to full size</td></tr>
         <tr><td>Stone</td><td>Rocks and pebbles, 1 per hit (2 with a pickaxe).</td><td><span data-r="ROCK_REGROW_DAYS"></span> days</td></tr>
         <tr><td>Copper / iron ore</td><td>Ore rocks, with a pickaxe (2 per swing with an iron pickaxe). Copper is on the hills, iron near the rocky top.</td><td><span data-r="ORE_REGROW_DAYS"></span> days</td></tr>
         <tr><td>Clay</td><td>Soft dirt patches, with a shovel (<span data-r="DIG_CLAY"></span> each). Sometimes seeds too.</td><td>Every sunrise</td></tr>
@@ -699,6 +699,7 @@ details.spoiler summary:focus-visible{outline:3px solid var(--blue);outline-offs
     <section id="changelog"><h2>Changelog</h2>
       <p class="muted">Newest first.</p>
       <ul class="log">
+        <li data-feature="treeheights"><b>Trees of every height:</b> from ones twice your height to towering ones over five times it. Even the smallest has a trunk taller than you before its leaves start, and the big ones (two and a half frogs tall or more) are too big to cut down.</li>
         <li><b>Trees are solid again:</b> trunks and branches were drawn inside out, so up close you could see into them and through them to the branches behind.</li>
         <li data-feature="bosses"><b>The Tidewife, as in the boss studies:</b> bigger claws of hull and wreck beams, iron-banded legs, a whole ruined deck on her back (railings, a hatch, the cabin, a capstan, barrels, crates and rope), more moss, rot and barnacles, lantern stalks that stretch when she rears, and seawater dripping off her with shore flies about.</li>
         <li data-feature="region-wood"><b>The Hanging Mother, as in the boss studies:</b> knuckled legs, cocoons hanging close beside her, and silk, spores and pale fireflies drifting around her.</li>

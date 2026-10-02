@@ -629,6 +629,18 @@ bottom for `leafCeiling` is the 15th percentile of the leafy vertices (`userData
 (two shown per coconut the server counts). The Wood's giant (`109-the-wood.js`) is the study giant
 scaled to its height. Roughly twice the old trees' cost in a dense forest when drawn in software;
 at Low graphics the browser tests' forest walks run as before.
+Tree heights (flag `treeheights`, on): `maxScaleFor` gives each tree a full-grown height in m
+from `RULES.TREES` (SMALL, or TALL for TALL_SHARE of them) as a size against `TREES.BASE`
+(4 m), so `sizeOf`, chops and growth work as before; `WG.treeHeight` and `WG.tooBigToChop`
+(NO_CHOP x `RULES.FROG_HEIGHT`, 1.86 m, or more: `gather.js` says it's too big, the client's
+label and swing agree). In `102-tree-studies.js` a tree is scaled to its height exactly
+(`BASE / (natural H + lift)` on the body, the size on the mesh), and its trunk is lengthened by a
+`lift` (`liftFor`, in steps of a tenth of the tree) so its leaves start at least `TREES.CLEAR` m
+up: `liftUp` cuts the variant low on the trunk (`natural().cut`), stretches the trunk (and ivy
+up it) and moves every branch, card and lump above the cut up whole. Lifted variants are cached
+per lift, so a tree's fuller levels are only grown when it's first shown near (`fill`); its
+leaf spread for bumping into leaves comes from `userData.leafR`. Far pictures are the tree's
+own width and height (they no longer stick up above wide trees).
 (The start screen's "What's new" box and its Hidden Pages link were taken out on 1 Oct; the
 Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), holding V (sit) by a lit clay hearth sleeps there (`UI.sitHold` in
 `145-hearth-checkpoints.js`; a tap only sits), and 3 s asleep saves it as where you

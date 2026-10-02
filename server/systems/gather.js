@@ -83,7 +83,10 @@ const uses = {
       ctx.changed();
     },
   },
-  tree: { use(p, o, ctx) { chop.call(this, p, o, ctx); } },
+  tree: { use(p, o, ctx) {
+    if (WG.tooBigToChop(o, o.state, this.day, this.time)) return ctx.say('This tree is too big to cut down.');   // (flag treeheights)
+    chop.call(this, p, o, ctx);
+  } },
   bush: {
     use(p, o, { say, changed }) {
       const s = o.state;

@@ -39,8 +39,8 @@ function spotNear(from, ok, { step = 1, max = 120 } = {}) {
 // fires in `avoid` (a database kept between runs remembers the last run's fires).
 const landNear = (from, avoid = []) => spotNear(from, (h, x, z) => h > .6 && h < 3 && WG.heightAt(x + 1.6, z) > .6
   && avoid.every(f => Math.hypot(f.x - x, f.z - z) > 4 && Math.hypot(f.x - x - 1.6, f.z - z) > 4));
-// How many more chops a tree or palm takes to come down.
-const chopsLeft = (o, island) => WG.chopsFor(o, o.state, island.day, island.time) - (o.state.hits || 0);
+// How many more chops a tree or palm takes to come down (none for a tree too big to cut).
+const chopsLeft = (o, island) => WG.tooBigToChop(o, o.state, island.day, island.time) ? 0 : WG.chopsFor(o, o.state, island.day, island.time) - (o.state.hits || 0);
 // Shallow sea, where a bucket can be filled (and a player can stand).
 const seaNear = from => spotNear(from, h => h < .5 && h > -.6, { step: 2, max: 400 });
 

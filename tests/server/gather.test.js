@@ -38,6 +38,13 @@ test('chopping a tree gives wood', async () => {
   assert.equal(c.me.inv.wood, 2);
 });
 
+test('a tree 2.5 frogs tall or more is too big to cut down (flag treeheights)', async () => {
+  const { c, o } = await besideA('tree', (x, isl) => WG.tooBigToChop(x, x.state, isl.day, isl.time), 'big');
+  assert.ok(WG.treeHeight(o, o.state, 0, .3) >= WG.RULES.TREES.NO_CHOP * WG.RULES.FROG_HEIGHT);
+  assert.match((await c.act('o' + o.id)).msg, /too big to cut down/);
+  assert.ok(!c.me.inv.wood, 'no wood from it');
+});
+
 test('an axe doubles the wood', async () => {
   const { c, o } = await besideA('tree', (x, isl) => chopsLeft(x, isl) >= 2, 'axe');
   await giveTool(c, 'axe');
