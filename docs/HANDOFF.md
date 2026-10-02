@@ -214,7 +214,10 @@ planned separately by Thaqif):
   phase 2 below half: quicker, throws at anyone, rears more. Trophies `tidewife_eye` and
   `tidewife_shell` (journal, flag bosses); the `tide_shell` patch (wade at walking speed; the
   Stilled notice you from 6 m further). Look: `public/js/mobs/tidewife.js`. The boss system
-  now also counts everyone in the arena when a boss falls. Tests:
+  now also counts everyone in the arena when a boss falls. Her detailed model (V15: wreck
+  carapace, mossy claws, lantern eyestalks, torn sail; one point light for both lanterns) is
+  baked into a mesh per material except the parts that move (claws, eyestalks, kelp, sail).
+  Tests:
   `tests/server/tidewife.test.js` (6), `tests/browser/tidewife.test.js`.
 - **Bosses (C0, flag `bosses`, on).** `server/systems/bosses.js` and `server/bosses/` (one
   file per boss: a mob definition plus region, next, hp, appear, phases, trophy). A finished
@@ -555,7 +558,9 @@ her three vines are mob kinds of her own (`kinds: [mother_vine]`, grown in `onAp
 vines grow back. Trophies `mother_eye`, `mother_silk` (the `silk_patch`: climb 1.5x as fast,
 `385-climbing.js`; the Hung reach 1.5 m further). Browser: `109-the-wood.js` (models, labels,
 icons, the bow in hand through `UI.heldModels`, bug looks), `public/js/mobs/hung.js`,
-`public/js/mobs/mother.js`. `RULES.TRAVEL.MAX_HEIGHT` is 95 so the giants can be climbed.
+`public/js/mobs/mother.js` (the detailed V15 model: an upside-down spider with legs up into the
+canopy, baked like the Tidewife's; the body group sits at 15.5 m up, 2.4 on a snatch).
+`RULES.TRAVEL.MAX_HEIGHT` is 95 so the giants can be climbed.
 Tests: `tests/server/wood.test.js` (8), `tests/browser/wood.test.js` (3).
 The Teeth's pack (C6, flag `region-teeth`, off), the same way: `server/regions/teeth.js`
 (`spawnMore`: ice, crystal, pinesap, hare, icehole, silver `ore`; the `icecave`, dug into the
