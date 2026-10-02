@@ -70,25 +70,28 @@ const methods = {
     if (!def) return console.log(`[island ${this.id}] boss summoned for ${regionId} (none to come yet)`);
     this.bossCall(def.id);
   },
-  // A boss starts waiting for its time (at x, z if given: an admin's /boss, or a test).
+  // A boss starts waiting for its time (at x, z if given: an admin's /boss, or a test). `again`:
+  // even if it's out already (or beaten); `now`: it comes at once, whatever its time, facing
+  // `face`, and stays until it's beaten or nobody is left standing (an admin's /boss).
   bossCall(id, at = {}) {
     const def = BOSSES[id];
     if (!def) return null;
     this.bossesReady();
     const old = this.bossState.get(id);
     if (old && (old.state === 'fighting' || old.state === 'beaten') && !at.again) return old;
-    if (old && old.mob && !old.mob.gone) this.mobs.remove(old.mob);
+    if (old && old.mob && !old.mob.gone) { this.mobs.remove(old.mob); if (def.onGone) def.onGone(this, old); }   // (out elsewhere: it goes, and its helpers with it)
     const b = { id, state: 'waiting', hp: def.hp, maxHp: def.hp, phase: 0, defeatedAt: null, frogs: 1, earned: [], returnAt: 0,
-      x: num(at.x) ? at.x : def.appear.x, z: num(at.z) ? at.z : def.appear.z };
+      x: num(at.x) ? at.x : def.appear.x, z: num(at.z) ? at.z : def.appear.z, face: num(at.face) ? at.face : 0, forced: !!at.now };
     this.bossState.set(id, b);
     this.bossSave(b);
     this.bossTell(b);
+    if (at.now) this.bossAppear(b);
     return b;
   },
   // It comes: a mob with the boss's health (as saved, if a restart cut a fight short).
   bossAppear(b) {
     const def = BOSSES[b.id], resume = b.resume && b.hp > 0;
-    const mob = this.mobs.spawn(def.kind, b.x, b.z, { hp: resume ? b.hp : def.hp, bossId: b.id, phase: resume ? b.phase : 0 });
+    const mob = this.mobs.spawn(def.kind, b.x, b.z, { hp: resume ? b.hp : def.hp, bossId: b.id, phase: resume ? b.phase : 0, face: b.face || 0 });
     if (resume && b.maxHp) mob.maxHp = b.maxHp;
     Object.assign(b, { state: 'fighting', mob, present: new Set(), emptySince: null, resume: false });
     if (!resume) { b.frogs = 1; b.phase = 0; }
@@ -102,7 +105,7 @@ const methods = {
     const def = BOSSES[b.id];
     if (b.mob && !b.mob.gone) this.mobs.remove(b.mob);
     if (def.onGone) def.onGone(this, b);
-    Object.assign(b, { state: 'waiting', mob: null, hp: def.hp, maxHp: def.hp, phase: 0, frogs: 1, returnAt: Date.now() + (def.appear.cooldown || 0) * 1000 });
+    Object.assign(b, { state: 'waiting', mob: null, hp: def.hp, maxHp: def.hp, phase: 0, frogs: 1, forced: false, returnAt: Date.now() + (def.appear.cooldown || 0) * 1000 });
     this.bossTell(b);
     this.bossSave(b);
     this.broadcast({ t: 'toast', msg: say || `${def.name} draws back. It will come again.` });
@@ -155,7 +158,7 @@ function onTick() {
       continue;
     }
     if (b.state !== 'fighting' || !b.mob || b.mob.gone) continue;
-    if (def.leaves && def.leaves(this, b)) { this.bossWipe(b, def.leaveSay); continue; }   // its time is over (the tide turns...)
+    if (def.leaves && !b.forced && def.leaves(this, b)) { this.bossWipe(b, def.leaveSay); continue; }   // its time is over (the tide turns...; not one an admin called)
     const mob = b.mob, inArena = [...this.players.values()].filter(p => !p.dead && !p.under && Math.hypot(p.x - b.x, p.z - b.z) < A);
     for (const p of inArena) b.present.add(p.id);
     // more frogs: more of it

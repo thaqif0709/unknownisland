@@ -377,8 +377,10 @@ As built (C0, flag `bosses`): a boss file in `server/bosses/` is a mob definitio
 engine also registers as kinds). `server/systems/bosses.js` keeps `island.bossState` (id ->
 { state: 'waiting' | 'fighting' | 'beaten', x, z, mob, phase, frogs, present, earned, returnAt })
 and the `bosses` table (migration 0010). `island.summonBoss(region)` calls the region's boss
-(`island.bossCall(id, { x, z })`, which admins reach with `/boss <id>` and tests with
-`test boss { boss, x, z }`); it appears when `appear.when` holds (and its cooldown after a
+(`island.bossCall(id, { x, z })`, which tests reach with `test boss { boss, x, z }`; an admin's
+`/boss <id>` passes `now`: it comes at once, 10 m in front of them and facing them, whatever its
+time and wherever it already is (its helpers cleared away with it), and its `leaves` doesn't send
+it off until it's beaten or nobody is left standing); it appears when `appear.when` holds (and its cooldown after a
 wipe has passed). Its states use `island.bossOf(mob)`, `island.bossTarget(b, players)`,
 `island.bossStep(b, mob, a, step)` and `mob.phase`; its `onDeath` calls
 `island.bossBeaten(mob)`. Messages: `{ t: 'boss', id, name, state, x, z, r, hp, max, phase,

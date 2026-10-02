@@ -8,7 +8,8 @@ const { startServer } = require('../helpers/server');
 const { WG, landNear } = require('../helpers/world');
 
 let server;
-before(async () => { server = await startServer({ env: { FEATURES: 'bosses' } }); });
+const ADMIN = 'bossadm' + require('crypto').randomBytes(3).toString('hex');
+before(async () => { server = await startServer({ env: { FEATURES: 'bosses', ADMINS: ADMIN } }); });
 after(async () => { if (server) await server.stop(); });
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -82,6 +83,34 @@ test('nobody left standing: it draws back, whole, to come again', async () => {
   assert.equal(back.hp, PRACTICE.hp, 'whole again');
   await sleep(200);   // (a removed mob leaves the list at the next tick)
   assert.ok(!(await a.test('mobs')).mobs.some(x => x.id === boss.mob), 'its mob is gone');
+});
+
+test('/boss: it comes now, in front of you; called again from elsewhere, it moves to you', async () => {
+  const at = landNear({ x: WG.SPAWN.x - 60, z: WG.SPAWN.z + 60 });
+  const a = await server.join(ADMIN, { username: ADMIN });
+  await a.test('place', at);
+  await a.test('set', { health: 100 });
+  a.send({ t: 'pos', x: at.x, z: at.z, face: 0, moving: false, sprint: false, cam: 0 });
+  await sleep(200);
+  const came = bossMsg(a, m => m.state === 'fighting');
+  const said = await a.request({ t: 'chat', text: '/boss practice' }, m => m.t === 'chat' && m.kind === 'system');
+  assert.match(said.text, /comes, right in front of you/);
+  const b = await came;
+  assert.ok(Math.hypot(b.x - at.x, b.z - (at.z + 10)) < .5, `10 m in front (${b.x}, ${b.z})`);
+  // somewhere else: it moves (one of it, not two)
+  const there = landNear({ x: at.x + 30, z: at.z });
+  await a.test('place', there);
+  a.send({ t: 'pos', x: there.x, z: there.z, face: Math.PI / 2, moving: false, sprint: false, cam: 0 });
+  await sleep(200);
+  const moved = bossMsg(a, m => m.state === 'fighting' && Math.hypot(m.x - there.x - 10, m.z - there.z) < .5);
+  a.send({ t: 'chat', text: '/boss practice' });
+  await moved;
+  await sleep(400);   // (the one removed leaves the list on the next tick)
+  const mobs = (await a.test('mobs')).mobs.filter(m => m.kind === PRACTICE.kind);
+  assert.equal(mobs.length, 1);
+  assert.ok(Math.hypot(mobs[0].x - there.x - 10, mobs[0].z - there.z) < 4, 'here now (it may have taken a step), not back there');
+  await a.test('mobHit', { mob: mobs[0].id, amount: 1e6 });   // (beaten: it's saved, and must not turn up in later tests)
+  a.close();
 });
 
 test('a region boss beaten: its stone goes quiet and the next region opens', () => {
