@@ -122,6 +122,7 @@
       combat: true,      // P6: weapons, attacking (left click, hold for heavy), dodging (double-tap Shift), downed and revived
       torchlight: false, // torches burn above ground too: light, fog pushed back, warmth; G plants one (E takes it back)
       fasttravel: false, // W10: travel between lit lanterns you've stood by, paying lamp oil
+      trees3: true,      // the trees as in the "Unknown Island Trees" studies, shape for shape, in the game's inked style (102-tree-studies.js); off: trees2's lighter ones
       trees2: true,      // the new tree models: branching oaks and blossoms, wind-bent (and snowy) pines, ringed palms with fronds, the Mire's cypress (FEATURES=-trees2 brings the old ones back)
       tools: true,       // P3: tools are items in the bag, used from your hand, that wear out (needs slots)
       'region-teeth': false,   // C6: the Teeth's snow and warmth, their own things (ice, crystal, pine resin, hare fur, silver, ice holes), bugs, the ice char, the Frozen, the ice cave, its chain, the White Ram

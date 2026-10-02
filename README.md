@@ -195,6 +195,11 @@ The new tree models (branching oaks and blossoms, wind-bent pines, ringed palms 
 Mire's cypress, the Weeping Wood's new giants) are the `trees2` flag, on; `FEATURES=-trees2` brings
 the old round ones back.
 
+The trees as drawn in the "Unknown Island Trees" studies, shape for shape (every limb, leaf card, root,
+ivy, fungus, the pine's boulder, palm rings and fronds, cypress knees and moss, the giants'
+buttresses and strands), are the `trees3` flag, on; it takes over from `trees2`, and
+`FEATURES=-trees3` goes back to the `trees2` models. Low graphics skips their closest, fullest level.
+
 Torches working above ground (light, fog, warmth, burning down; G plants one) are the `torchlight` flag.
 
 Hearth checkpoints are the `checkpoints` flag: hold V by a lit clay hearth to sleep there, and wake there after a
