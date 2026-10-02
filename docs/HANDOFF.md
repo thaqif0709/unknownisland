@@ -579,6 +579,17 @@ charge in `dazed` (blows `SKULL` times); won't go for a frog who is warm or in l
 frost, falling snow and the blizzard's white fog, `UI.teeth` for tests), snow on the ground in
 `040-terrain.js` and no flowers in it (`090`), `public/js/mobs/frozen.js`, `public/js/mobs/ram.js`.
 Tests: `tests/server/teeth.test.js` (9), `tests/browser/teeth.test.js` (3).
+Tree models (flag `trees2`, on): `public/js/101-tree-models.js` grows each tree from its seeded
+rng: `barkTube` (a tapered tube along a curve, with ridges, a flared base and optional palm
+rings; inked `barkTex`), `lumpGeo` (a lumpy sphere that keeps its uvs for the leafy texture).
+`UI.trees.tree(rng, o)` (broadleaf for oak and blossom, round/tall/wide/forked; pine, bent
+away from the wind on high ground and the Teeth, snowy above their snow line; the Mire's
+cypress) and `UI.trees.palm(rng, o)` (returns the coconuts separately, as before) are called
+from `buildMesh` in `100-plants-and-rocks.js` and baked like the old ones. Leaves stay above
+2.25 m (they're solid: `leafCeiling`); anything that hangs lower (moss, dead fronds, the giants'
+strands) uses a non-leafy material. About 15% more triangles than the old shapes; phones
+(`coarse`) get fewer segments. The Weeping Wood's giant (`109-the-wood.js`) uses the same
+helpers. The viewer study they came from: the "Unknown Island Trees" artifact.
 (The start screen's "What's new" box and its Hidden Pages link were taken out on 1 Oct; the
 Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), holding V (sit) by a lit clay hearth sleeps there (`UI.sitHold` in
 `145-hearth-checkpoints.js`; a tap only sits), and 3 s asleep saves it as where you

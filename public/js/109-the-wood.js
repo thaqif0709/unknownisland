@@ -9,6 +9,7 @@
     leaf: soft(0x6FA055), amber: new THREE.MeshBasicMaterial({ color: 0xE8A03A }), root: soft(0x6B5240),
   };
   woodM.canopy.userData.leafy = true; woodM.canopy2.userData.leafy = true;
+  woodM.giantBark = soft(0x6E5E50, { map: UI.trees ? UI.trees.barkTex : null });   // (inked, 101-tree-models.js)
 
   Object.assign(UI.things, {
     // a giant: a trunk like a tower, roots flaring out, a roof of leaves far up, vines down its side
@@ -16,19 +17,54 @@
       solid: true, swing: 'chop',
       label: () => `Hew hardwood${has('axe') ? '' : ' (needs an axe)'} · walk into it to climb its vines`,
       make(rng) {
-        const g = new THREE.Group(), h = rr(rng, 60, 90), r0 = rr(rng, 2.2, 2.6);
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(r0 * .55, r0, h, 12), woodM.bark); trunk.position.y = h / 2; g.add(trunk);
-        for (let i = 0; i < 5; i++) {   // roots
-          const a = i / 5 * 6.28 + rng(), root = new THREE.Mesh(new THREE.ConeGeometry(.9, 4, 6), woodM.barkDark);
-          root.position.set(Math.sin(a) * r0, 1.2, Math.cos(a) * r0); root.rotation.set(Math.cos(a) * .9, 0, -Math.sin(a) * .9); g.add(root);
+        // (with `trees2`, 101-tree-models.js: buttress roots, inked bark, arching limbs, weeping strands)
+        const g = new THREE.Group(), h = rr(rng, 60, 90), r0 = rr(rng, 2.2, 2.6), T2 = UI.trees && WG.feature('trees2');
+        if (!T2) {
+          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(r0 * .55, r0, h, 12), woodM.bark); trunk.position.y = h / 2; g.add(trunk);
+          for (let i = 0; i < 5; i++) {   // roots
+            const a = i / 5 * 6.28 + rng(), root = new THREE.Mesh(new THREE.ConeGeometry(.9, 4, 6), woodM.barkDark);
+            root.position.set(Math.sin(a) * r0, 1.2, Math.cos(a) * r0); root.rotation.set(Math.cos(a) * .9, 0, -Math.sin(a) * .9); g.add(root);
+          }
+          for (let i = 0; i < 3; i++) {   // the roof of leaves
+            const c = ball(rr(rng, 9, 13), i % 2 ? woodM.canopy : woodM.canopy2, 10, 8);
+            c.scale.set(1, .35, 1); c.position.set(rr(rng, -4, 4), h - 4 + i * 3, rr(rng, -4, 4)); g.add(c);
+          }
+          for (let i = 0; i < 6; i++) {   // vines down the trunk (what you climb)
+            const a = i / 6 * 6.28 + rng() * .4, v = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, h - 6, 4), woodM.vine);
+            v.position.set(Math.sin(a) * (r0 * .8 + .1), (h - 6) / 2, Math.cos(a) * (r0 * .8 + .1)); g.add(v);
+          }
+          return { g };
+        }
+        const { barkTube, lumpGeo } = UI.trees, V = (x, y, z) => new THREE.Vector3(x, y, z), lq = coarse, ph = rng() * 6;
+        const mesh = (geo, m, p, sx = 1, sy = sx, sz = sx) => { const o = new THREE.Mesh(geo, m); if (p) o.position.copy(p); o.scale.set(sx, sy, sz); g.add(o); return o; };
+        const tp = [];
+        for (let i = 0; i <= 6; i++) { const f = i / 6; tp.push(V(Math.sin(f * 3 + ph) * .35 * f, f * (h - 5) - .5, Math.cos(f * 2.5 + ph) * .3 * f)); }
+        const trunk = barkTube(tp, r0, r0 * .42, { radial: lq ? 10 : 14, segs: lq ? 10 : 14, flare: 1.4, flareK: .35, roots: 6, ph, bark: .08, vRep: .12 });
+        mesh(trunk.geo, woodM.giantBark);
+        for (let k = 0; k < 5; k++) {   // buttress roots
+          const a = ph + k / 5 * 6.28 + rr(rng, -.2, .2), c = Math.cos(a), s = Math.sin(a), L = rr(rng, 3, 4.2) * r0;
+          mesh(barkTube([V(c * r0 * .7, 4.5, s * r0 * .7), V(c * r0 * 1.5, 2, s * r0 * 1.5), V(c * L * .75, .4, s * L * .75), V(c * L, -.4, s * L)], r0 * .32, .15, { radial: 6, segs: 5, ph: a }).geo, woodM.giantBark);
+        }
+        const top = trunk.curve.getPointAt(1), tips = [];
+        for (let k = 0; k < (lq ? 5 : 7); k++) {   // limbs arching out under the roof of leaves
+          const a = ph + k * 2.39996, t = rr(rng, .8, .97), b = trunk.curve.getPointAt(t), L = rr(rng, 9, 14), c = Math.cos(a), s = Math.sin(a);
+          const e = b.clone().add(V(c * L, rr(rng, 1, 4), s * L));
+          mesh(barkTube([b, b.clone().add(V(c * L * .4, 4, s * L * .4)), b.clone().add(V(c * L * .75, 3.5, s * L * .75)), e], r0 * .3, .2, { radial: 6, segs: 6, ph: a }).geo, woodM.giantBark);
+          tips.push(e);
         }
         for (let i = 0; i < 3; i++) {   // the roof of leaves
-          const c = ball(rr(rng, 9, 13), i % 2 ? woodM.canopy : woodM.canopy2, 10, 8);
-          c.scale.set(1, .35, 1); c.position.set(rr(rng, -4, 4), h - 4 + i * 3, rr(rng, -4, 4)); g.add(c);
+          const r = rr(rng, 9, 13);
+          mesh(lumpGeo(rng, 12, 8, 1.3), i % 2 ? woodM.canopy : woodM.canopy2, V(top.x + rr(rng, -4, 4), h - 4 + i * 3, top.z + rr(rng, -4, 4)), r, r * .35, r);
         }
-        for (let i = 0; i < 6; i++) {   // vines down the trunk (what you climb)
-          const a = i / 6 * 6.28 + rng() * .4, v = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, h - 6, 4), woodM.vine);
-          v.position.set(Math.sin(a) * (r0 * .8 + .1), (h - 6) / 2, Math.cos(a) * (r0 * .8 + .1)); g.add(v);
+        for (const e of tips) mesh(lumpGeo(rng, 9, 6), woodM.canopy2, e.clone().add(V(0, 1.2, 0)), 4.5, 2, 4.5);
+        for (const e of tips) for (let j = 0; j < (lq ? 2 : 4); j++) {   // weeping strands (vines, not leaves: you don't bump into them)
+          const st = e.clone().add(V(rr(rng, -3, 3), -.5, rr(rng, -3, 3))), L = rr(rng, 8, 22);
+          mesh(barkTube([st, st.clone().add(V(.4, -L * .5, -.3)), st.clone().add(V(-.2, -L, .3))], .09, .03, { radial: 3, segs: 4, bark: 0 }).geo, woodM.vine);
+        }
+        for (let k = 0; k < (lq ? 3 : 5); k++) {   // vines winding up the trunk (what you climb)
+          const vp = [];
+          for (let i = 0; i <= 18; i++) { const t = .02 + i / 18 * .8, a = ph + k * 1.26 + i * .22, p = trunk.curve.getPointAt(t); vp.push(p.add(V(Math.cos(a), 0, Math.sin(a)).multiplyScalar(trunk.radiusAt(t, a) + .1))); }
+          mesh(barkTube(vp, .12, .08, { radial: 4, segs: lq ? 18 : 30, bark: 0 }).geo, woodM.vine);
         }
         return { g };
       },
