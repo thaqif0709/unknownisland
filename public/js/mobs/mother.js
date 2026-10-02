@@ -1,34 +1,126 @@
-  // ---- boss: the Hanging Mother (C4, the Weeping Wood's boss) ----
-  // A huge pale body wrapped in silk, hanging head-down from the canopy by long arms (extra 1:
-  // up there, out of reach); dropped, she sprawls on the ground. Her three vines are separate
-  // mobs: thick green ropes from the ground up into the dark.
-  const motherM = { skin: softShared(0xE6E0D6), silk: softShared(0xF4F1EA), eye: new THREE.MeshBasicMaterial({ color: 0x9FB7C6 }), vine: softShared(0x4F7A3A) };
-  UI.mobs.register('boss_mother', {
-    make() {
-      const g = new THREE.Group(), body = new THREE.Group();
-      const add = (geo, m, x, y, z) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); mesh.castShadow = true; body.add(mesh); return mesh; };
-      add(new THREE.SphereGeometry(1.3, 14, 10), motherM.silk, 0, 0, 0).scale.set(1, 1.5, 1);
-      add(new THREE.SphereGeometry(.7, 12, 9), motherM.skin, 0, -1.9, 0);
-      for (const sx of [-1, 1]) add(new THREE.SphereGeometry(.13, 8, 6), motherM.eye, sx * .3, -2.1, .55);
-      const arms = [];
-      for (let i = 0; i < 4; i++) { const a = add(new THREE.CylinderGeometry(.09, .06, 8, 6), motherM.skin, Math.cos(i * 1.57) * .6, 5, Math.sin(i * 1.57) * .6); arms.push(a); }
+  // ---- boss: the Hanging Mother (C4, the Weeping Wood's boss; detailed model V15) ----
+  // A gigantic hanging orb-weaver, upside down: a black abdomen in segmented plates under a coat
+  // of old silk, hair and forest litter, a pale face tucked beneath with glowing eyes and hooked
+  // mouthparts, eight jointed legs reaching up into the canopy, three load-bearing vines fused
+  // into her back, and cocoons hanging in her web. Up in the canopy (extra 1) she sways far
+  // overhead; on a snatch she drops until her mouth touches the ground; with her vines cut she
+  // lies tipped over. Her three vines are separate mobs (mother_vine). The static parts are
+  // baked into one mesh per material (100-plants-and-rocks.js `bake`); the little eyes flicker.
+  {
+    const M = { black: softShared(0x171715), pale: softShared(0xd8d4c8), wood2: softShared(0x34271f), stone2: softShared(0x47473f),
+      moss: softShared(0x35412b), bone: softShared(0xaaa48f),
+      glow: new THREE.MeshStandardMaterial({ color: 0xd8efb0, roughness: .35, emissive: 0xa7d87a, emissiveIntensity: 1.7 }),
+      eye: new THREE.MeshBasicMaterial({ color: 0xd8efb0 }) };
+    const mat = (c, o = 1) => new THREE.MeshStandardMaterial({ color: c, roughness: .9, transparent: o < 1, opacity: o });
+    const V = (x, y, z) => new THREE.Vector3(x, y, z);
+    function add(geo, m, p, sc, par) { const q = new THREE.Mesh(geo, m); q.position.set(...p); q.scale.set(...sc); par.add(q); return q; }
+    // a lumpy ellipsoid
+    function def(x, y, z, seed = 1, detail = 1) {
+      const geo = new THREE.IcosahedronGeometry(1, detail), a = geo.attributes.position;
+      for (let i = 0; i < a.count; i++) {
+        const vx = a.getX(i), vy = a.getY(i), vz = a.getZ(i), n = 1 + (Math.sin(vx * 7.1 + seed) + Math.sin(vy * 9.3 + seed * .7) + Math.sin(vz * 8.7 + seed * 1.3)) * .035;
+        a.setXYZ(i, vx * x * n, vy * y * n, vz * z * n);
+      }
+      geo.computeVertexNormals(); return geo;
+    }
+    function limb(a, b, r0, r1, m, par, sides = 8) {
+      const d = new THREE.Vector3().subVectors(b, a), len = d.length(), mid = new THREE.Vector3().addVectors(a, b).multiplyScalar(.5);
+      const q = add(new THREE.CylinderGeometry(r1, r0, len, sides), m, [mid.x, mid.y, mid.z], [1, 1, 1], par);
+      q.quaternion.setFromUnitVectors(V(0, 1, 0), d.normalize()); return q;
+    }
+    function taperTube(pts, r0, r1, m, par, sides = 7) {
+      for (let i = 0; i < pts.length - 1; i++) limb(pts[i], pts[i + 1], THREE.MathUtils.lerp(r0, r1, i / Math.max(1, pts.length - 2)), THREE.MathUtils.lerp(r0, r1, (i + 1) / Math.max(1, pts.length - 1)), m, par, sides);
+    }
+    // a jointed leg: tapering segments with a knuckle at each joint
+    function jointChain(pts, r0, r1, m, par) {
+      for (let i = 0; i < pts.length - 1; i++) {
+        const ra = THREE.MathUtils.lerp(r0, r1, i / (pts.length - 1)), rb = THREE.MathUtils.lerp(r0, r1, (i + 1) / (pts.length - 1));
+        limb(pts[i], pts[i + 1], ra, rb, m, par, 7);
+        if (i > 0) add(new THREE.SphereGeometry(ra * 1.35, 8, 6), m, [pts[i].x, pts[i].y, pts[i].z], [1, 1, 1], par);
+      }
+    }
+    function detailPass(g, eyes) {
+      const silk = mat(0xc8c2ad, .55), bark = mat(0x2b251e, .98), moss = mat(0x35412b, .95);
+      for (let i = 0; i < 72; i++) {   // layered webbing and hair across the body and joints
+        const a = i * 2.399, r = .65 + (i % 11) * .085, y = 2.45 - ((i * 17) % 61) / 60 * 4.45;
+        taperTube([V(Math.cos(a) * r, y, Math.sin(a) * r * .72), V(Math.cos(a + .7) * (r + .28), y - .28 - Math.sin(i) * .12, Math.sin(a + .7) * (r + .28) * .72)], .008, .0015, silk, g, 4);
+      }
+      for (let i = 0; i < 54; i++) {   // old bark, lichen and moss caught in the abdomen's coat
+        const a = i * 2.17, y = -1.15 + ((i * 23) % 53) / 52 * 3.9, r = 1.0 - (Math.abs(y - .5) * .07);
+        const q = add(def(.12 + (i % 4) * .035, .025, .09 + (i % 3) * .03, 5100 + i, 1), i % 4 ? moss : bark, [Math.cos(a) * r, y, Math.sin(a) * r * .72], [1, 1, 1], g);
+        q.rotation.set(a * .08, a, (i % 5 - 2) * .08);
+      }
+      for (const sx of [-1, 1]) for (let j = 0; j < 3; j++) {   // tiny eyes: pinpoints that flicker on their own
+        const eye = add(new THREE.SphereGeometry(.025 + j * .006, 8, 6), M.eye, [sx * (.13 + j * .07), -1.77 + j * .035, 1.31], [1, 1, 1], g);
+        eye.userData.flickerSeed = 7 + j + sx * 1.7; eyes.push(eye);
+      }
+    }
+    function makeMother() {
+      const g = new THREE.Group(), body = new THREE.Group(), eyes = [];
+      add(def(1.55, 2.55, 1.28, 1001, 4), M.black, [0, .65, -.18], [1, 1, 1], body);   // abdomen
+      add(def(1.08, .9, 1.0, 1003, 4), M.black, [0, -1.25, .08], [1, 1, 1], body);     // cephalothorax
+      for (let r = 0; r < 8; r++) {   // segmented abdomen plates under a coat of old silk and hair
+        const ring = add(new THREE.TorusGeometry(1.18 - r * .035, .055, 7, 28), r % 3 ? M.black : M.wood2, [0, 2.05 - r * .43, -.15], [1, 1, 1], body);
+        ring.rotation.x = Math.PI / 2;
+      }
+      add(def(.52, .4, .35, 1007, 3), M.pale, [0, -1.8, .96], [1, 1, 1], body);   // the face, tucked beneath
+      for (const sx of [-1, 1]) {
+        add(new THREE.SphereGeometry(.052, 12, 7), M.glow, [sx * .18, -1.79, 1.28], [1, 1, 1], body);
+        taperTube([V(sx * .16, -1.95, 1.18), V(sx * .25, -2.18, 1.38), V(sx * .08, -2.32, 1.48)], .055, .012, M.bone, body, 7);   // hooked mouthparts
+      }
+      for (let i = 0; i < 8; i++) {   // eight jointed legs reaching up into the canopy
+        const side = i < 4 ? -1 : 1, j = i % 4, z = .82 - j * .52;
+        const p0 = V(side * .72, -.95 + j * .16, z), p1 = V(side * (1.45 + j * .14), -.55 + j * .12, z * 1.08),
+          p2 = V(side * (2.28 + j * .23), .45 + (j % 2) * .48, z * 1.34), p3 = V(side * (3.12 + j * .3), 2.18 + (j % 2) * .55, z * 1.7),
+          p4 = V(side * (3.72 + j * .38), 4.25 + (j % 3) * .42, z * 2.05);
+        jointChain([p0, p1, p2, p3, p4], .13, .018, M.stone2, body);
+        for (let f = -1; f <= 1; f++) taperTube([p4, p4.clone().add(V(side * .18, .35, f * .11)), p4.clone().add(V(side * .08, .58, f * .16))], .015, .002, M.stone2, body, 5);
+      }
+      for (let i = 0; i < 125; i++) {   // forest litter, vines, silk and hair grown into her outer coat
+        const aa = i * 2.399, rad = .38 + (i % 15) * .065;
+        const st = V(Math.sin(aa) * rad, 1.35 + (i % 7) * .18, Math.cos(aa) * rad * .72),
+          md = V(Math.sin(aa) * (1 + (i % 6) * .08), -.45 - (i % 11) * .1, Math.cos(aa) * (.72 + (i % 5) * .07)),
+          en = V(Math.sin(aa) * (1.1 + (i % 5) * .12), -2.25 - (i % 9) * .16, Math.cos(aa) * (.8 + (i % 4) * .08));
+        taperTube([st, md, en], .018, .003, i % 8 === 0 ? M.moss : (i % 5 === 0 ? M.bone : M.black), body, 5);
+      }
+      for (let i = 0; i < 3; i++) {   // three load-bearing vines fused into her back
+        const aa = i / 3 * Math.PI * 2 + .3;
+        taperTube([V(Math.cos(aa) * .5, 2.2, Math.sin(aa) * .4), V(Math.cos(aa) * 1.05, 4.4, Math.sin(aa) * .85), V(Math.cos(aa) * 2.1, 8.0, Math.sin(aa) * 1.75)], .12, .04, M.moss, body, 9);
+      }
+      for (let i = 0; i < 24; i++) {   // the anchor web
+        const aa = i / 24 * Math.PI * 2;
+        taperTube([V(Math.cos(aa) * .7, 1.8, Math.sin(aa) * .5), V(Math.cos(aa) * 2.2, 4.6 + (i % 5) * .45, Math.sin(aa) * 1.8)], .009, .002, M.bone, body, 4);
+      }
+      for (let i = 0; i < 11; i++) {   // cocoons hanging in it
+        const x = -2 + (i % 6) * .75, z = -1.25 + (i % 4) * .72;
+        taperTube([V(x, 7.0, z), V(x * .92, 3.7 + (i % 3) * .45, z)], .012, .005, M.bone, body);
+        add(def(.18, .48, .15, 1100 + i, 2), M.bone, [x * .92, 3.3 + (i % 3) * .45, z], [1, 1, 1], body);
+      }
+      detailPass(body, eyes);
+      bake(body, eyes);   // hundreds of parts: one mesh per material (the eyes stay apart, they flicker)
+      shadows(body);
+      body.position.y = 15.5;
       g.add(body);
-      g.userData = { body, arms };
+      g.userData = { body, eyes };
       return g;
-    },
-    pose(m, dt, now) {
-      const { body, arms } = m.mesh.userData, up = m.extra === 1;
-      const y = up ? 16 : m.state === 'snatch' ? 2.4 : 1.4;
-      body.position.y += (y - body.position.y) * Math.min(1, dt * (up ? 2.5 : 10));
-      arms.forEach(a => { a.visible = up || m.state === 'snatch'; });
-      body.rotation.z = up ? Math.sin(now / 1200) * .06 : m.state === 'fallen' ? 1.3 : 0;
-    },
-  });
-  UI.mobs.register('mother_vine', {
-    make() {
-      const g = new THREE.Group(), v = new THREE.Mesh(new THREE.CylinderGeometry(.18, .26, 22, 7), motherM.vine);
-      v.position.y = 11; v.castShadow = true; g.add(v);
-      return g;
-    },
-    pose(m, dt, now) { m.mesh.rotation.z = Math.sin(now / 700 + m.id) * .03; },
-  });
+    }
+    UI.mobs.register('boss_mother', {
+      make: makeMother,
+      pose(m, dt, now) {
+        // up in the canopy (her mouth some 13 m up), dropped on a snatch (her mouth at the ground), or tipped over once fallen
+        const { body, eyes } = m.mesh.userData, up = m.extra === 1, t = now / 1000;
+        const y = up ? 15.5 : m.state === 'snatch' ? 2.4 : 1.8;
+        body.position.y += (y - body.position.y) * Math.min(1, dt * (up ? 2.5 : 10));
+        body.rotation.z = up ? Math.sin(now / 1200) * .06 : m.state === 'fallen' ? 1.3 : 0;
+        for (const e of eyes) { const k = e.userData.flickerSeed, f = .72 + Math.sin(t * 5.3 + k) * .18 + Math.sin(t * 13.7 + k) * .08; e.scale.setScalar(Math.max(.55, f)); }
+      },
+    });
+    UI.mobs.register('mother_vine', {
+      make() {
+        const g = new THREE.Group(), v = new THREE.Mesh(new THREE.CylinderGeometry(.18, .26, 22, 7), softShared(0x4F7A3A));
+        v.position.y = 11; v.castShadow = true; g.add(v);
+        return g;
+      },
+      pose(m, dt, now) { m.mesh.rotation.z = Math.sin(now / 700 + m.id) * .03; },
+    });
+  }
