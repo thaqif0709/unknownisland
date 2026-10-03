@@ -52,18 +52,20 @@ test('clicking the island locks the pointer, and the mouse turns the camera', as
   assert.ok(Math.abs(after - before) > .1, `the camera turned (${before.toFixed(2)} -> ${after.toFixed(2)})`);
 });
 
-test('a panel frees the pointer; closing it locks again, or asks for a click', async () => {
+test('a panel frees the pointer; closing it locks again, with no "click to continue"', async () => {
   await page.keyboard.press('KeyB');
   await page.waitForFunction(() => !document.pointerLockElement, null, { timeout: 5000 });
   assert.ok(!(await shown('#xhair')), 'no crosshair over a panel');
   assert.ok(await page.evaluate(() => window.UI.panels.isOpen('book')));
+  await page.keyboard.press('KeyB');   // closed with its own key: locks again in that key press
+  await page.waitForFunction(() => !!document.pointerLockElement, null, { timeout: 5000 });
+  // closed with Esc (which the browser never lets lock again by itself): no pill, a click on the island locks
+  await page.keyboard.press('KeyB');
+  await page.waitForFunction(() => !document.pointerLockElement, null, { timeout: 5000 });
   await page.keyboard.press('Escape');
-  // the browser decides whether it may lock again without a click; either way it ends locked
-  await page.waitForFunction(() => document.pointerLockElement || !document.getElementById('lockPill').classList.contains('hidden'), null, { timeout: 5000 });
-  if (!(await locked())) {
-    assert.equal(await page.textContent('#lockPill'), 'Click to continue');
-    await page.mouse.click(640, 300);
-  }
+  await page.waitForTimeout(400);
+  assert.ok(!(await shown('#lockPill')), 'no "click to continue" pill');
+  if (!(await locked())) await page.mouse.click(640, 300);
   await page.waitForFunction(() => !!document.pointerLockElement, null, { timeout: 5000 });
 });
 

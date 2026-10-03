@@ -2,7 +2,9 @@
   // On a computer with a mouse: click the island and the pointer locks, so moving the
   // mouse turns the camera. Esc frees it (and opens settings). Any panel, chat, the intro
   // or dying frees it too, with an ink cursor for menus; closing the last panel locks it
-  // again, or shows "Click to continue" when the browser won't allow that without a click.
+  // again (right in the key press or click that closed it, while the browser still allows it;
+  // after Esc, which it never allows, the next click on the island does). "Click to look around"
+  // only shows until the first lock.
   // An ink crosshair snaps onto whatever E would use; it only shows while something you can hit is aimed at.
   // Phones and touch are unchanged.
   const finePointer = matchMedia('(any-pointer: fine)').matches;
@@ -38,6 +40,13 @@
   });
   document.addEventListener('pointerlockerror', () => { freeingByUs = false; });
   lockPill.addEventListener('click', e => { e.stopPropagation(); lockPointer(); });
+  // a key or a click that closes a panel: lock again straight after, inside that same action
+  const relockSoon = e => {
+    if ((e.type === 'keydown' && e.key === 'Escape') || !lockWanted || pointerLocked()) return;
+    setTimeout(() => { if (state === 'play' && !panelOpen()) lockPointer(); }, 0);
+  };
+  document.addEventListener('keydown', relockSoon, true);
+  document.addEventListener('click', relockSoon, true);
 
   // Turning with the mouse while it's locked. The same sensitivity and invert settings as dragging.
   document.addEventListener('mousemove', e => {
@@ -84,7 +93,7 @@
     // the last panel just closed: lock again (the browser may say no; then the pill asks for a click)
     if (on && !blocker && hadBlocker && lockWanted && !locked) lockPointer();
     hadBlocker = blocker;
-    const pill = on && !blocker && !locked;
+    const pill = on && !blocker && !locked && !lockWanted;   // (only before the first lock: after that a click on the island locks it)
     if (pill !== !lockPill.classList.contains('hidden')) {
       lockPill.textContent = lockWanted ? 'Click to continue' : 'Click to look around';
       lockPill.classList.toggle('hidden', !pill);
