@@ -206,6 +206,10 @@ Trees of many heights are the `treeheights` flag, on: each tree's height comes f
 `RULES.TREES` (most small, about a third tall); every trunk stands taller than a frog before
 the leaves start, and a tree 2.5 frogs tall or more can't be cut down.
 
+The grass (crown tufts, blade fans, meadow stalks, ferns, moss and clover, in the trees' style,
+growing in patches of random thickness and swaying in the wind) is the `grass2` flag, on; it
+replaces the old cone tufts.
+
 Torches working above ground (light, fog, warmth, burning down; G plants one) are the `torchlight` flag.
 
 Hearth checkpoints are the `checkpoints` flag: hold V by a lit clay hearth to sleep there, and wake there after a

@@ -641,6 +641,15 @@ up it) and moves every branch, card and lump above the cut up whole. Lifted vari
 per lift, so a tree's fuller levels are only grown when it's first shown near (`fill`); its
 leaf spread for bumping into leaves comes from `userData.leafR`. Far pictures are the tree's
 own width and height (they no longer stick up above wide trees).
+Grass (flag `grass2`, on): `public/js/091-grass.js` grows five kinds of clump from the tree
+studies' parts (lumpy `blob`s, leaf `cards` with drawn veins, twig `stalk`s, `frond`s; canvases
+`blade`, `wisp`, `needle`, `clover`): crowns, fans, meadow, ferns, carpet. Each is grown once and
+drawn as instances; `MIX` says which grow in each biome (and how much of each kind's `n` per
+chunk), `thickness` (fbm at ~30 m) makes bare clearings and dense patches, and each chunk gets a
+random .6-1.4 multiplier. Only the chunks within `GRASS_VIEW` (1) of you have grass, built one per
+0.4 s beat. Materials sway in a vertex shader (height squared, each instance on its own phase);
+blobs and stalks are inked, cards are `noInk`. The old cone tufts in 090 skip themselves while
+the flag is on.
 (The start screen's "What's new" box and its Hidden Pages link were taken out on 1 Oct; the
 Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), holding V (sit) by a lit clay hearth sleeps there (`UI.sitHold` in
 `145-hearth-checkpoints.js`; a tap only sits), and 3 s asleep saves it as where you
