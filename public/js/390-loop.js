@@ -1,7 +1,7 @@
   // ================= Loop =================
   const clock = new THREE.Clock();
   const tagV = new THREE.Vector3();
-  let elapsed = 0, lastDayLabel = '', growTimer = 0;
+  let elapsed = 0, lastDayLabel = '', growTimer = 0, pooledLights = null;
   const inGame = () => state === 'play' || state === 'dead';
 
   function tick() {
@@ -341,18 +341,26 @@
     for (const fn of UI.frameFns) fn(dt);
     if (Cut.on) { camera.position.copy(cutCam); camera.lookAt(cutLook); }
     if (window.__dbg && __dbg.camOverride) { const c = __dbg.camOverride; camera.position.set(c[0], c[1], c[2]); camera.lookAt(c[3], c[4], c[5]); camera.updateMatrixWorld(); }   // debug only
+    // Lights waiting unused (fires out, torches unlit) are switched off: every light in the scene costs every pixel.
+    if (!pooledLights) pooledLights = scene.children.filter(o => o.isPointLight);
+    for (const l of pooledLights) l.visible = l.intensity > .001;
+    renderer.shadowMap.needsUpdate = true;   // (drawn once a frame, with the colour pass; not again for the normal pass)
     renderer.setRenderTarget(colorRT); renderer.render(scene, camera);
     if (lowGfx) { renderer.setRenderTarget(null); renderer.render(inkScene, inkCam); requestAnimationFrame(tick); return; }
     const bg = scene.background, fog = scene.fog;
     scene.background = null; scene.fog = null; scene.overrideMaterial = normalMat;
     noInk.forEach(o => { o.visible = false; });
     sea.visible = false;
+    // The normal pass only needs what the ink reaches (flag inknear: RULES.INK.FAR), so it stops just past it.
+    const nearFar = WG.feature('inknear') ? RULES.INK.FAR + 8 : 0, fullFar = camera.far;
+    if (nearFar && nearFar < fullFar) { camera.far = nearFar; camera.updateProjectionMatrix(); }
     renderer.setRenderTarget(normalRT); renderer.setClearColor(0x000000, 1); renderer.clear(); renderer.render(scene, camera);
     scene.overrideMaterial = null;
     // The sea goes into the normal buffer in a flat odd colour, so the shoreline reads as a crease and gets inked.
     sea.visible = true; sea.material = seaInkMat;
     renderer.autoClear = false; renderer.render(sea, camera); renderer.autoClear = true;
     sea.material = seaMat;
+    if (camera.far !== fullFar) { camera.far = fullFar; camera.updateProjectionMatrix(); }
     noInk.forEach(o => { o.visible = true; });
     scene.background = bg; scene.fog = fog;
     renderer.setRenderTarget(null); renderer.render(inkScene, inkCam);

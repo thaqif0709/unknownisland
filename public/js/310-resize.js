@@ -16,7 +16,7 @@
   let lowGfx = false;
   function applyQuality() {
     lowGfx = prefs.quality === 'low' || (prefs.quality !== 'high' && coarse);
-    PR = lowGfx ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+    PR = lowGfx ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
     renderer.setPixelRatio(PR);
     sun.castShadow = !lowGfx;
     inkMat.uniforms.useNormals.value = lowGfx ? 0 : 1;

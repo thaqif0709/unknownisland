@@ -658,6 +658,18 @@ short and tall grass, each clump jittered off it; clumps grow taller, never wide
 Ink distance (flag `inknear`, on): the ink pass's lines fade out between `RULES.INK.NEAR` and `FAR`
 (22-34 m) of the pixel's depth (`inkFade` uniform in `020-ink-pass.js`, set each frame); off, the
 old 60-120 m.
+Performance (measured with `renderer.info` per pass): the normal pass draws only to
+`RULES.INK.FAR` + 8 m (camera.far shortened for it, with `inknear`); the shadow map is drawn once a
+frame (`shadowMap.autoUpdate` off, `needsUpdate` set before the colour pass; it used to be
+redrawn for the normal pass too), over a 44 m square; pooled point lights at zero brightness are
+switched off before drawing (every light costs every pixel); the pixel ratio tops out at 1.5.
+Trees (`102-tree-studies.js`) are drawn through `drawBatches()`: one InstancedMesh per part of each
+variant, level and lift (and per picture, and for the shadow proxies within 24 m), filled each
+frame from the live trees that pass a sphere test against the view; each tree keeps its own
+meshes, hidden, so `topOf` and the leaf ceilings still measure it. The full level's crowns are one
+detail step coarser, full detail within 9 m. Flowers (`090`) are merged per chunk into one mesh per
+material with vertex colours. Forest: draw calls ~1,280 -> ~840, triangles ~1.17M -> ~0.89M; spawn
+~1,100 -> ~630 calls.
 (The start screen's "What's new" box and its Hidden Pages link were taken out on 1 Oct; the
 Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), holding V (sit) by a lit clay hearth sleeps there (`UI.sitHold` in
 `145-hearth-checkpoints.js`; a tap only sits), and 3 s asleep saves it as where you
