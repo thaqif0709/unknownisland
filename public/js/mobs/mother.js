@@ -1,88 +1,123 @@
-  // ---- boss: the Hanging Mother (C4, the Weeping Wood's boss; the V15 "Hero Boss Lab" model, part for part) ----
-  // A gigantic hanging orb-weaver, upside down: a black abdomen in segmented plates under a coat
-  // of old silk, hair and forest litter, a pale face tucked beneath with glowing eyes and hooked
-  // mouthparts, eight jointed legs with knuckled joints reaching up into the canopy, three
-  // load-bearing vines fused into her back, an anchor web with cocoons hanging in it, and the
-  // Wood's air around her: drifting silk, spores and pale fireflies. Up in the canopy (extra 1)
-  // she sways far overhead; on a snatch she drops until her mouth touches the ground; with her
-  // vines cut she lies tipped over. Her three vines are separate mobs (mother_vine). The static
-  // parts are baked into one mesh per material (100-plants-and-rocks.js `bake`); the little
-  // eyes flicker.
+  // ---- boss: the Hanging Mother (C4, the Weeping Wood's boss; the V16.32 "Hero Boss Lab" model, part for part) ----
+  // A great spider with a woman's head: a dark chitin abdomen bristling with hair over a thorax,
+  // eight jointed legs that end in long four-fingered hands, hair along the shins; a human face
+  // (brow, cheeks, nose, mouth, ears) with exactly two round glowing spider eyes, under heavy,
+  // centre-parted dark hair of uneven lengths; and three great vines from her back up into the
+  // canopy. Up in the canopy (extra 1) she hangs far overhead; on a snatch she drops to the
+  // ground on her hands; with her vines cut she lies tipped over. Her three vines are also
+  // separate mobs (mother_vine), the ones you cut. Everything is baked into one mesh per
+  // material (100-plants-and-rocks.js `bake`).
   {
-    const { M, V, add, def, taperTube, jointChain, fx } = BK;
-    const mm = { silk: softShared(0xc8c2ad), bark: softShared(0x2b251e), moss: softShared(0x35412b) };
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xd8efb0 });
-    function detailPass(g, eyes) {
-      for (let i = 0; i < 72; i++) {   // layered webbing and hair across the body and joints
-        const a = i * 2.399, r = .65 + (i % 11) * .085, y = 2.45 - ((i * 17) % 61) / 60 * 4.45;
-        taperTube(g, [V(Math.cos(a) * r, y, Math.sin(a) * r * .72), V(Math.cos(a + .7) * (r + .28), y - .28 - Math.sin(i) * .12, Math.sin(a + .7) * (r + .28) * .72)], .008, .0015, mm.silk);
+    const { V, add, def, limb } = BK;
+    const mm = {
+      chitin: softShared(0x29251f), dark: softShared(0x151311), hair: softShared(0x443a31), joint: softShared(0x201c18),
+      skin: softShared(0x171513), skinDark: softShared(0x0b0a09), lip: softShared(0x070606), black: softShared(0x1d1e1c),
+      hair1: softShared(0x100b09), hair2: softShared(0x211512), hairHi: softShared(0x3a241d),
+      vine: softShared(0x27351d), vineMoss: softShared(0x485633),
+      eye: new THREE.MeshStandardMaterial({ color: 0xffb34c, roughness: .25, emissive: 0xff8a22, emissiveIntensity: 2.7 }),
+    };
+    const strand = (par, pts, segs, r, sides, m) => add(par, new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), segs, r, sides, false), m);
+
+    function makeHead(body) {
+      const head = new THREE.Group(); head.position.set(0, 2.62, 2.30); body.add(head);
+      add(head, def(.60, .78, .54, 701, 2), mm.skin, [0, .02, 0]);   // skull
+      add(head, def(.47, .45, .43, 702, 2), mm.skin, [0, -.48, .08]).scale.z = .92;   // jaw
+      for (const sx of [-1, 1]) add(head, def(.105, .19, .065, 710 + (sx > 0 ? 1 : 0), 1), mm.skinDark, [sx * .59, -.03, .02]).rotation.z = sx * .08;   // ears
+      for (const sx of [-1, 1]) {   // brow ridge and cheeks
+        add(head, def(.25, .09, .12, 720 + (sx > 0 ? 1 : 0), 1), mm.skinDark, [sx * .25, .20, .47]);
+        add(head, def(.22, .18, .11, 730 + (sx > 0 ? 1 : 0), 1), mm.skin, [sx * .29, -.18, .45]);
       }
-      for (let i = 0; i < 54; i++) {   // old bark, lichen and moss caught in the abdomen's coat
-        const a = i * 2.17, y = -1.15 + ((i * 23) % 53) / 52 * 3.9, r = 1.0 - (Math.abs(y - .5) * .07);
-        add(g, def(.12 + (i % 4) * .035, .025, .09 + (i % 3) * .03, 5100 + i, 1), i % 4 ? mm.moss : mm.bark, [Math.cos(a) * r, y, Math.sin(a) * r * .72]).rotation.set(a * .08, a, (i % 5 - 2) * .08);
+      add(head, def(.095, .29, .13, 740, 1), mm.skin, [0, -.02, .53]);   // nose bridge, tip and nostrils
+      add(head, def(.14, .095, .16, 741, 1), mm.skinDark, [0, -.22, .59]);
+      for (const sx of [-1, 1]) add(head, new THREE.SphereGeometry(.035, 8, 6), mm.black, [sx * .065, -.24, .70], [1, 1, .45]);
+      for (const sx of [-1, 1]) add(head, new THREE.SphereGeometry(.115, 18, 14), mm.eye, [sx * .22, .12, .615], [1, 1, .38]);   // exactly two round spider eyes
+      add(head, new THREE.SphereGeometry(.15, 14, 8), mm.lip, [0, -.42, .515], [1.55, .55, .28]);   // the mouth
+      // the hair: a full crown and back, then centre-parted strands sweeping outward at uneven lengths
+      const { hair1, hair2, hairHi } = mm;
+      add(head, def(.72, .76, .60, 760, 2), hair1, [0, .32, -.10]);
+      add(head, def(.68, .67, .53, 761, 2), hair2, [0, .16, -.32]);
+      for (const side of [-1, 1]) for (let i = 0; i < 118; i++) {   // the crown, short to extra long
+        const u = i / 117, layer = (i % 11) / 10, band = i % 8;
+        const lengthBoost = [-.38, -.18, .05, .28, .52, .78, .18, .95][band];
+        const shoulderX = side * (.27 + u * .42 + layer * .065), endX = side * (.45 + u * .39 + layer * .07), endY = -.50 - u * .72 - lengthBoost - (i % 4) * .055, wave = Math.sin(i * 1.37) * .065;
+        strand(head, [V(side * (.018 + u * .245), .79 - u * .22, .13 - u * .055), V(side * (.13 + u * .23) + wave * .25, .62 - u * .10, .49), V(shoulderX + wave, .22 - u * .20, .60), V(endX + wave * 1.25, endY, .36 + (i % 3) * .025)],
+          17, .017 + (i % 6) * .0024, 6, i % 13 === 0 ? hairHi : (i % 3 === 0 ? hair2 : hair1));
       }
-      for (const sx of [-1, 1]) for (let j = 0; j < 3; j++) {   // tiny eyes: pinpoints that flicker on their own
-        const eye = add(g, new THREE.SphereGeometry(.025 + j * .006, 8, 6), eyeMat, [sx * (.13 + j * .07), -1.77 + j * .035, 1.31]);
-        eye.userData.flickerSeed = 7 + j + sx * 1.7; eyes.push(eye);
+      for (const side of [-1, 1]) for (let i = 0; i < 38; i++) {   // locks framing the face (clear of the eyes, nose and mouth)
+        const u = i / 37, drop = [.45, .68, .92, 1.18, .58, 1.42][i % 6];
+        strand(head, [V(side * (.025 + u * .15), .79 - u * .10, .16), V(side * (.20 + u * .13), .62, .55), V(side * (.38 + u * .12), .25 - u * .14, .66), V(side * (.47 + u * .18), -.18 - drop - u * .22, .46)],
+          16, .022 + (i % 5) * .0028, 7, i % 7 === 0 ? hairHi : (i % 2 ? hair2 : hair1));
+      }
+      for (const side of [-1, 1]) for (let i = 0; i < 64; i++) {   // thick side curtains, ends uneven
+        const u = i / 63, len = [.25, .55, .88, .42, 1.05, .68, 1.28, .34, .82][i % 9], x = side * (.45 + u * .33), sway = Math.sin(i * 1.71) * .075 + Math.cos(i * .63) * .035;
+        strand(head, [V(side * (.34 + u * .27), .49 - u * .20, .25), V(x + sway * .35, .08, .58), V(x + sway, -.55, .50), V(x + sway * 1.55, -.58 - len - u * .36, .27 + (i % 4) * .025)],
+          16, .016 + (i % 5) * .0026, 6, i % 11 === 0 ? hairHi : (i % 3 === 0 ? hair2 : hair1));
+      }
+      for (const side of [-1, 1]) for (let i = 0; i < 26; i++) {   // shorter broken layers at the temples
+        const u = i / 25;
+        strand(head, [V(side * (.10 + u * .30), .70 - u * .20, .16), V(side * (.32 + u * .24), .50 - u * .12, .57), V(side * (.47 + u * .22), .12 - u * .32, .53)], 10, .014 + (i % 4) * .0025, 6, i % 5 === 0 ? hairHi : hair2);
+      }
+      for (const side of [-1, 1]) for (let i = 0; i < 24; i++) {   // a few long flyaways, pushed back from the face
+        const extra = (i % 6) * .14;
+        strand(head, [V(side * (.09 + i * .012), .74 - i * .009, .11), V(side * (.43 + i * .022), .50 - i * .016, .45), V(side * (.68 + i * .030), -.18 - extra, .32), V(side * (.76 + i * .035), -.52 - extra * 1.45, .20)],
+          12, .009 + (i % 4) * .0018, 5, i % 4 === 0 ? hairHi : hair2);
       }
     }
+
     function makeMother() {
-      const g = new THREE.Group(), body = new THREE.Group(), eyes = [];
-      add(body, def(1.55, 2.55, 1.28, 1001, 4), M.black, [0, .65, -.18]);   // abdomen
-      add(body, def(1.08, .9, 1.0, 1003, 4), M.black, [0, -1.25, .08]);     // cephalothorax
-      for (let r = 0; r < 8; r++) add(body, new THREE.TorusGeometry(1.18 - r * .035, .055, 7, 28), r % 3 ? M.black : M.wood2, [0, 2.05 - r * .43, -.15]).rotation.x = Math.PI / 2;   // abdomen plates
-      add(body, def(.52, .4, .35, 1007, 3), M.pale, [0, -1.8, .96]);   // the face, tucked beneath
-      for (const sx of [-1, 1]) {
-        add(body, new THREE.SphereGeometry(.052, 12, 7), M.glow, [sx * .18, -1.79, 1.28]);
-        taperTube(body, [V(sx * .16, -1.95, 1.18), V(sx * .25, -2.18, 1.38), V(sx * .08, -2.32, 1.48)], .055, .012, M.bone);   // hooked mouthparts
+      const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+      const { chitin, dark, hair, joint } = mm;
+      add(body, def(2.25, 1.55, 2.55, 31, 2), chitin, [0, 5.15, -.75]).rotation.x = .12;   // abdomen
+      add(body, def(1.75, 1.05, 1.7, 42, 2), dark, [0, 3.65, .65]);   // thorax
+      for (let i = 0; i < 110; i++) {   // bristles over the abdomen
+        const a = i * 2.399963, u = ((i * 37) % 101) / 100, yy = 4.15 + u * 2.0, rr = Math.sqrt(Math.max(0, 1 - ((yy - 5.15) / 1.55) ** 2)), x = Math.cos(a) * 2.18 * rr, z = -.75 + Math.sin(a) * 2.48 * rr, h = .16 + ((i * 13) % 7) * .018;
+        const q = add(body, new THREE.CylinderGeometry(.018, .035, h, 5), hair, [x, yy, z]);
+        q.lookAt(V(x * 1.12, yy + (yy - 5.15) * .12, -.75 + (z + .75) * 1.12)); q.rotateX(Math.PI / 2);
       }
-      for (let i = 0; i < 8; i++) {   // eight jointed legs reaching up into the canopy
-        const side = i < 4 ? -1 : 1, j = i % 4, z = .82 - j * .52;
-        const p0 = V(side * .72, -.95 + j * .16, z), p1 = V(side * (1.45 + j * .14), -.55 + j * .12, z * 1.08),
-          p2 = V(side * (2.28 + j * .23), .45 + (j % 2) * .48, z * 1.34), p3 = V(side * (3.12 + j * .3), 2.18 + (j % 2) * .55, z * 1.7),
-          p4 = V(side * (3.72 + j * .38), 4.25 + (j % 3) * .42, z * 2.05);
-        jointChain(body, [p0, p1, p2, p3, p4], .13, .018, M.stone2);
-        for (let f = -1; f <= 1; f++) taperTube(body, [p4, p4.clone().add(V(side * .18, .35, f * .11)), p4.clone().add(V(side * .08, .58, f * .16))], .015, .002, M.stone2);
+      for (const side of [-1, 1]) for (let k = 0; k < 4; k++) {   // eight jointed legs, each ending in a long-fingered hand
+        const front = (1.5 - k) * .78, spread = 2.0 + k * .42;
+        const hip = V(side * 1.18, 3.75, .65 + front), knee = V(side * (3.0 + spread * .35), 4.15 + (k === 0 ? .2 : 0), 1.05 + front * 1.42),
+          ankle = V(side * (4.45 + spread * .42), 2.55, 1.15 + front * 1.72), foot = V(side * (5.15 + spread * .5), 1.25, 1.35 + front * 2.0), tip = V(side * (5.5 + spread * .52), .75, 1.52 + front * 2.08);
+        limb(body, hip, knee, .30, .23, chitin); add(body, new THREE.SphereGeometry(.34, 9, 7), joint, [knee.x, knee.y, knee.z]);
+        limb(body, knee, ankle, .24, .16, chitin); add(body, new THREE.SphereGeometry(.23, 8, 6), joint, [ankle.x, ankle.y, ankle.z]);
+        limb(body, ankle, foot, .16, .10, dark);
+        const wristEnd = foot.clone().add(tip.clone().sub(foot).normalize().multiplyScalar(.42));
+        limb(body, foot, wristEnd, .105, .085, chitin);
+        const hand = new THREE.Group(); hand.position.copy(wristEnd); body.add(hand);
+        add(hand, def(.24, .32, .105, 80 + k + (side > 0 ? 10 : 0), 1), chitin, [0, -.18, 0]);
+        const fingerX = [-.15, -.05, .05, .15], fingerLen = [.48, .58, .56, .45];
+        for (let fi = 0; fi < 4; fi++) {
+          const base = V(fingerX[fi], -.39, .02), mid = V(fingerX[fi], -.39 - fingerLen[fi] * .52, .06), end = V(fingerX[fi], -.39 - fingerLen[fi], -.01);
+          limb(hand, base, mid, .038, .028, chitin); add(hand, new THREE.SphereGeometry(.032, 7, 5), joint, [mid.x, mid.y, mid.z]); limb(hand, mid, end, .028, .013, chitin);
+        }
+        limb(hand, V(side * .20, -.18, .02), V(side * .34, -.33, .06), .044, .030, chitin);   // the thumb
+        limb(hand, V(side * .34, -.33, .06), V(side * .40, -.49, 0), .030, .014, chitin);
+        for (let j = 0; j < 8; j++) { const p = ankle.clone().lerp(foot, (j + 1) / 9); limb(body, p, p.clone().add(V(side * .22, .10, (j % 2 ? 1 : -1) * .10)), .018, .004, hair); }   // hair along the shin
       }
-      for (let i = 0; i < 125; i++) {   // forest litter, vines, silk and hair grown into her outer coat
-        const aa = i * 2.399, rad = .38 + (i % 15) * .065;
-        const st = V(Math.sin(aa) * rad, 1.35 + (i % 7) * .18, Math.cos(aa) * rad * .72),
-          md = V(Math.sin(aa) * (1 + (i % 6) * .08), -.45 - (i % 11) * .1, Math.cos(aa) * (.72 + (i % 5) * .07)),
-          en = V(Math.sin(aa) * (1.1 + (i % 5) * .12), -2.25 - (i % 9) * .16, Math.cos(aa) * (.8 + (i % 4) * .08));
-        taperTube(body, [st, md, en], .018, .003, i % 8 === 0 ? M.moss : (i % 5 === 0 ? M.bone : M.black));
+      makeHead(body);
+      // the three great vines she hangs by, each fused into her back at its own point, moss along them
+      const anchors = [V(-1.28, 5.62, -.36), V(.00, 6.18, -.72), V(1.24, 5.55, -.22)], tops = [V(-2.35, 11.8, -.55), V(.15, 12.9, -1.05), V(2.55, 12.1, -.40)];
+      for (let vi = 0; vi < 3; vi++) {
+        const a = anchors[vi], top = tops[vi];
+        const curve = new THREE.CatmullRomCurve3([a, V(a.x + (vi - 1) * .18, 7.15, a.z + .10), V(top.x + (vi === 1 ? .12 : -.10), 9.35, top.z - .08), top]);
+        add(body, new THREE.TubeGeometry(curve, 28, .13, 8, false), mm.vine);
+        for (let n = 0; n < 8 - 1; n++) { const p = curve.getPoint((n + 1) / 8); add(body, new THREE.SphereGeometry(.075 + (n % 2) * .018, 7, 5), mm.vineMoss, [p.x + .06 * Math.sin(n * 2.1 + vi), p.y, p.z + .05 * Math.cos(n * 1.7 + vi)], [1.25, .55, 1]); }
       }
-      for (let i = 0; i < 3; i++) {   // three load-bearing vines fused into her back
-        const aa = i / 3 * Math.PI * 2 + .3;
-        taperTube(body, [V(Math.cos(aa) * .5, 2.2, Math.sin(aa) * .4), V(Math.cos(aa) * 1.05, 4.4, Math.sin(aa) * .85), V(Math.cos(aa) * 2.1, 8.0, Math.sin(aa) * 1.75)], .12, .04, M.moss);
-      }
-      for (let i = 0; i < 24; i++) {   // the anchor web
-        const aa = i / 24 * Math.PI * 2;
-        taperTube(body, [V(Math.cos(aa) * .7, 1.8, Math.sin(aa) * .5), V(Math.cos(aa) * 2.2, 4.6 + (i % 5) * .45, Math.sin(aa) * 1.8)], .009, .002, M.bone);
-      }
-      for (let i = 0; i < 11; i++) {   // cocoons hanging beside her (in the studies they hang from the scene, 4.9 below her centre)
-        const x = -2 + (i % 6) * .75, z = -1.25 + (i % 4) * .72;
-        taperTube(body, [V(x, 7.0 - 4.9, z), V(x * .92, 3.7 + (i % 3) * .45 - 4.9, z)], .012, .005, M.bone);
-        add(body, def(.18, .48, .15, 1100 + i, 2), M.bone, [x * .92, 3.3 + (i % 3) * .45 - 4.9, z]);
-      }
-      detailPass(body, eyes);
-      // the Wood's air: drifting silk, spores and moth-pale fireflies
-      const fxs = [fx.silk(body, 210, 4.7, -2.4, 8), fx.pointCloud(body, 145, 4.2, -1.5, 7.2, 0x9f9b79, .027, .3), fx.fireflies(body, 34, 3.7, -.5, 6.5, 0xc8d987)];
-      bake(body, [...eyes, ...fxs]);   // hundreds of parts: one mesh per material (the eyes stay apart, they flicker)
+      bake(body);   // over a thousand parts: one mesh per material
       BK.solidShadows(body);
-      body.position.y = 15.5;
-      g.add(body);
-      g.userData = { body, eyes };
+      body.position.y = UP_Y;
+      g.userData = { body };
       return g;
     }
+    // her height: hanging up among the branches, down on her hands on a snatch, tipped over once fallen
+    const UP_Y = 10.5, DOWN_Y = 0, FALLEN_Y = .6;
     UI.mobs.register('boss_mother', {
       make: makeMother,
       pose(m, dt, now) {
-        // up in the canopy (her mouth some 13 m up), dropped on a snatch (her mouth at the ground), or tipped over once fallen
-        const { body, eyes } = m.mesh.userData, up = m.extra === 1, t = now / 1000;
-        const y = up ? 15.5 : m.state === 'snatch' ? 2.4 : 1.8;
+        const { body } = m.mesh.userData, up = m.extra === 1;
+        const y = up ? UP_Y : m.state === 'fallen' ? FALLEN_Y : DOWN_Y;
         body.position.y += (y - body.position.y) * Math.min(1, dt * (up ? 2.5 : 10));
         body.rotation.z = up ? Math.sin(now / 1200) * .06 : m.state === 'fallen' ? 1.3 : 0;
-        for (const e of eyes) { const k = e.userData.flickerSeed, f = .72 + Math.sin(t * 5.3 + k) * .18 + Math.sin(t * 13.7 + k) * .08; e.scale.setScalar(Math.max(.55, f)); }
       },
     });
     UI.mobs.register('mother_vine', {

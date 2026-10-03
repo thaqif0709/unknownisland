@@ -572,10 +572,10 @@ her three vines are mob kinds of her own (`kinds: [mother_vine]`, grown in `onAp
 vines grow back. Trophies `mother_eye`, `mother_silk` (the `silk_patch`: climb 1.5x as fast,
 `385-climbing.js`; the Hung reach 1.5 m further). Browser: `109-the-wood.js` (models, labels,
 icons, the bow in hand through `UI.heldModels`, bug looks), `public/js/mobs/hung.js`,
-`public/js/mobs/mother.js` (the V15 study's `mother()`, part for part with the `BK` kit: an
-upside-down spider with knuckled legs up into the canopy, cocoons hanging beside her, drifting
-silk, spores and fireflies; baked like the Tidewife's; the body group sits at 15.5 m up, 2.4 on
-a snatch).
+`public/js/mobs/mother.js` (the V16.32 study's `mother()`, part for part with the `BK` kit: a
+standing spider with a woman's head, two round glowing eyes and long hair, legs ending in
+four-fingered hands, three vines from her back; all baked; the body group sits at 10.5 m up,
+0 on a snatch, tipped over at .6 once fallen).
 `RULES.TRAVEL.MAX_HEIGHT` is 95 so the giants can be climbed.
 Tests: `tests/server/wood.test.js` (8), `tests/browser/wood.test.js` (3).
 The Teeth's pack (C6, flag `region-teeth`, off), the same way: `server/regions/teeth.js`
