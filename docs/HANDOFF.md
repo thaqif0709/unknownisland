@@ -650,6 +650,11 @@ random .6-1.4 multiplier. Only the chunks within `GRASS_VIEW` (1) of you have gr
 0.4 s beat. Materials sway in a vertex shader (height squared, each instance on its own phase);
 blobs and stalks are inked, cards are `noInk`. The old cone tufts in 090 skip themselves while
 the flag is on.
+Heights: each kind has a `tall` range (a y scale); `tallness` (fbm at ~20 m) makes patches of
+short and tall grass, each clump jittered off it; clumps grow taller, never wider.
+Ink distance (flag `inknear`, on): the ink pass's lines fade out between `RULES.INK.NEAR` and `FAR`
+(22-34 m) of the pixel's depth (`inkFade` uniform in `020-ink-pass.js`, set each frame); off, the
+old 60-120 m.
 (The start screen's "What's new" box and its Hidden Pages link were taken out on 1 Oct; the
 Hidden Pages changelog is where changes are listed, linked from Settings.) With the `checkpoints` flag (P4), holding V (sit) by a lit clay hearth sleeps there (`UI.sitHold` in
 `145-hearth-checkpoints.js`; a tap only sits), and 3 s asleep saves it as where you

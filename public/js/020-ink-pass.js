@@ -24,11 +24,12 @@
       invProj: { value: camera.projectionMatrixInverse }, camWorld: { value: camera.matrixWorld }, camPos: { value: camera.position },
       night: { value: 0 }, time: { value: 0 }, dread: { value: 0 }, seeFar: { value: 1 },
       farFog: { value: 0 }, fogFrontU: { value: -2 },   // far view (W3): fog beyond the fog map from height
+      inkFade: { value: new THREE.Vector2(60, 120) },   // lines fade out between these distances (m): near ones only with the inknear flag (RULES.INK)
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0., 1.); }',
     fragmentShader: `
       uniform sampler2D tColor, tDepth, tNormal, fogTex;
-      uniform vec2 res, fogOrigin; uniform float width, near, far, useNormals, fogSize, night, time, dread, seeFar, farFog, fogFrontU;
+      uniform vec2 res, fogOrigin, inkFade; uniform float width, near, far, useNormals, fogSize, night, time, dread, seeFar, farFog, fogFrontU;
       uniform vec3 ink, camPos; uniform mat4 invProj, camWorld;
       varying vec2 vUv;
       float lin(vec2 uv){ float z = texture2D(tDepth, uv).x * 2. - 1.; return 2. * near * far / (far + near - z * (far - near)); }
@@ -79,7 +80,7 @@
             e = max(e, smoothstep(.03, .06, (d - d0) / d0));
             if (useNormals > .5) e = max(e, smoothstep(.45, .7, 1. - dot(n0, nrm(suv))));
           }
-          e *= 1. - smoothstep(60., 120., d0);
+          e *= 1. - smoothstep(inkFade.x, inkFade.y, d0);   // far off, no lines
           e *= mix(1., step(fog * .95, bay), fog);   // in fog, the linework dissolves into dots
         }
         col = mix(col, ink, e * .92);
@@ -122,6 +123,8 @@
     }
     fogTex.needsUpdate = true;
   }
+  // Only what's near you is inked (flag inknear): lines fade out between RULES.INK.NEAR and FAR m.
+  UI.onFrame(() => { const I = WG.feature('inknear') ? RULES.INK : { NEAR: 60, FAR: 120 }; inkMat.uniforms.inkFade.value.set(I.NEAR, I.FAR); });
   const inkScene = new THREE.Scene();
   inkScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), inkMat));
   const inkCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
