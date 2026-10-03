@@ -38,8 +38,12 @@
     { biomes: ['meadow', 'forest', 'highland', 'spring'], n: 40, oldGrass: true, parts: [[DG.tuft, DM.tuftA, .14], [DG.tuft, DM.tuftB, .12, null, [.8, .8, .8]]] },   // (the grass flag grows real grass instead: 091-grass.js)
   ];
   const dummy = new THREE.Object3D();
+  // A chunk's flowers are merged into one mesh per material (each plant's colour baked into its
+  // vertices), so a chunk costs a handful of draws instead of one per part per species.
+  const vcMats = new Map();   // the materials, with vertex colours on
+  const vcMat = m => { if (!vcMats.has(m)) { const c = m.clone(); c.vertexColors = true; vcMats.set(m, c); } return vcMats.get(m); };
   function buildDecor(cx, cz) {
-    const out = [], r = mulberry32((cx * 92821) ^ (cz * 68917) ^ 0x51f1);
+    const out = [], r = mulberry32((cx * 92821) ^ (cz * 68917) ^ 0x51f1), byMat = new Map(), white = new THREE.Color(1, 1, 1);
     DECOR.forEach(sp => {
       if (sp.oldGrass && WG.feature('grass2')) return;
       const spots = [];
@@ -52,19 +56,36 @@
       }
       if (!spots.length) return;
       for (const [geo, mat, y, colors, sc, off] of sp.parts) {
-        const im = new THREE.InstancedMesh(geo, mat, spots.length);
-        spots.forEach(([x, h, z, k, rot, rr], i) => {
+        const list = byMat.get(mat) || (byMat.set(mat, []), byMat.get(mat));
+        spots.forEach(([x, h, z, k, rot, rr]) => {
           // off: an optional sideways offset, turned with the plant
           const ox = off ? (off[0] * Math.cos(rot) + off[1] * Math.sin(rot)) * k : 0, oz = off ? (-off[0] * Math.sin(rot) + off[1] * Math.cos(rot)) * k : 0;
           dummy.position.set(x + ox, h + y * k, z + oz); dummy.rotation.set(0, rot, 0);
           const v = sc || [1, 1, 1]; dummy.scale.set(v[0] * k, v[1] * k, v[2] * k); dummy.updateMatrix();
-          im.setMatrixAt(i, dummy.matrix);
-          if (colors) im.setColorAt(i, colors[(rr * colors.length) | 0]);
+          list.push({ geo, m: dummy.matrix.clone(), c: colors ? colors[(rr * colors.length) | 0] : white });
         });
-        im.receiveShadow = true;
-        scene.add(im); noInk.add(im); out.push(im);
       }
     });
+    for (const [mat, list] of byMat) {
+      let n = 0; for (const it of list) n += it.geo.index ? it.geo.index.count : it.geo.attributes.position.count;
+      const pos = new Float32Array(n * 3), nrm = new Float32Array(n * 3), col = new Float32Array(n * 3), v = new THREE.Vector3(), nm = new THREE.Matrix3();
+      let o = 0;
+      for (const { geo, m, c } of list) {
+        const P = geo.attributes.position, N = geo.attributes.normal, idx = geo.index; nm.getNormalMatrix(m);
+        const cnt = idx ? idx.count : P.count;
+        for (let k = 0; k < cnt; k++, o++) {
+          const i = idx ? idx.getX(k) : k;
+          v.fromBufferAttribute(P, i).applyMatrix4(m); pos[o * 3] = v.x; pos[o * 3 + 1] = v.y; pos[o * 3 + 2] = v.z;
+          v.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); nrm[o * 3] = v.x; nrm[o * 3 + 1] = v.y; nrm[o * 3 + 2] = v.z;
+          col[o * 3] = c.r; col[o * 3 + 1] = c.g; col[o * 3 + 2] = c.b;
+        }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nrm, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      g.computeBoundingSphere();
+      const mesh = new THREE.Mesh(g, vcMat(mat)); mesh.receiveShadow = true;
+      scene.add(mesh); noInk.add(mesh); out.push(mesh);
+    }
     return out;
   }
 

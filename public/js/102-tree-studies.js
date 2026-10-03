@@ -14,7 +14,7 @@
   const TS = (() => {
     // full detail within the first distance, lighter within the second, the bare form within the third; beyond, a picture of it.
     // At Low graphics (and Auto on phones and tablets: 310-resize.js) never the full detail, and the lighter levels only nearer.
-    const LOD_FULL = [10, 24, 40], LOD_LOW = [0, 8, 22];
+    const LOD_FULL = [9, 24, 40], LOD_LOW = [0, 8, 22];
     const lodDist = () => lowGfx ? LOD_LOW : LOD_FULL;
     const VARIANTS = 4;
     // ---------- seeded randomness (as in the studies) ----------
@@ -398,7 +398,7 @@
       giant: { build: giant, slot: 2, scale: 1 }, cypress: { build: cypress, slot: 3, scale: .58 }, palm: { build: palm, slot: 5, scale: .58 },
     };
     const LODS = [
-      { rad: 1, seg: 1, det: 0, leaf: 1, frond: 1 },          // as drawn in the studies
+      { rad: 1, seg: 1, det: -1, leaf: 1, frond: 1 },         // as drawn in the studies (the crowns' lumps one step coarser: the toon shading can't tell)
       { rad: .5, seg: .5, det: -2, leaf: 3, frond: 2 },       // lighter: half the segments, a third of the leaf cards
       { rad: .3, seg: .25, det: -3, leaf: 0, frond: 3, minR: .05 },   // the bare form, far off (no twigs)
     ];
@@ -532,12 +532,9 @@
       const lv = root.userData.levels[l], { kind, v, lift } = root.userData.spec;
       if (lv.userData.filled) return;
       lv.userData.filled = true;
-      for (const p of variant(kind, v, l, lift).parts) {
-        const m = new THREE.Mesh(p.geo, p.mat);
-        m.castShadow = false; m.receiveShadow = true;   // (the shadow comes from the bare form: below)
-        if (p.mat.userData.cards) { m.customDepthMaterial = cardDepthMat(p.mat.map === T.leaf.oak ? 'oak' : p.mat.map === T.leaf.needle ? 'needle' : p.mat.map === T.leaf.willow ? 'willow' : 'moss'); noInk.add(m); }   // (cards: their alpha shape is their outline)
-        lv.add(m);
-      }
+      const parts = variant(kind, v, l, lift).parts;
+      root.userData.parts[l] = parts;
+      for (const p of parts) { const m = new THREE.Mesh(p.geo, p.mat); m.visible = false; lv.add(m); }   // (kept, unseen, for measuring the tree: it's drawn through the batches below)
     }
     // How much longer a tree's trunk is drawn (flag treeheights), in its variant's units: enough that,
     // full grown at `height` m, its leaves start TREES.CLEAR m up (taller than a frog). In steps of
@@ -562,13 +559,14 @@
       const nuts = (kind === 'palm' ? variant(kind, v, 0).nuts : []).map(n => { const m = new THREE.Mesh(n.geo, n.mat); m.castShadow = true; body.add(m); return m; });   // (palms)
       // the shadow, cast by the bare form whatever level is shown (only drawn into the shadow map)
       const shadowHold = new THREE.Group();
-      for (const p of variant(kind, v, 2, lift).parts) { const m = new THREE.Mesh(p.geo, SHADOW_ONLY); m.castShadow = true; shadowHold.add(m); noInk.add(m); }
+      for (const p of variant(kind, v, 2, lift).parts) { const m = new THREE.Mesh(p.geo, SHADOW_ONLY); m.visible = false; shadowHold.add(m); }
       body.add(shadowHold); root.userData.shadow = shadowHold;
       const pic = picture(kind, v, lift), card = new THREE.Mesh(pic.geo, pic.mat), cardHold = new THREE.Group();
-      cardHold.scale.copy(body.scale); cardHold.add(card); root.add(cardHold); noInk.add(card);
+      card.visible = false; cardHold.scale.copy(body.scale); cardHold.add(card); root.add(cardHold);
       levels.push(cardHold);
       root.userData.prebaked = true; root.userData.levels = levels; root.userData.level = 3; root.userData.card = cardHold;
-      root.userData.spec = { kind, v, lift };
+      root.userData.spec = { kind, v, lift }; root.userData.body = body; root.userData.pic = pic; root.userData.parts = [];
+      root.userData.shadowParts = variant(kind, v, 2, lift).parts; root.userData.sphere = sphereOf(kind, v, lift);
       const { leafBottom: lb, leafR } = variant(kind, v, 1, lift);
       if (lb != null) root.userData.leafBottom = Math.max(2.1, lb * body.scale.y);   // (always room to walk underneath)
       if (leafR != null) root.userData.leafR = leafR * body.scale.x;   // (how far the leaves spread, before its fuller levels are grown)
@@ -588,7 +586,68 @@
         if (want === 3) root.userData.card.rotation.y = Math.atan2(cx - root.position.x, cz - root.position.z);   // (the picture faces you)
         root.userData.shadow.visible = root.userData.level < 3;
       }
+      drawBatches();
     });
+
+    // ---------- drawn together ----------
+    // Every tree's shown level, its shadow and its far picture are drawn as instances: one draw for
+    // each part of each variant, level and lift, whatever the number of trees (before, each tree was
+    // several draws of its own). Trees off screen are left out (a sphere test), shadows are kept for
+    // trees near you even behind the camera, and the bare forms and pictures stay out of the
+    // normal pass (the ink only reaches so far: 020-ink-pass.js).
+    const batches = new Map();
+    const frustum = new THREE.Frustum(), _pm = new THREE.Matrix4(), _c = V(), _m = new THREE.Matrix4();
+    const sphereCache = new Map();
+    function sphereOf(kind, v, lift) {   // the bare form's bounds, in the tree's own units
+      const key = kind + ':' + v + ':' + lift;
+      if (!sphereCache.has(key)) {
+        const box = new THREE.Box3();
+        for (const p of variant(kind, v, 2, lift).parts) { p.geo.computeBoundingBox(); box.union(p.geo.boundingBox); }
+        const sph = box.getBoundingSphere(new THREE.Sphere());
+        sphereCache.set(key, { y: sph.center.y, r: sph.radius + Math.hypot(sph.center.x, sph.center.z) });
+      }
+      return sphereCache.get(key);
+    }
+    function batch(geo, mat, kind) {
+      const key = geo.uuid + '|' + mat.uuid;
+      let b = batches.get(key);
+      if (!b) { b = { geo, mat, kind, im: null, cap: 0, n: 0 }; batches.set(key, b); }
+      return b;
+    }
+    function put(b, m4) {
+      if (b.n >= b.cap) {   // (grow: twice the room, keeping what's written)
+        const cap = Math.max(16, b.cap * 2), im = new THREE.InstancedMesh(b.geo, b.mat, cap);
+        im.frustumCulled = false;
+        if (b.kind === 'shadow') { im.castShadow = true; im.receiveShadow = false; } else im.receiveShadow = true;
+        if (b.im) { im.instanceMatrix.array.set(b.im.instanceMatrix.array); scene.remove(b.im); noInk.delete(b.im); b.im.dispose(); }
+        if (b.kind !== 'inked') noInk.add(im);
+        scene.add(im); b.im = im; b.cap = cap;
+      }
+      b.im.setMatrixAt(b.n++, m4);
+    }
+    const shown = o => { for (let p = o; p; p = p.parent) { if (!p.visible) return false; if (p === scene) return true; } return false; };
+    function drawBatches() {
+      for (const b of batches.values()) b.n = 0;
+      camera.updateMatrixWorld(); frustum.setFromProjectionMatrix(_pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+      const S = new THREE.Sphere();
+      for (const root of live) {
+        const u = root.userData;
+        if (!u.levels || !shown(root)) continue;
+        const sc = root.scale.x * u.body.scale.x, sph = u.sphere;
+        S.center.set(root.position.x, root.position.y + sph.y * sc, root.position.z); S.radius = sph.r * sc;
+        const inView = frustum.intersectsSphere(S), level = u.level;
+        const nearShadow = level < 3 && Math.hypot(root.position.x - px, root.position.z - pz) < 24;   // (the sun's shadow reaches about that far: 030)
+        if (!inView && !nearShadow) continue;
+        root.updateMatrixWorld(true);
+        const bw = u.body.matrixWorld;
+        if (inView) {
+          if (level < 3) { if (!u.parts[level]) fill(root, level); for (const p of u.parts[level]) put(batch(p.geo, p.mat, p.mat.userData.cards || level === 2 ? 'plain' : 'inked'), bw); }
+          else put(batch(u.pic.geo, u.pic.mat, 'plain'), _m.multiplyMatrices(u.card.matrixWorld, u.card.children[0].matrix));
+        }
+        if (nearShadow) for (const p of u.shadowParts) put(batch(p.geo, SHADOW_ONLY, 'shadow'), bw);
+      }
+      for (const b of batches.values()) if (b.im) { b.im.count = b.n; b.im.instanceMatrix.needsUpdate = b.n > 0; }
+    }
 
     return {
       // the model for a tree, palm or giant (o: the object; rng: seeded by its id)

@@ -15,7 +15,7 @@
   const sun = new THREE.DirectionalLight(0xFFF4E0, .9);
   sun.castShadow = true;
   sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
-  Object.assign(sun.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 120 });
+  Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 90 });   // (just round you: the trees cast theirs within 30 m, 102-tree-studies.js)
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.03;
   sun.shadow.radius = 4;

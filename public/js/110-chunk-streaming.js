@@ -21,7 +21,7 @@
   }
   function dropDecor(c) {
     if (!c.decor) return;
-    for (const im of c.decor) { scene.remove(im); noInk.delete(im); im.dispose(); }
+    for (const m of c.decor) { scene.remove(m); noInk.delete(m); m.geometry.dispose(); }   // (each chunk's flowers are its own merged meshes: 090)
     c.decor = null;
   }
   // Called every frame: unload far chunks, then build the nearest missing ones
