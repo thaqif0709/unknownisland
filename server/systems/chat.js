@@ -1,7 +1,7 @@
 // Chat and whispers.
 const WG = require('../shared/world-gen');
 
-const isAdmin = p => String(process.env.ADMINS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean).includes(p.name.toLowerCase());
+const { isAdmin } = require('./util');
 
 const methods = {
   // ================= Chat =================

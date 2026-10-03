@@ -1,7 +1,7 @@
 // Players: joining and leaving, what others see, movement, survival, and small show-only messages.
 const WG = require('../shared/world-gen');
 const { RULES, FIRES, ITEMS, heightAt, SPAWN } = WG;
-const { r2, num } = require('./util');
+const { r2, num, isAdmin } = require('./util');
 
 const methods = {
   // Watching the intro cutscene (held safe for at most two and a half minutes).
@@ -56,6 +56,7 @@ const methods = {
       players: [...this.players.values()].filter(q => q !== p).map(q => this.publicView(q)),
       rules: RULES,
       features: WG.features(),
+      admin: isAdmin(p),   // (admins can double-click the big map to go there)
       ...this.joinExtras(p),
     });
     this.broadcast({ t: 'join', player: this.publicView(p) }, p);
@@ -232,6 +233,15 @@ const methods = {
 // Messages from the client this system answers (msg.t -> handler; `this` is the Island).
 const messages = {
   pos(p, msg) { return this.onPos(p, msg); },
+  // An admin double-clicked the big map: straight there (onto open sea only in creative mode, where you can hover).
+  mapjump(p, { x, z }) {
+    if (!isAdmin(p) || p.dead || !num(x) || !num(z) || Math.hypot(x - SPAWN.x, z - SPAWN.z) > 6000) return;
+    if (!p.creative && heightAt(x, z) <= -1) return this.send(p, { t: 'toast', msg: 'That\u2019s open sea. Pick land, or go /creative to hover there.' });
+    if (p.ride && this.dismount) this.dismount(p);
+    p.x = x; p.z = z; p.under = null; p.lastPosAt = Date.now(); p.moving = false; p.sitting = false;
+    this.send(p, { t: 'correct', x, z, under: 0 });
+    this.send(p, { t: 'toast', msg: 'You jump there.' });
+  },
   respawn(p) { return this.onRespawn(p); },
   jump(p, msg) {   // just for show: tell everyone else so they see the hop
     const now = Date.now();

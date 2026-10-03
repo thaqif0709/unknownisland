@@ -6,9 +6,9 @@ const assert = require('node:assert/strict');
 const { startServer } = require('../helpers/server');
 const { WG, landNear } = require('../helpers/world');
 
-const ADMIN = 'fly' + Date.now().toString(36).slice(-6), ADMIN2 = 'god' + Date.now().toString(36).slice(-6), ADMIN3 = 'tp' + Date.now().toString(36).slice(-6);
+const ADMIN = 'fly' + Date.now().toString(36).slice(-6), ADMIN2 = 'god' + Date.now().toString(36).slice(-6), ADMIN3 = 'tp' + Date.now().toString(36).slice(-6), ADMIN4 = 'mj' + Date.now().toString(36).slice(-6);
 let server;
-before(async () => { server = await startServer({ env: { ADMINS: `${ADMIN},${ADMIN2},${ADMIN3}` } }); });
+before(async () => { server = await startServer({ env: { ADMINS: `${ADMIN},${ADMIN2},${ADMIN3},${ADMIN4}` } }); });
 after(async () => { if (server) await server.stop(); });
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -99,4 +99,29 @@ test('/tp takes you to another frog, in creative mode only', async () => {
   await sleep(300);
   assert.equal((await travel(a, fix, 0, 3, undefined, 2)).corrected, false);
   assert.match((await say(a, `/tp #${c.id}`)).text, /You go to/, 'by number too');
+});
+
+test('an admin double-clicking the big map jumps there (not onto open sea out of creative)', async () => {
+  const a = await server.join('mj', { username: ADMIN4 }), c = await server.join('notadmin');
+  assert.equal(a.welcome.admin, true, 'the welcome says who is an admin');
+  assert.equal(c.welcome.admin, false);
+  const there = landNear({ x: WG.SPAWN.x - 50, z: WG.SPAWN.z - 30 });
+  const moved = a.next(m => m.t === 'correct', { what: 'the jump' });
+  a.send({ t: 'mapjump', x: there.x, z: there.z });
+  const fix = await moved;
+  assert.ok(Math.hypot(fix.x - there.x, fix.z - there.z) < .01);
+  // not for anyone else
+  const seen = c.messages.length;
+  c.send({ t: 'mapjump', x: there.x, z: there.z });
+  await sleep(400);
+  assert.ok(!c.messages.slice(seen).some(m => m.t === 'correct'), 'a player who is not an admin stays put');
+  // open sea: only in creative mode
+  const sea = { x: WG.ISL * 2, z: 0 };
+  const no = a.next(m => m.t === 'toast' && /open sea/.test(m.msg), { what: 'the sea refusal' });
+  a.send({ t: 'mapjump', x: sea.x, z: sea.z });
+  await no;
+  assert.match((await say(a, '/creative')).text, /Creative mode/);
+  const over = a.next(m => m.t === 'correct', { what: 'the jump out to sea' });
+  a.send({ t: 'mapjump', x: sea.x, z: sea.z });
+  assert.ok(Math.hypot((await over).x - sea.x, 0) < .01);
 });

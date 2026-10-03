@@ -166,7 +166,8 @@ For getting around quickly while testing, admins have a creative mode like Minec
 the flying): `/creative` (or `/gamemode creative`), then double-tap **Space** to fly, again to
 stop. The walking keys fly you fast where the camera looks, **Space** rises, **Shift** sinks, and
 you can cross the sea and the Veil. Your health, hunger and thirst stay full and nothing can
-hurt you, and `/tp name` (or `/tp #number`) takes you straight to another player. `/normal`
+hurt you, and `/tp name` (or `/tp #number`) takes you straight to another player. Admins can also double-click (or double-tap)
+anywhere on the big map to jump there (onto open sea only in creative mode). `/normal`
 turns it off (it's off after a rejoin anyway).
 
 The big world is behind three flags that go together: `FEATURES=streaming,bigworld,farview`
