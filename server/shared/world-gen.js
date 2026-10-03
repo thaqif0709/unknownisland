@@ -129,6 +129,7 @@
       combat: true,      // P6: weapons, attacking (left click, hold for heavy), dodging (double-tap Shift), downed and revived
       torchlight: false, // torches burn above ground too: light, fog pushed back, warmth; G plants one (E takes it back)
       fasttravel: false, // W10: travel between lit lanterns you've stood by, paying lamp oil
+      grass2: true,      // grass grown from the tree studies' parts (091-grass.js): crown tufts, blade fans, meadow stalks, ferns, moss & clover, in patches of random thickness; replaces the cone tufts
       treeheights: true, // trees of many heights: the small ones (trunk still taller than a frog) can be cut, ones 2.5 frogs tall or more can't (RULES.TREES)
       trees3: true,      // the trees as in the "Unknown Island Trees" studies, shape for shape, in the game's inked style (102-tree-studies.js); off: trees2's lighter ones
       trees2: true,      // the new tree models: branching oaks and blossoms, wind-bent (and snowy) pines, ringed palms with fronds, the Mire's cypress (FEATURES=-trees2 brings the old ones back)

@@ -35,12 +35,13 @@
     { biomes: ['forest'], n: 16, parts: [[DG.mStem, DM.mushStem, 0], [DG.mGills, DM.gills, .158], [DG.mCap, DM.mushCap, .15, decorCols(['#B8504A', '#C0704F', '#C9623E'])],
       [DG.mSpot, DM.mushSpot, .308, null, null, [.03, -.02]], [DG.mSpot, DM.mushSpot, .292, null, null, [-.07, .03]], [DG.mSpot, DM.mushSpot, .276, null, null, [.05, .09]],
       [DG.mSpot, DM.mushSpot, .269, null, null, [-.02, -.11]], [DG.mSpot, DM.mushSpot, .254, null, null, [.12, -.03]]] },
-    { biomes: ['meadow', 'forest', 'highland', 'spring'], n: 40, parts: [[DG.tuft, DM.tuftA, .14], [DG.tuft, DM.tuftB, .12, null, [.8, .8, .8]]] },
+    { biomes: ['meadow', 'forest', 'highland', 'spring'], n: 40, oldGrass: true, parts: [[DG.tuft, DM.tuftA, .14], [DG.tuft, DM.tuftB, .12, null, [.8, .8, .8]]] },   // (the grass flag grows real grass instead: 091-grass.js)
   ];
   const dummy = new THREE.Object3D();
   function buildDecor(cx, cz) {
     const out = [], r = mulberry32((cx * 92821) ^ (cz * 68917) ^ 0x51f1);
     DECOR.forEach(sp => {
+      if (sp.oldGrass && WG.feature('grass2')) return;
       const spots = [];
       for (let i = 0; i < sp.n * 2 && spots.length < sp.n; i++) {
         const x = cx * CH + r() * CH, z = cz * CH + r() * CH, h = heightAt(x, z);
