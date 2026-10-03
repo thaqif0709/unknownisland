@@ -11,6 +11,8 @@ const cleanBuckets = list => (Array.isArray(list) ? list : []).filter(b => b && 
   .map(b => ({ id: b.id | 0 || Math.floor(Math.random() * 1e9), mat: b.mat, uses: Math.max(0, b.uses | 0),
     water: ['none', 'sea', 'clean'].includes(b.water) ? b.water : 'none', drinks: Math.max(0, b.drinks | 0) }));
 const newBucketId = () => Math.floor(Math.random() * 1e9);
+// Whoever runs the island: usernames in the ADMINS env var (comma-separated, any case).
+const isAdmin = p => String(process.env.ADMINS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean).includes(String(p.name).toLowerCase());
 const costText = cost => Object.entries(cost).map(([k, n]) => `${n} ${ITEMS[k].toLowerCase()}`).join(', ');
 
-module.exports = { r2, num, cleanBuckets, newBucketId, costText, REACH_SLACK, ACT_COOLDOWN };
+module.exports = { isAdmin, r2, num, cleanBuckets, newBucketId, costText, REACH_SLACK, ACT_COOLDOWN };

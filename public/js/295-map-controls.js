@@ -45,5 +45,22 @@
   });
   const endMapPtr = e => { mapPtrs.delete(e.pointerId); if (!mapPtrs.size) mapCanvas.classList.remove('dragging'); pinchDist = 0; };
   mapCanvas.addEventListener('pointerup', endMapPtr);
+  // Admins (the server says so in its welcome): double-click (or double-tap) the map to go straight there.
+  let isAdmin = false, lastJump = 0, lastTap = null;
+  UI.net.on('welcome', m => { isAdmin = !!m.admin; });
+  function mapJump(clientX, clientY) {
+    if (!isAdmin || !inGame() || performance.now() - lastJump < 600) return;
+    lastJump = performance.now();
+    const r = mapCanvas.getBoundingClientRect(), v = fullMapView();
+    const x = v.cx + ((clientX - r.left) / r.width - .5) * 2 * v.half, z = v.cz + ((clientY - r.top) / r.height - .5) * 2 * v.half;
+    if (net && net.open) { net.send({ t: 'mapjump', x, z }); closePanels(); }
+  }
+  mapCanvas.addEventListener('dblclick', e => mapJump(e.clientX, e.clientY));
+  mapCanvas.addEventListener('pointerup', e => {   // (a double-tap, where a touch screen sends no dblclick)
+    if (e.pointerType !== 'touch') return;
+    const now = performance.now();
+    if (lastTap && now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 24) { lastTap = null; mapJump(e.clientX, e.clientY); }
+    else lastTap = { t: now, x: e.clientX, y: e.clientY };
+  });
   mapCanvas.addEventListener('pointercancel', endMapPtr);
 

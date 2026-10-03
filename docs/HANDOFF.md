@@ -207,6 +207,9 @@ planned separately by Thaqif):
   `knock` leave you alone. `/tp name` (or `#number`, creative only) calls `teleportTo(p, q)`: a
   step behind them (or on them, when that step is sea or the Veil, or they're in a cave, which
   you join), off any raft, with a `correct` carrying `under`.
+  Map jump (admins): the welcome carries `admin`; double-clicking (or double-tapping) the big map
+  (`295-map-controls.js`) sends `{ t: 'mapjump', x, z }`, which `players.js` answers for admins only
+  (`isAdmin` in `util.js`, shared with chat): there with a `correct`, refused onto open sea unless creative.
   Tests: `tests/server/creative.test.js`, `tests/browser/creative.test.js`.
 - **The White Ram (C6, flag `region-teeth`, off; the Teeth's boss).** See the Teeth's pack below.
 - **The Hanging Mother (C4, flag `region-wood`, off; the Wood's boss).** See the Wood's pack
