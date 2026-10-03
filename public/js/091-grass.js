@@ -3,8 +3,9 @@
   // inked toon look: crown tufts (a lumpy crown in miniature bristling with blade cards), blade
   // fans (upright leaf cards with drawn midribs), meadow stalks (twig-thin stalks with seed
   // heads over wispy cards), fern tufts (little fronds round a blob of moss) and moss & clover
-  // (low cushions with clover cards and needle sprigs). Each biome grows its own mix, and how
-  // thick it grows wanders in patches across the land (bare clearings to dense stands), with
+  // (low cushions with clover cards and needle sprigs). Each biome grows its own mix; how thick
+  // and how tall it grows wander in patches across the land (bare clearings to dense stands,
+  // short swards to tall ones, each kind within its `tall` range, each clump a little off), with
   // each chunk a little thicker or thinner than the next. Built only in the chunks around you
   // (GRASS_VIEW), one geometry per kind of clump drawn as instances that sway in the wind. The
   // blobs and stalks are inked like the trees; the cards' cut-out shape is their outline
@@ -127,16 +128,16 @@
 
     // ---------- the five clumps: [{ geo, mat, ink }] each, grown once ----------
     const KINDS = {
-      crowns: { n: 70, build(r) {
+      crowns: { n: 70, tall: [.7, 1.6], build(r) {
         const mound = merge([blob(r, .24, .16, .22, '#7d9a52', '#25361d', { at: V(0, .1, 0), flat: .4, lumps: 1.3 }), blob(r, .15, .12, .15, '#8aa058', '#2f4422', { detail: 0, at: V(.14, .14, -.06), flat: .4 })]);
         const list = []; for (let i = 0; i < 11; i++) { const u = V(r() * 2 - 1, r() * .9 + .5, r() * 2 - 1).normalize(); list.push({ p: V(u.x * .2, .12 + u.y * .12, u.z * .2), n: u, s: .26 + r() * .16, col: pick(r, GREENS), upright: true, lean: .25 + r() * .35 }); }
         return [{ geo: mound, mat: swaying({ vertexColors: true }, .2), ink: true }, { geo: cards(r, list), mat: cardMat(TEX.blade, .55) }];
       } },
-      fans: { n: 130, build(r) {
+      fans: { n: 130, tall: [.6, 1.9], build(r) {
         const list = []; for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2 + r() * .5; list.push({ p: V(Math.cos(a) * .04, 0, Math.sin(a) * .04), n: V(Math.cos(a), 0, Math.sin(a)), s: .38 + r() * .22, w: .3 + r() * .1, col: pick(r, GREENS), upright: true, lean: .15 + r() * .3 }); }
         return [{ geo: cards(r, list), mat: cardMat(TEX.blade, .6) }];
       } },
-      meadow: { n: 55, build(r) {
+      meadow: { n: 55, tall: [.65, 1.45], build(r) {
         const parts = [];
         for (let i = 0; i < 3; i++) {
           const a = r() * 6.28, lean = .12 + r() * .18, h = .8 + r() * .45, dx = Math.cos(a), dz = Math.sin(a);
@@ -146,12 +147,12 @@
         const list = []; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + r() * .4; list.push({ p: V(Math.cos(a) * .05, 0, Math.sin(a) * .05), n: V(Math.cos(a), 0, Math.sin(a)), s: .42 + r() * .25, w: .32, col: pick(r, ['#7f9a50', '#8aa058', '#a3ad62', '#6f8d48']), upright: true, lean: .2 + r() * .3 }); }
         return [{ geo: merge(parts), mat: swaying({ vertexColors: true }, .3), ink: true }, { geo: cards(r, list), mat: cardMat(TEX.wisp, .45) }];
       } },
-      ferns: { n: 45, build(r) {
+      ferns: { n: 45, tall: [.7, 1.45], build(r) {
         const geos = [blob(r, .1, .06, .1, '#5f7d3a', '#22311b', { detail: 0, at: V(0, .03, 0), flat: .3 })];
         for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + r() * .4; geos.push(...frond(V(0, .04, 0), V(Math.cos(a), 0, Math.sin(a)), .38 + r() * .16, .75 + r() * .3, '#3f5a2c', '#9bb064')); }
         return [{ geo: merge(geos), mat: swaying({ vertexColors: true, side: THREE.DoubleSide }, .35), ink: true }];
       } },
-      carpet: { n: 60, build(r) {
+      carpet: { n: 60, tall: [.8, 1.35], build(r) {
         const cush = merge([blob(r, .26, .07, .22, '#93a85e', '#3f5a2c', { lumps: 1.5, at: V(0, .02, 0), flat: .2 }), blob(r, .14, .05, .16, '#a3b26a', '#44602e', { detail: 0, lumps: 1.5, at: V(.2, .02, .1), flat: .2 })]);
         const list = []; for (let i = 0; i < 7; i++) { const a = r() * 6.28, rr = .1 + r() * .25; list.push({ p: V(Math.cos(a) * rr, .07 + r() * .03, Math.sin(a) * rr), n: V((r() - .5) * .4, 1, (r() - .5) * .4).normalize(), s: .1 + r() * .05, col: pick(r, ['#5d7a3c', '#6f8d48', '#4f6d33']), tilt: .35 }); }
         const sprigs = []; for (let i = 0; i < 2; i++) { const a = r() * 6.28; sprigs.push({ p: V(Math.cos(a) * .18, .04, Math.sin(a) * .18), n: V(Math.cos(a), 0, Math.sin(a)), s: .16, col: pick(r, ['#3a5948', '#2f4b3d']), upright: true, lean: .2 }); }
@@ -170,6 +171,8 @@
     const clump = k => grown[k] || (grown[k] = KINDS[k].build(mulberry32(0x9e37 + Object.keys(KINDS).indexOf(k) * 7919)));
     // how thick it grows here: patches that wander from bare to dense
     const thickness = (x, z) => THREE.MathUtils.smoothstep(fbm(x * .035 + 17, z * .035 - 9), .32, .68);
+    // how tall it grows here: whole patches of short or tall grass (0-1), each clump a little off that
+    const tallness = (x, z) => THREE.MathUtils.smoothstep(fbm(x * .05 - 31, z * .05 + 12), .3, .7);
 
     // ---------- one chunk's grass ----------
     const dummy = new THREE.Object3D();
@@ -185,12 +188,13 @@
           const sn = WG.nearestSpring(x, z);
           if (Math.hypot(x - sn.x, z - sn.z) < 2.9 || (caveList.length && Caves.groundCut(caveList, x, z, h))) continue;
           if (h > RULES.TEETH.SNOW_LINE - 20 && WG.feature('region-teeth') && WG.regionAt(x, z) === 'teeth') continue;   // nothing grows in the Teeth's snow
-          spots.push([x, groundAt(x, z) - .02, z, .75 + r() * .6, r() * 6.28]);
+          const [lo, hi] = KINDS[k].tall, tall = THREE.MathUtils.lerp(lo, hi, THREE.MathUtils.clamp(tallness(x, z) + (r() - .5) * .35, 0, 1));
+          spots.push([x, groundAt(x, z) - .02, z, .8 + r() * .4, r() * 6.28, tall]);
         }
         if (!spots.length) continue;
         for (const part of clump(k)) {
           const im = new THREE.InstancedMesh(part.geo, part.mat, spots.length);
-          spots.forEach(([x, y, z, s, rot], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, rot, 0); dummy.scale.setScalar(s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); });
+          spots.forEach(([x, y, z, s, rot, tall], i) => { dummy.position.set(x, y, z); dummy.rotation.set(0, rot, 0); dummy.scale.set(s, s * tall, s); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); });   // (taller, not wider)
           im.receiveShadow = true; im.frustumCulled = false;   // (the instances spread over the chunk; the template's own bounds are tiny)
           scene.add(im); if (!part.ink) noInk.add(im); out.push(im);
         }

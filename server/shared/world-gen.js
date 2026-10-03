@@ -49,6 +49,8 @@
     // short, a full-grown tree's trunk stands at least CLEAR m before its leaves start, taller
     // than a frog. A tree's size (sizeOf) is its height over BASE.
     FROG_HEIGHT: 1.86,
+    // The ink lines (flag inknear) fade out between NEAR and FAR m from the camera: only what's near you is outlined.
+    INK: { NEAR: 22, FAR: 34 },
     TREES: { BASE: 4, SMALL: [3.7, 4.5], TALL: [4.8, 10], TALL_SHARE: .35, NO_CHOP: 2.5, CLEAR: 2.05 },
     FRUIT_AT: 0.6,           // bushes fruit once this grown; palms only when fully grown
     // Sprinting uses energy (0-100) and makes you hungry faster. Run out and
@@ -129,6 +131,7 @@
       combat: true,      // P6: weapons, attacking (left click, hold for heavy), dodging (double-tap Shift), downed and revived
       torchlight: false, // torches burn above ground too: light, fog pushed back, warmth; G plants one (E takes it back)
       fasttravel: false, // W10: travel between lit lanterns you've stood by, paying lamp oil
+      inknear: true,     // ink lines only on things near you (RULES.INK); farther off, the colours alone
       grass2: true,      // grass grown from the tree studies' parts (091-grass.js): crown tufts, blade fans, meadow stalks, ferns, moss & clover, in patches of random thickness; replaces the cone tufts
       treeheights: true, // trees of many heights: the small ones (trunk still taller than a frog) can be cut, ones 2.5 frogs tall or more can't (RULES.TREES)
       trees3: true,      // the trees as in the "Unknown Island Trees" studies, shape for shape, in the game's inked style (102-tree-studies.js); off: trees2's lighter ones
